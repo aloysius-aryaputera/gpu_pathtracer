@@ -11,7 +11,10 @@ NVCCFLAGS      = $(NVCC_DBG) -m64
 
 SRCS = main.cu
 INCS = \
+	model/geometry/triangle.h \
 	model/vector_and_matrix/vec3.h \
+	model/ray.h \
+	param.h \
 	render/pathtracing.h \
 	util/image_util.h
 

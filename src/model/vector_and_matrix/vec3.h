@@ -1,3 +1,4 @@
+//File: vec3.h
 #ifndef VEC3_H
 #define VEC3_H
 
@@ -94,6 +95,12 @@ __host__ __device__ inline vec3 cross(const vec3 &v1, const vec3 &v2) {
               (v1.e[0]*v2.e[1] - v1.e[1]*v2.e[0]));
 }
 
+__host__ __device__ inline float compute_distance(
+  const vec3 &v1, const vec3 &v2
+) {
+  vec3 temp = v1 - v2;
+  return temp.squared_length();
+}
 
 __host__ __device__ inline vec3& vec3::operator+=(const vec3 &v){
   e[0]  += v.e[0];
@@ -141,6 +148,14 @@ __host__ __device__ inline vec3& vec3::operator/=(const float t) {
 
 __host__ __device__ inline vec3 unit_vector(vec3 v) {
     return v / v.length();
+}
+
+__host__ __device__ void print_vec3(vec3 v) {
+  printf("\n");
+  printf("| %5.4f |\n", v.x());
+  printf("| %5.4f |\n", v.y());
+  printf("| %5.4f |\n", v.z());
+  printf("\n");
 }
 
 #endif
