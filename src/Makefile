@@ -1,0 +1,28 @@
+CUDA_PATH     ?= /usr/local/cuda
+HOST_COMPILER  = g++
+NVCC           = $(CUDA_PATH)/bin/nvcc -ccbin $(HOST_COMPILER)
+
+# select one of these for Debug vs. Release
+NVCC_DBG       = -g -G
+#NVCC_DBG       =
+
+NVCCFLAGS      = $(NVCC_DBG) -m64
+#GENCODE_FLAGS  = -gencode arch=compute_60,code=sm_60
+
+SRCS = main.cu
+INCS = \
+	model/vector_and_matrix/vec3.h \
+	render/pathtracing.h \
+	util/image_util.h
+
+# cudart: cudart.o
+# 	$(NVCC) $(NVCCFLAGS) $(GENCODE_FLAGS) -o cudart cudart.o
+#
+# cudart.o: $(SRCS) $(INCS)
+# 	$(NVCC) $(NVCCFLAGS) $(GENCODE_FLAGS) -o cudart.o -c main.cu
+
+gpu_path_tracing: gpu_path_tracing.o
+	$(NVCC) $(NVCCFLAGS) -o gpu_path_tracing gpu_path_tracing.o
+
+gpu_path_tracing.o: $(SRCS) $(INCS)
+	$(NVCC) $(NVCCFLAGS) -o gpu_path_tracing.o -c main.cu
