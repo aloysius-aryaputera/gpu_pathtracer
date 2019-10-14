@@ -11,6 +11,8 @@ NVCCFLAGS      = $(NVCC_DBG) -m64
 
 SRCS = main.cu
 INCS = \
+	model/camera.h \
+	model/data_structure/local_vector.h \
 	model/geometry/triangle.h \
 	model/vector_and_matrix/vec3.h \
 	model/ray.h \
@@ -24,8 +26,14 @@ INCS = \
 # cudart.o: $(SRCS) $(INCS)
 # 	$(NVCC) $(NVCCFLAGS) $(GENCODE_FLAGS) -o cudart.o -c main.cu
 
+# gpu_path_tracing: gpu_path_tracing.o
+# 	$(NVCC) $(NVCCFLAGS) -o gpu_path_tracing gpu_path_tracing.o
+#
+# gpu_path_tracing.o: $(SRCS) $(INCS)
+# 	$(NVCC) $(NVCCFLAGS) -o gpu_path_tracing.o -c main.cu
+
 gpu_path_tracing: gpu_path_tracing.o
-	$(NVCC) $(NVCCFLAGS) -o gpu_path_tracing gpu_path_tracing.o
+	$(NVCC) -o gpu_path_tracing gpu_path_tracing.o
 
 gpu_path_tracing.o: $(SRCS) $(INCS)
-	$(NVCC) $(NVCCFLAGS) -o gpu_path_tracing.o -c main.cu
+	$(NVCC) -o gpu_path_tracing.o -c main.cu

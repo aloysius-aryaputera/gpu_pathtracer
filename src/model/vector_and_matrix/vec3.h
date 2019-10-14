@@ -99,7 +99,7 @@ __host__ __device__ inline float compute_distance(
   const vec3 &v1, const vec3 &v2
 ) {
   vec3 temp = v1 - v2;
-  return temp.squared_length();
+  return temp.length();
 }
 
 __host__ __device__ inline vec3& vec3::operator+=(const vec3 &v){
