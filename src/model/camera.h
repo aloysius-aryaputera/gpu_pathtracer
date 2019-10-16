@@ -17,7 +17,7 @@ class Camera {
     __host__ __device__ Camera(
       vec3 eye_, vec3 center_, vec3 up_, float fovy_, int width_, int height_
     );
-    __device__ Ray compute_ray(float i, float j);
+    __host__ __device__ Ray compute_ray(float i, float j);
 
     int width, height;
 
@@ -39,7 +39,7 @@ __host__ __device__ Camera::Camera(
   v = cross(w, u);
 }
 
-__device__ Ray Camera::compute_ray(float i, float j) {
+__host__ __device__ Ray Camera::compute_ray(float i, float j) {
   vec3 dir;
   float alpha, beta;
   alpha = tan(fovx * M_PI / 180.0 / 2) * (j - (1.0 * width / 2)) / (

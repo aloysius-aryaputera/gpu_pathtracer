@@ -10,7 +10,7 @@
 
 __global__ void render(float *fb, int max_x, int max_y);
 __global__ void render(
-  float* fb, Camera* camera, Triangle** geom_array
+  float* fb, Camera* camera, Triangle** geom_array, int num_triangles
 );
 
 __global__
@@ -26,32 +26,24 @@ void render(float *fb, int max_x, int max_y) {
 
 __global__
 void render(
-  float *fb, Camera *camera, Triangle **geom_array
+  float *fb, Camera **camera, Triangle **geom_array, int num_triangles
 ) {
-  if (
-    threadIdx.x == 0 && blockIdx.x == 0 && threadIdx.y == 0 && blockIdx.y == 0
-  ) {
-    print_vec3((*geom_array) -> normal);
-  }
-  camera = new Camera(
-    vec3(0, -5, 0), vec3(0, 0, 0), vec3(0, 0, 1), 45, 100, 100
-  );
-  vec3 point_1 = vec3(0, 0, 0), point_2 = vec3(1, 1, 0), point_3 = vec3(1, 1, 1);
-  Triangle* my_triangle = new Triangle(point_1, point_2, point_3);
-  *geom_array = my_triangle;
 
   vec3 color;
   hit_record rec, best_rec;
   bool hit = false;
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   int j = threadIdx.y + blockIdx.y * blockDim.y;
-  if((i >= camera -> width) || (j >= camera -> height)) return;
+
+  if((i >= camera[0] -> width) || (j >= camera[0] -> height)) {
+    return;
+  }
 
   best_rec.t = INFINITY;
 
-  Ray camera_ray = camera -> compute_ray(i, j);
-  for (int idx = 0; idx < 1; idx++) {
-    hit = (*geom_array)[idx].hit(camera_ray, 0, INFINITY, rec);
+  Ray camera_ray = camera[0] -> compute_ray(i, j);
+  for (int idx = 0; idx < num_triangles; idx++) {
+    hit = (geom_array[idx]) -> hit(camera_ray, 0, INFINITY, rec);
     if (hit && rec.t < best_rec.t) {
       best_rec.t = rec.t;
       best_rec.point = vec3(rec.point.x(), rec.point.y(), rec.point.z());
@@ -60,12 +52,12 @@ void render(
   }
 
   if (best_rec.t < INFINITY) {
-    color = vec3(1, 1, 1);
+    color = vec3(best_rec.t / 10.0, best_rec.t / 10.0, best_rec.t / 10.0);
   } else {
     color = vec3(0, 0, 0);
   }
 
-  int pixel_index = j * camera -> width * 3 + i * 3;
+  int pixel_index = j * (camera[0] -> width) * 3 + i * 3;
   fb[pixel_index + 0] = color.r();
   fb[pixel_index + 1] = color.g();
   fb[pixel_index + 2] = color.b();

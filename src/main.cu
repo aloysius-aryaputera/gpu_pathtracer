@@ -8,6 +8,7 @@
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
 #include "util/image_util.h"
+#include "util/read_file_util.h"
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line) {
@@ -20,74 +21,94 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
     }
 }
 
-__global__ void create_world(Triangle* geom_array, Camera* camera) {
+__global__ void create_world(
+  Triangle** geom_array, float *x, float *y, float *z, int *point_1_idx,
+  int *point_2_idx, int *point_3_idx, int num_triangles
+) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
-      vec3 point_1 = vec3(0, 0, 0), point_2 = vec3(1, 1, 0), point_3 = vec3(1, 1, 1);
-      Triangle* my_triangle = new Triangle(point_1, point_2, point_3);
-      camera = new Camera(
-        vec3(0, -5, 0), vec3(0, 0, 0), vec3(0, 0, 1), 45, 100, 100
-      );
-      printf("Camera width = %d, height = %d\n", camera -> width, camera -> height);
-      geom_array = my_triangle;
+      for (int idx = 0; idx < num_triangles; idx++) {
+        *(geom_array + idx) = new Triangle(
+          vec3(x[point_1_idx[idx]], y[point_1_idx[idx]], z[point_1_idx[idx]]),
+          vec3(x[point_2_idx[idx]], y[point_2_idx[idx]], z[point_2_idx[idx]]),
+          vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]])
+        );
+      }
     }
 }
 
-__global__ void create_world(Triangle** geom_array) {
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
-      vec3 point_1 = vec3(0, 0, 0), point_2 = vec3(1, 1, 0), point_3 = vec3(1, 1, 1);
-      *(geom_array) = new Triangle(point_1, point_2, point_3);
+__global__ void set_camera(Camera** camera, int width, int height) {
+  if (threadIdx.x == 0 && blockIdx.x == 0) {
+    *(camera) = new Camera(
+      vec3(0, -8, 5), vec3(0, 0, 0), vec3(0, 0, 1), 45, width, height
+    );
+  }
+}
+
+__global__ void free_world(Triangle **geom_array, Camera **camera, int n) {
+    for (int i = 0; i < n; i++){
+      delete *(geom_array + i);
     }
+    delete *camera;
 }
 
 int main(int argc, char **argv) {
+  int im_width = 1000, im_height = 1000;
   int tx = 8, ty = 8;
 
   Triangle** my_geom_2;
-  Triangle* my_geom;
-  vec3 point_1 = vec3(0, 0, 0), point_2 = vec3(1, 1, 0), point_3 = vec3(1, 1, 1);
-  Triangle* my_triangle = new Triangle(point_1, point_2, point_3);
-  Camera *my_camera = new Camera(
-    vec3(0, -5, 0), vec3(0, 0, 0), vec3(0, 0, 1), 45, 100, 100
-  );
-  printf("Camera width = %d, height = %d\n", my_camera -> width, my_camera -> height);
-  my_geom = my_triangle;
-
-  size_t fb_size = 3 * 100 * 100 * sizeof(float);
-
-  printf("fb_size = %lu\n", fb_size);
-
-  // allocate FB
+  Camera **my_camera;
   float *fb;
-  checkCudaErrors(cudaMallocManaged(&fb, fb_size));
+  size_t fb_size = 3 * im_width * im_height * sizeof(float);
 
-  checkCudaErrors(cudaMalloc((void **)&my_geom_2, 1 * sizeof(Triangle *)));
-  create_world<<<1, 1>>>(my_geom_2);
+  checkCudaErrors(cudaMallocManaged((void **)&fb, fb_size));
+
+  checkCudaErrors(cudaMallocManaged((void **)&my_camera, sizeof(Camera *)));
+  set_camera<<<1, 1>>>(my_camera, im_width, im_height);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
-  // print_vec3((*my_geom_2) -> point_1);
-  // print_vec3((*my_geom_2) -> point_2);
-  // print_vec3((*my_geom_2) -> point_3);
-  // print_vec3((*my_geom_2) -> normal);
+  float *x, *y, *z;
+  int *point_1_idx, *point_2_idx, *point_3_idx;
+  int num_triangles = 0;
 
-  printf("Camera width = %d, height = %d\n", my_camera -> width, my_camera -> height);
+  checkCudaErrors(cudaMallocManaged((void **)&x, 9999 * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&y, 9999 * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&z, 9999 * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged(&my_geom, 1 * sizeof(Triangle)));
-  checkCudaErrors(cudaMallocManaged(&my_camera, sizeof(Camera)));
+  checkCudaErrors(cudaMallocManaged((void **)&point_1_idx, 9999 * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&point_2_idx, 9999 * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&point_3_idx, 9999 * sizeof(int)));
 
-  dim3 blocks(100 / tx + 1, 100 / ty + 1);
+  extract_triangle_data(
+    argv[2], x, y, z, point_1_idx, point_2_idx, point_3_idx, num_triangles
+  );
+  checkCudaErrors(cudaMallocManaged((void **)&my_geom_2, 999999 * sizeof(Triangle *)));
+  create_world<<<1, 1>>>(my_geom_2, x, y, z, point_1_idx, point_2_idx, point_3_idx, num_triangles);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+
+  printf("num_triangles = %d\n", num_triangles);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+
+
+  dim3 blocks(im_width / tx + 1, im_height / ty + 1);
   dim3 threads(tx, ty);
-  render<<<blocks, threads>>>(fb, my_camera, my_geom_2);
+  render<<<blocks, threads>>>(fb, my_camera, my_geom_2, num_triangles);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
-  printf("Camera width = %d, height = %d\n", my_camera -> width, my_camera -> height);
+  printf("Saving image!\n");
+  save_image(fb, im_width, im_height, argv[1]);
+  printf("Image saved!\n");
 
-  save_image(fb, 100, 100, argv[1]);
-
+  checkCudaErrors(cudaDeviceSynchronize());
+  free_world<<<1,1>>>(my_geom_2, my_camera, 9999);
   checkCudaErrors(cudaFree(fb));
   checkCudaErrors(cudaFree(my_camera));
-  checkCudaErrors(cudaFree(my_geom));
+  checkCudaErrors(cudaFree(my_geom_2));
+
+  cudaDeviceReset();
 
   return 0;
 }

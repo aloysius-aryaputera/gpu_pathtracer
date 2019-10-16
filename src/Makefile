@@ -18,7 +18,8 @@ INCS = \
 	model/ray.h \
 	param.h \
 	render/pathtracing.h \
-	util/image_util.h
+	util/image_util.h \
+	util/read_file_util.h
 
 # cudart: cudart.o
 # 	$(NVCC) $(NVCCFLAGS) $(GENCODE_FLAGS) -o cudart cudart.o
@@ -26,14 +27,14 @@ INCS = \
 # cudart.o: $(SRCS) $(INCS)
 # 	$(NVCC) $(NVCCFLAGS) $(GENCODE_FLAGS) -o cudart.o -c main.cu
 
-# gpu_path_tracing: gpu_path_tracing.o
-# 	$(NVCC) $(NVCCFLAGS) -o gpu_path_tracing gpu_path_tracing.o
-#
-# gpu_path_tracing.o: $(SRCS) $(INCS)
-# 	$(NVCC) $(NVCCFLAGS) -o gpu_path_tracing.o -c main.cu
-
 gpu_path_tracing: gpu_path_tracing.o
-	$(NVCC) -o gpu_path_tracing gpu_path_tracing.o
+	$(NVCC) $(NVCCFLAGS) -o gpu_path_tracing gpu_path_tracing.o
 
 gpu_path_tracing.o: $(SRCS) $(INCS)
-	$(NVCC) -o gpu_path_tracing.o -c main.cu
+	$(NVCC) $(NVCCFLAGS) -o gpu_path_tracing.o -c main.cu
+
+# gpu_path_tracing: gpu_path_tracing.o
+# 	$(NVCC) -o gpu_path_tracing gpu_path_tracing.o
+#
+# gpu_path_tracing.o: $(SRCS) $(INCS)
+# 	$(NVCC) -o gpu_path_tracing.o -c main.cu

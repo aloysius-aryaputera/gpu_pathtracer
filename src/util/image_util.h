@@ -22,9 +22,9 @@ __host__ void save_image(
     for (int j = 0; j < height; j++) {
       size_t pixel_index = j*3*width + i*3;
 
-      float r = image[pixel_index + 0];
-      float g = image[pixel_index + 1];
-      float b = image[pixel_index + 2];
+      float r = clamp(0, 1, image[pixel_index + 0]);
+      float g = clamp(0, 1, image[pixel_index + 1]);
+      float b = clamp(0, 1, image[pixel_index + 2]);
 
       int ir = int(255.99 * r);
       int ig = int(255.99 * g);

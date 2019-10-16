@@ -23,7 +23,7 @@ class Triangle {
   public:
     __host__ __device__ Triangle() {};
     __host__ __device__ Triangle(vec3 point_1_, vec3 point_2_, vec3 point_3_);
-    __device__ virtual bool hit(Ray ray, float t_min, float t_max, hit_record& rec);
+    __host__ __device__ bool hit(Ray ray, float t_min, float t_max, hit_record& rec);
     __host__ __device__ vec3 get_normal(vec3 point_on_surface);
 
     vec3 point_1, point_2, point_3, normal;
@@ -32,9 +32,9 @@ class Triangle {
 __host__ __device__ float _compute_triangle_area(vec3 point_1, vec3 point_2, vec3 point_3);
 
 __host__ __device__ Triangle::Triangle(vec3 point_1_, vec3 point_2_, vec3 point_3_) {
-  point_1 = point_1_;
-  point_2 = point_2_;
-  point_3 = point_3_;
+  point_1 = vec3(point_1_.x(), point_1_.y(), point_1_.z());
+  point_2 = vec3(point_2_.x(), point_2_.y(), point_2_.z());
+  point_3 = vec3(point_3_.x(), point_3_.y(), point_3_.z());
   area = _compute_triangle_area(point_1, point_2, point_3);
   normal = get_normal(point_1);
 }
@@ -44,7 +44,7 @@ __host__ __device__ vec3 Triangle::get_normal(vec3 point_on_surface) {
   return unit_vector(cross_product);
 }
 
-__device__ bool Triangle::hit(Ray ray, float t_min, float t_max, hit_record& rec) {
+__host__ __device__ bool Triangle::hit(Ray ray, float t_min, float t_max, hit_record& rec) {
   float t = (dot(point_1, normal) - dot(ray.p0, normal)) / dot(ray.dir, normal);
   vec3 point_4 = ray.get_vector(t);
 
