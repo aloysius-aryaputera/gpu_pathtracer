@@ -1,9 +1,12 @@
+#include <curand_kernel.h>
+#include <stdlib.h>
 #include <iostream>
 #include <math.h>
 
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
 #include "model/geometry/triangle.h"
+#include "model/material.h"
 #include "model/ray.h"
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
@@ -23,25 +26,97 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
 
 __global__ void create_world(
   Triangle** geom_array, float *x, float *y, float *z, int *point_1_idx,
-  int *point_2_idx, int *point_3_idx, int num_triangles
+  int *point_2_idx, int *point_3_idx, int* num_triangles
 ) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
-      for (int idx = 0; idx < num_triangles; idx++) {
+      Material *triangle_material = new Material(
+        vec3(.2, .2, .2), vec3(1, .2, .2), vec3(0, 0, 0), vec3(.3, .1, .1)
+      );
+
+      for (int idx = 0; idx < num_triangles[0]; idx++) {
         *(geom_array + idx) = new Triangle(
           vec3(x[point_1_idx[idx]], y[point_1_idx[idx]], z[point_1_idx[idx]]),
           vec3(x[point_2_idx[idx]], y[point_2_idx[idx]], z[point_2_idx[idx]]),
-          vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]])
+          vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]),
+          triangle_material
         );
       }
+
+      triangle_material = new Material(
+        vec3(.2, .2, .2), vec3(.2, 1, .2), vec3(0, 0, 0), vec3(.1, .3, .1)
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(-12, 0, 12), vec3(12, 0, 12), vec3(0, 0, -12),
+        triangle_material
+      );
+
+      triangle_material = new Material(
+        vec3(.2, .2, .2), vec3(1, 1, 1), vec3(2, 2, 2), vec3(1, 1, 1)
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(-3, 7, 3), vec3(0, 7, -3), vec3(3, 7, 3),
+        triangle_material
+      );
+
+      // triangle_material = new Material(
+      //   vec3(.2, .2, .2), vec3(1, 1, 1), vec3(0, 0, 0), vec3(.4, .4, .4)
+      // );
+      // *(geom_array + num_triangles[0]++) = new Triangle(
+      //   vec3(-12, 7, 12), vec3(0, 7, -12), vec3(12, 7, 12),
+      //   triangle_material
+      // );
+
+      triangle_material = new Material(
+        vec3(.2, .2, .2), vec3(1, 1, 1), vec3(0, 0, 0), vec3(.4, .4, .4)
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(-12, 7, 12), vec3(-12, 0, 12), vec3(0, 0, -12),
+        triangle_material
+      );
+
+      triangle_material = new Material(
+        vec3(.2, .2, .2), vec3(1, 1, 1), vec3(0, 0, 0), vec3(.4, .4, .4)
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(-12, 7, 12), vec3(0, 0, -12), vec3(0, 7, -12),
+        triangle_material
+      );
+
+      triangle_material = new Material(
+        vec3(.2, .2, .2), vec3(1, 1, 1), vec3(0, 0, 0), vec3(.4, .4, .4)
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(12, 7, 12), vec3(0, 0, -12), vec3(12, 0, 12),
+        triangle_material
+      );
+
+      triangle_material = new Material(
+        vec3(.2, .2, .2), vec3(1, 1, 1), vec3(0, 0, 0), vec3(.4, .4, .4)
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(12, 7, 12), vec3(0, 7, -12), vec3(0, 0, -12),
+        triangle_material
+      );
     }
 }
 
 __global__ void set_camera(Camera** camera, int width, int height) {
   if (threadIdx.x == 0 && blockIdx.x == 0) {
     *(camera) = new Camera(
-      vec3(0, -8, 5), vec3(0, 0, 0), vec3(0, 0, 1), 45, width, height
+      vec3(0, 6, 12), vec3(0, 1, 0), vec3(0, 1, 0), 45, width, height
     );
   }
+}
+
+__global__ void render_init(int im_width, int im_height, curandState *rand_state) {
+    int j = threadIdx.x + blockIdx.x * blockDim.x;
+    int i = threadIdx.y + blockIdx.y * blockDim.y;
+    if((j >= im_width) || (i >= im_height)) {
+      return;
+    }
+    int pixel_index = i * im_width + j;
+    //Each thread gets same seed, a different sequence number, no offset
+    curand_init(1984, pixel_index, 0, &rand_state[pixel_index]);
 }
 
 __global__ void free_world(Triangle **geom_array, Camera **camera, int n) {
@@ -52,15 +127,19 @@ __global__ void free_world(Triangle **geom_array, Camera **camera, int n) {
 }
 
 int main(int argc, char **argv) {
-  int im_width = 1000, im_height = 1000;
+  int im_width = 300, im_height = 300;
   int tx = 8, ty = 8;
 
-  Triangle** my_geom_2;
+  Triangle** my_geom;
   Camera **my_camera;
-  float *fb;
-  size_t fb_size = 3 * im_width * im_height * sizeof(float);
+  vec3 *fb;
+  int num_pixels = im_width * im_height;
+  size_t fb_size = num_pixels * sizeof(vec3);
+  curandState *rand_state;
+  size_t rand_state_size = num_pixels * sizeof(curandState);
 
   checkCudaErrors(cudaMallocManaged((void **)&fb, fb_size));
+  checkCudaErrors(cudaMallocManaged((void **)&rand_state, rand_state_size));
 
   checkCudaErrors(cudaMallocManaged((void **)&my_camera, sizeof(Camera *)));
   set_camera<<<1, 1>>>(my_camera, im_width, im_height);
@@ -69,7 +148,9 @@ int main(int argc, char **argv) {
 
   float *x, *y, *z;
   int *point_1_idx, *point_2_idx, *point_3_idx;
-  int num_triangles = 0;
+  int *num_triangles;
+
+  checkCudaErrors(cudaMallocManaged((void **)&num_triangles, sizeof(int)));
 
   checkCudaErrors(cudaMallocManaged((void **)&x, 9999 * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&y, 9999 * sizeof(float)));
@@ -82,19 +163,31 @@ int main(int argc, char **argv) {
   extract_triangle_data(
     argv[2], x, y, z, point_1_idx, point_2_idx, point_3_idx, num_triangles
   );
-  checkCudaErrors(cudaMallocManaged((void **)&my_geom_2, 999999 * sizeof(Triangle *)));
-  create_world<<<1, 1>>>(my_geom_2, x, y, z, point_1_idx, point_2_idx, point_3_idx, num_triangles);
+
+  checkCudaErrors(cudaMallocManaged((void **)&my_geom, 9999 * sizeof(Triangle *)));
+  create_world<<<1, 1>>>(
+    my_geom, x, y, z, point_1_idx, point_2_idx, point_3_idx, num_triangles
+  );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
+  checkCudaErrors(cudaFree(x));
+  checkCudaErrors(cudaFree(y));
+  checkCudaErrors(cudaFree(z));
+  checkCudaErrors(cudaFree(point_1_idx));
+  checkCudaErrors(cudaFree(point_2_idx));
+  checkCudaErrors(cudaFree(point_3_idx));
 
-  printf("num_triangles = %d\n", num_triangles);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-
 
   dim3 blocks(im_width / tx + 1, im_height / ty + 1);
   dim3 threads(tx, ty);
-  render<<<blocks, threads>>>(fb, my_camera, my_geom_2, num_triangles);
+  render_init<<<blocks, threads>>>(im_width, im_height, rand_state);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+
+
+  render<<<blocks, threads>>>(fb, my_camera, my_geom, num_triangles, rand_state);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
@@ -103,10 +196,13 @@ int main(int argc, char **argv) {
   printf("Image saved!\n");
 
   checkCudaErrors(cudaDeviceSynchronize());
-  free_world<<<1,1>>>(my_geom_2, my_camera, 9999);
-  checkCudaErrors(cudaFree(fb));
+  free_world<<<1,1>>>(my_geom, my_camera, 9999);
+  checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaFree(my_camera));
-  checkCudaErrors(cudaFree(my_geom_2));
+  checkCudaErrors(cudaFree(my_geom));
+  checkCudaErrors(cudaFree(num_triangles));
+  checkCudaErrors(cudaFree(rand_state));
+  checkCudaErrors(cudaFree(fb));
 
   cudaDeviceReset();
 

@@ -9,21 +9,19 @@
 
 void extract_triangle_data(
   const char* filename, float* x, float* y, float* z, int* point_1_idx,
-  int* point_2_idx, int* point_3_idx, int &num_triangles
+  int* point_2_idx, int* point_3_idx, int* num_triangles
 );
 
 void extract_triangle_data(
   const char* filename, float* x, float* y, float* z, int* point_1_idx,
-  int* point_2_idx, int* point_3_idx, int &num_triangles
+  int* point_2_idx, int* point_3_idx, int* num_triangles
 ) {
   float num[3];
   char letter;
   int point_idx = 0, triangle_idx = 0;
-  std::string line;
   std::ifstream myfile (filename);
 
   if (myfile.is_open()){
-    // while(myfile >> letter >> num[0] >> num[1] >> num[2]) {
     while(myfile >> letter) {
       if (letter != 'v' && letter != 'f') return;
       myfile >> num[0] >> num[1] >> num[2];
@@ -42,7 +40,7 @@ void extract_triangle_data(
     }
     myfile.close();
   }
-  num_triangles = triangle_idx;
+  num_triangles[0] = triangle_idx;
 }
 
 #endif

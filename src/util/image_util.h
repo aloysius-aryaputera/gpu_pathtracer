@@ -6,31 +6,31 @@
 
 __host__ float clamp(const float &lo, const float &hi, const float &v);
 __host__ void save_image(
-  float* image, int width, int height, const char * filename
+  vec3* image, int width, int height, const char * filename
 );
 
 __host__ float clamp(const float &lo, const float &hi, const float &v)
 { return std::max(lo, std::min(hi, v)); }
 
 __host__ void save_image(
-  float* image, int width, int height, const char * filename
+  vec3* image, int width, int height, const char * filename
 ) {
   std::ofstream ofs;
   ofs.open(filename);
-  ofs << "P3\n" << width << " " << height << "\n255\n";
-  for (int i = 0; i < width; i++) {
-    for (int j = 0; j < height; j++) {
-      size_t pixel_index = j*3*width + i*3;
+  ofs << "P6\n" << width << " " << height << "\n255\n";
+  for (int i = 0; i < height; i++) {
+    for (int j = 0; j < width; j++) {
+      size_t pixel_index = i * width + j;
 
-      float r = clamp(0, 1, image[pixel_index + 0]);
-      float g = clamp(0, 1, image[pixel_index + 1]);
-      float b = clamp(0, 1, image[pixel_index + 2]);
+      float r = clamp(0, 1, image[pixel_index].r());
+      float g = clamp(0, 1, image[pixel_index].g());
+      float b = clamp(0, 1, image[pixel_index].b());
 
-      int ir = int(255.99 * r);
-      int ig = int(255.99 * g);
-      int ib = int(255.99 * b);
+      char ir = (char)(255 * r);
+      char ig = (char)(255 * g);
+      char ib = (char)(255 * b);
 
-      ofs << ir << " " << ig << " " << ib << "\n";
+      ofs << ir << ig << ib;
     }
   }
   ofs.close();

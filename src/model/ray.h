@@ -6,11 +6,17 @@
 
 class Ray {
   public:
+    __host__ __device__ Ray();
     __host__ __device__ Ray(vec3 p0_, vec3 dir_);
     __host__ __device__ vec3 get_vector(float t);
 
     vec3 p0, dir;
 };
+
+__host__ __device__ Ray::Ray() {
+  p0 = vec3(0, 0, 0);
+  dir = vec3(1, 0, 0);
+}
 
 __host__ __device__ Ray::Ray(vec3 p0_, vec3 dir_) {
   p0 = p0_;
