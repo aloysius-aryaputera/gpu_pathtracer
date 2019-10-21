@@ -48,6 +48,7 @@ __device__ vec3 _compute_color(
         mask *= (1 / pdf) * cur_rec.object -> material -> diffuse * cur_rec.object -> material -> albedo;
       }
     } else {
+      light += cos_theta * vec3(0.1, 0.1, 0.1);
       return mask * light;
     }
   }
@@ -85,13 +86,14 @@ void render(
   vec3 color = vec3(0, 0, 0);
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
-  int pixel_index = i * (camera[0] -> width) + j, sampling_size = 1028;
-  curandState local_rand_state = rand_state[pixel_index];
+  int pixel_index = i * (camera[0] -> width) + j, sampling_size = 1024;
   // float max_dist = 40.0;
 
   if((j >= camera[0] -> width) || (i >= camera[0] -> height)) {
     return;
   }
+
+  curandState local_rand_state = rand_state[pixel_index];
 
   Ray camera_ray = camera[0] -> compute_ray(i + .5, j + .5);
   bool hit = _hit(camera_ray, geom_array, num_triangles[0], init_rec);
@@ -111,7 +113,7 @@ void render(
       hit = _hit(ray, geom_array, num_triangles[0], cur_rec);
       if (hit) {
         color += cos_theta * _compute_color(
-          cur_rec, 4, geom_array, num_triangles[0], &local_rand_state);
+          cur_rec, 8, geom_array, num_triangles[0], &local_rand_state);
       }
 
     }

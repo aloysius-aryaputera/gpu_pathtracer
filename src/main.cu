@@ -54,7 +54,7 @@ __global__ void create_world(
         vec3(.2, .2, .2), vec3(1, 1, 1), vec3(2, 2, 2), vec3(1, 1, 1)
       );
       *(geom_array + num_triangles[0]++) = new Triangle(
-        vec3(-3, 7, 3), vec3(0, 7, -3), vec3(3, 7, 3),
+        vec3(-5, 7, 4), vec3(-2, 8, -2), vec3(1, 9, 4),
         triangle_material
       );
 
@@ -127,7 +127,7 @@ __global__ void free_world(Triangle **geom_array, Camera **camera, int n) {
 }
 
 int main(int argc, char **argv) {
-  int im_width = 300, im_height = 300;
+  int im_width = 200, im_height = 200;
   int tx = 8, ty = 8;
 
   Triangle** my_geom;
