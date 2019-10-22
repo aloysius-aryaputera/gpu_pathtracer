@@ -1,7 +1,8 @@
 #include <curand_kernel.h>
-#include <stdlib.h>
 #include <iostream>
 #include <math.h>
+#include <stdlib.h>
+#include <string>
 
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
@@ -50,53 +51,6 @@ __global__ void create_world(
         triangle_material
       );
 
-      triangle_material = new Material(
-        vec3(.2, .2, .2), vec3(1, 1, 1), vec3(2, 2, 2), vec3(1, 1, 1)
-      );
-      *(geom_array + num_triangles[0]++) = new Triangle(
-        vec3(-5, 7, 4), vec3(-2, 8, -2), vec3(1, 9, 4),
-        triangle_material
-      );
-
-      // triangle_material = new Material(
-      //   vec3(.2, .2, .2), vec3(1, 1, 1), vec3(0, 0, 0), vec3(.4, .4, .4)
-      // );
-      // *(geom_array + num_triangles[0]++) = new Triangle(
-      //   vec3(-12, 7, 12), vec3(0, 7, -12), vec3(12, 7, 12),
-      //   triangle_material
-      // );
-
-      triangle_material = new Material(
-        vec3(.2, .2, .2), vec3(1, 1, 1), vec3(0, 0, 0), vec3(.4, .4, .4)
-      );
-      *(geom_array + num_triangles[0]++) = new Triangle(
-        vec3(-12, 7, 12), vec3(-12, 0, 12), vec3(0, 0, -12),
-        triangle_material
-      );
-
-      triangle_material = new Material(
-        vec3(.2, .2, .2), vec3(1, 1, 1), vec3(0, 0, 0), vec3(.4, .4, .4)
-      );
-      *(geom_array + num_triangles[0]++) = new Triangle(
-        vec3(-12, 7, 12), vec3(0, 0, -12), vec3(0, 7, -12),
-        triangle_material
-      );
-
-      triangle_material = new Material(
-        vec3(.2, .2, .2), vec3(1, 1, 1), vec3(0, 0, 0), vec3(.4, .4, .4)
-      );
-      *(geom_array + num_triangles[0]++) = new Triangle(
-        vec3(12, 7, 12), vec3(0, 0, -12), vec3(12, 0, 12),
-        triangle_material
-      );
-
-      triangle_material = new Material(
-        vec3(.2, .2, .2), vec3(1, 1, 1), vec3(0, 0, 0), vec3(.4, .4, .4)
-      );
-      *(geom_array + num_triangles[0]++) = new Triangle(
-        vec3(12, 7, 12), vec3(0, 7, -12), vec3(0, 0, -12),
-        triangle_material
-      );
     }
 }
 
@@ -127,8 +81,11 @@ __global__ void free_world(Triangle **geom_array, Camera **camera, int n) {
 }
 
 int main(int argc, char **argv) {
-  int im_width = 200, im_height = 200;
-  int tx = 8, ty = 8;
+  int im_width = std::stoi(argv[3]), im_height = std::stoi(argv[4]);
+  int tx = std::stoi(argv[5]), ty = std::stoi(argv[6]);
+
+  printf("im_width = %d, im_height = %d\n", im_width, im_height);
+  printf("tx = %d, ty = %d\n", tx, ty);
 
   Triangle** my_geom;
   Camera **my_camera;
@@ -185,7 +142,6 @@ int main(int argc, char **argv) {
   render_init<<<blocks, threads>>>(im_width, im_height, rand_state);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-
 
   render<<<blocks, threads>>>(fb, my_camera, my_geom, num_triangles, rand_state);
   checkCudaErrors(cudaGetLastError());

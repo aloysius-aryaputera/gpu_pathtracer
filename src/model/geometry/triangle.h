@@ -22,7 +22,7 @@ class Triangle {
     __host__ __device__ Triangle() {};
     __host__ __device__ Triangle(
       vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_);
-    __host__ __device__ bool hit(Ray ray, float t_max, hit_record& rec, bool print);
+    __host__ __device__ bool hit(Ray ray, float t_max, hit_record& rec);
     __host__ __device__ vec3 get_normal(vec3 point_on_surface);
 
     vec3 point_1, point_2, point_3, normal;
@@ -73,7 +73,7 @@ __host__ __device__ vec3 Triangle::get_normal(vec3 point_on_surface) {
 }
 
 __host__ __device__ bool Triangle::hit(
-  Ray ray, float t_max, hit_record& rec, bool print=false) {
+  Ray ray, float t_max, hit_record& rec) {
   float t = (dot(point_1, normal) - dot(ray.p0, normal)) / dot(ray.dir, normal);
 
   if (t > t_max) {
