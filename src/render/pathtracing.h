@@ -12,19 +12,19 @@
 #include "../util/vector_util.h"
 
 __global__ void render(
-  float* fb, Camera** camera, Triangle** geom_array, int *num_triangles,
+  float* fb, Camera** camera, Primitive** geom_array, int *num_triangles,
   curandState *rand_state
 );
 
-__host__ __device__ bool _hit(
-  Ray ray, Triangle **geom_array, int num_triangles, hit_record &rec);
+__device__ bool _hit(
+  Ray ray, Primitive **geom_array, int num_triangles, hit_record &rec);
 
 __device__ vec3 _compute_color(
-  hit_record rec, int level, Triangle **geom_array, int num_triangles,
+  hit_record rec, int level, Primitive **geom_array, int num_triangles,
   vec3 sky_emission, curandState *rand_state);
 
 __device__ vec3 _compute_color(
-  hit_record rec, int level, Triangle **geom_array, int num_triangles,
+  hit_record rec, int level, Primitive **geom_array, int num_triangles,
   vec3 sky_emission, curandState *rand_state
 ) {
   hit_record cur_rec = rec;
@@ -41,13 +41,13 @@ __device__ vec3 _compute_color(
     ray = Ray(cur_rec.point, v3_rand_world);
     hit = _hit(ray, geom_array, num_triangles, cur_rec);
     if (hit) {
-      light += cos_theta * cur_rec.object -> material -> emission;
+      light += cos_theta * cur_rec.object -> get_material() -> emission;
       if (light.x() > 0 || light.y() > 0 || light.z() > 0) {
         return mask * light;
       } else {
         mask *= (1 / pdf) * (1 / M_PI) * \
-          cur_rec.object -> material -> diffuse * \
-          cur_rec.object -> material -> albedo;
+          cur_rec.object -> get_material() -> diffuse * \
+          cur_rec.object -> get_material() -> albedo;
       }
     } else {
       light += cos_theta * sky_emission;
@@ -58,8 +58,8 @@ __device__ vec3 _compute_color(
   return mask * light;
 }
 
-__host__ __device__ bool _hit(
-  Ray ray, Triangle **geom_array, int num_triangles, hit_record &rec) {
+__device__ bool _hit(
+  Ray ray, Primitive **geom_array, int num_triangles, hit_record &rec) {
 
   hit_record cur_rec;
   bool hit = false, intersection_found = false;
@@ -79,12 +79,12 @@ __host__ __device__ bool _hit(
 
 __global__
 void render(
-  vec3 *fb, Camera **camera, Triangle **geom_array, int *num_triangles,
+  vec3 *fb, Camera **camera, Primitive **geom_array, int *num_triangles,
   curandState *rand_state
 ) {
 
   hit_record init_rec, cur_rec;
-  vec3 color;
+  vec3 color = vec3(0, 0, 0);
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
 
@@ -92,18 +92,17 @@ void render(
     return;
   }
 
-  int pixel_index = i * (camera[0] -> width) + j, sampling_size = 256;
+  int pixel_index = i * (camera[0] -> width) + j, sampling_size = 128;
   curandState local_rand_state = rand_state[pixel_index];
 
   Ray camera_ray = camera[0] -> compute_ray(i + .5, j + .5);
   bool hit = _hit(camera_ray, geom_array, num_triangles[0], init_rec);
   CartesianSystem new_xyz_system = CartesianSystem(init_rec.normal);
-  vec3 v3_rand, v3_rand_world, sky_emission = vec3(0.75, 0.75, 1);
+  vec3 v3_rand, v3_rand_world, sky_emission = vec3(0, 0, 0);
   float pdf = 1 / (2 * M_PI), cos_theta;
   Ray ray;
 
   if (hit) {
-    color = vec3(0, 0, 0);
     for(int idx = 0; idx < sampling_size; idx++) {
       cur_rec = init_rec;
       v3_rand = get_random_unit_vector_hemisphere(&local_rand_state);
@@ -120,13 +119,13 @@ void render(
       }
 
     }
-    color = init_rec.object -> material -> emission + \
-      init_rec.object -> material -> ambient + \
+    color = init_rec.object -> get_material() -> emission + \
+      init_rec.object -> get_material() -> ambient + \
       (1.0f / sampling_size) * (1 / pdf) * (1 / M_PI) * color * \
-      init_rec.object -> material -> diffuse * \
-      init_rec.object -> material -> albedo;
+      init_rec.object -> get_material() -> diffuse * \
+      init_rec.object -> get_material() -> albedo;
   } else {
-    color = vec3(.75, .75, 1.0);
+    color = vec3(0, 0, 0);
   }
   rand_state[pixel_index] = local_rand_state;
   fb[pixel_index] = color;

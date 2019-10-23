@@ -14,6 +14,7 @@ INCS = \
 	model/camera.h \
 	model/cartesian_system.h \
 	model/data_structure/local_vector.h \
+	model/geometry/primitive.h \
 	model/geometry/triangle.h \
 	model/material.h \
 	model/vector_and_matrix/vec3.h \

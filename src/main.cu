@@ -54,10 +54,71 @@ __global__ void create_world(
     }
 }
 
+__global__ void create_world_2(
+  Primitive** geom_array, float *x, float *y, float *z, int *point_1_idx,
+  int *point_2_idx, int *point_3_idx, int* num_triangles
+) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+      Material *triangle_material = new Material(
+        vec3(0, 0, 0), vec3(.5, .5, .5), vec3(0, 0, 0), vec3(.3, .3, .3)
+      );
+
+      for (int idx = 0; idx < num_triangles[0]; idx++) {
+        *(geom_array + idx) = new Triangle(
+          vec3(x[point_1_idx[idx]], y[point_1_idx[idx]], z[point_1_idx[idx]]),
+          vec3(x[point_2_idx[idx]], y[point_2_idx[idx]], z[point_2_idx[idx]]),
+          vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]),
+          triangle_material
+        );
+      }
+
+      triangle_material = new Material(
+        vec3(0, 0, 0), vec3(.2, .9, .2), vec3(0, 0, 0), vec3(.1, .3, .1)
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(-12, 0, 12), vec3(12, 0, 12), vec3(0, 0, -12),
+        triangle_material
+      );
+
+      triangle_material = new Material(
+        vec3(0, 0, 0), vec3(.9, .2, .2), vec3(0, 0, 0), vec3(.3, .1, .1)
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(-12, 12, 12), vec3(-12, 0, 12), vec3(0, 0, -12),
+        triangle_material
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(-12, 12, 12), vec3(0, 0, -12), vec3(0, 12, -12),
+        triangle_material
+      );
+
+      triangle_material = new Material(
+        vec3(0, 0, 0), vec3(.2, .2, .9), vec3(0, 0, 0), vec3(.1, .1, .3)
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(12, 12, 12), vec3(0, 0, -12), vec3(12, 0, 12),
+        triangle_material
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(12, 12, 12), vec3(0, 12, -12), vec3(0, 0, -12),
+        triangle_material
+      );
+
+      triangle_material = new Material(
+        vec3(0, 0, 0), vec3(1, 1, 1), vec3(15.0, 15.0, 15.0), vec3(1, 1, 1)
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(0, 5, 12), vec3(12, 0, 12), vec3(-12, 0, 12),
+        triangle_material
+      );
+
+    }
+}
+
 __global__ void set_camera(Camera** camera, int width, int height) {
   if (threadIdx.x == 0 && blockIdx.x == 0) {
     *(camera) = new Camera(
-      vec3(0, 6, 12), vec3(0, 1, 0), vec3(0, 1, 0), 45, width, height
+      vec3(0, 6, 10), vec3(0, 1, 0), vec3(0, 1, 0), 45, width, height
     );
   }
 }
@@ -73,7 +134,7 @@ __global__ void render_init(int im_width, int im_height, curandState *rand_state
     curand_init(1984, pixel_index, 0, &rand_state[pixel_index]);
 }
 
-__global__ void free_world(Triangle **geom_array, Camera **camera, int n) {
+__global__ void free_world(Primitive **geom_array, Camera **camera, int n) {
     for (int i = 0; i < n; i++){
       delete *(geom_array + i);
     }
@@ -87,7 +148,7 @@ int main(int argc, char **argv) {
   printf("im_width = %d, im_height = %d\n", im_width, im_height);
   printf("tx = %d, ty = %d\n", tx, ty);
 
-  Triangle** my_geom;
+  Primitive** my_geom;
   Camera **my_camera;
   vec3 *fb;
   int num_pixels = im_width * im_height;
@@ -121,8 +182,8 @@ int main(int argc, char **argv) {
     argv[2], x, y, z, point_1_idx, point_2_idx, point_3_idx, num_triangles
   );
 
-  checkCudaErrors(cudaMallocManaged((void **)&my_geom, 9999 * sizeof(Triangle *)));
-  create_world<<<1, 1>>>(
+  checkCudaErrors(cudaMallocManaged((void **)&my_geom, 9999 * sizeof(Primitive *)));
+  create_world_2<<<1, 1>>>(
     my_geom, x, y, z, point_1_idx, point_2_idx, point_3_idx, num_triangles
   );
   checkCudaErrors(cudaGetLastError());

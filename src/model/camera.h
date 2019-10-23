@@ -32,7 +32,7 @@ __host__ __device__ Camera::Camera(
   width = width_;
   height = height_;
   fovy = fovy_;
-  fovx = 2 * atan((1.0 * width / height)) * tan(M_PI * fovy / 180 / 2) * \
+  fovx = 2.0f * atan(((float)width / (float)height) * tan(M_PI * fovy / 180 / 2)) * \
     180 / M_PI;
   w = unit_vector(eye - center);
   u = unit_vector(cross(up, w));
@@ -42,10 +42,10 @@ __host__ __device__ Camera::Camera(
 __host__ __device__ Ray Camera::compute_ray(float i, float j) {
   vec3 dir;
   float alpha, beta;
-  alpha = tan(fovx * M_PI / 180.0 / 2) * (j - (1.0 * width / 2)) / (
-    1.0 * width / 2);
-  beta = tan(fovy * M_PI / 180.0 / 2) * ((1.0 * height / 2) - i) / (
-    1.0 * height / 2);
+  alpha = tan(fovx * M_PI / 180.0 / 2) * (j - ((float)width / 2)) / (
+    (float)width / 2);
+  beta = tan(fovy * M_PI / 180.0 / 2) * (((float)height / 2) - i) / (
+    (float)height / 2);
   dir = unit_vector(alpha * u + beta * v - w);
   Ray out = Ray(eye, dir);
   return out;

@@ -8,11 +8,9 @@
 #include "../material.h"
 #include "../ray.h"
 #include "../vector_and_matrix/vec3.h"
-// #include "hitable.h"
+#include "primitive.h"
 
-struct hit_record;
-
-class Triangle {
+class Triangle: public Primitive {
   private:
     __host__ __device__ float _compute_tolerance();
 
@@ -20,26 +18,19 @@ class Triangle {
 
   public:
     __host__ __device__ Triangle() {};
-    __host__ __device__ Triangle(
+    __device__ Triangle(
       vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_);
-    __host__ __device__ bool hit(Ray ray, float t_max, hit_record& rec);
-    __host__ __device__ vec3 get_normal(vec3 point_on_surface);
+    __device__ bool hit(Ray ray, float t_max, hit_record& rec);
+    __device__ vec3 get_normal(vec3 point_on_surface);
+    __device__ Material* get_material();
 
     vec3 point_1, point_2, point_3, normal;
     Material *material;
 };
 
-struct hit_record
-{
-    float t;
-    vec3 point;
-    vec3 normal;
-    Triangle* object;
-};
-
 __host__ __device__ float _compute_triangle_area(vec3 point_1, vec3 point_2, vec3 point_3);
 
-__host__ __device__ Triangle::Triangle(
+__device__ Triangle::Triangle(
   vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_
 ) {
   point_1 = vec3(point_1_.x(), point_1_.y(), point_1_.z());
@@ -67,12 +58,16 @@ __host__ __device__ float Triangle::_compute_tolerance() {
   return tolerance_ / 100;
 }
 
-__host__ __device__ vec3 Triangle::get_normal(vec3 point_on_surface) {
+__device__ Material* Triangle::get_material() {
+  return material;
+}
+
+__device__ vec3 Triangle::get_normal(vec3 point_on_surface) {
   vec3 cross_product = cross(point_2 - point_1, point_3 - point_1);
   return unit_vector(cross_product);
 }
 
-__host__ __device__ bool Triangle::hit(
+__device__ __device__ bool Triangle::hit(
   Ray ray, float t_max, hit_record& rec) {
   float t = (dot(point_1, normal) - dot(ray.p0, normal)) / dot(ray.dir, normal);
 
