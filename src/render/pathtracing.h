@@ -13,7 +13,7 @@
 
 __global__ void render(
   float* fb, Camera** camera, Primitive** geom_array, int *num_triangles,
-  curandState *rand_state
+  curandState *rand_state, int sample_size, int level
 );
 
 __device__ bool _hit(
@@ -80,7 +80,7 @@ __device__ bool _hit(
 __global__
 void render(
   vec3 *fb, Camera **camera, Primitive **geom_array, int *num_triangles,
-  curandState *rand_state
+  curandState *rand_state, int sample_size, int level
 ) {
 
   hit_record init_rec, cur_rec;
@@ -92,7 +92,7 @@ void render(
     return;
   }
 
-  int pixel_index = i * (camera[0] -> width) + j, sampling_size = 128;
+  int pixel_index = i * (camera[0] -> width) + j;
   curandState local_rand_state = rand_state[pixel_index];
 
   Ray camera_ray = camera[0] -> compute_ray(i + .5, j + .5);
@@ -103,7 +103,7 @@ void render(
   Ray ray;
 
   if (hit) {
-    for(int idx = 0; idx < sampling_size; idx++) {
+    for(int idx = 0; idx < sample_size; idx++) {
       cur_rec = init_rec;
       v3_rand = get_random_unit_vector_hemisphere(&local_rand_state);
       cos_theta = v3_rand.z();
@@ -112,7 +112,7 @@ void render(
       hit = _hit(ray, geom_array, num_triangles[0], cur_rec);
       if (hit) {
         color += cos_theta * _compute_color(
-          cur_rec, 10, geom_array, num_triangles[0], sky_emission,
+          cur_rec, level, geom_array, num_triangles[0], sky_emission,
           &local_rand_state);
       } else {
         color += cos_theta * sky_emission;
@@ -121,7 +121,7 @@ void render(
     }
     color = init_rec.object -> get_material() -> emission + \
       init_rec.object -> get_material() -> ambient + \
-      (1.0f / sampling_size) * (1 / pdf) * (1 / M_PI) * color * \
+      (1.0f / sample_size) * (1 / pdf) * (1 / M_PI) * color * \
       init_rec.object -> get_material() -> diffuse * \
       init_rec.object -> get_material() -> albedo;
   } else {

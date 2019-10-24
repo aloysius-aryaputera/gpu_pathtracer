@@ -6,6 +6,7 @@
 
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
+#include "model/geometry/sphere.h"
 #include "model/geometry/triangle.h"
 #include "model/material.h"
 #include "model/ray.h"
@@ -60,7 +61,7 @@ __global__ void create_world_2(
 ) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
       Material *triangle_material = new Material(
-        vec3(0, 0, 0), vec3(.5, .5, .5), vec3(0, 0, 0), vec3(.3, .3, .3)
+        vec3(0, 0, 0), vec3(.2, .9, .2), vec3(0, 0, 0), vec3(.1, .3, .1)
       );
 
       for (int idx = 0; idx < num_triangles[0]; idx++) {
@@ -73,7 +74,28 @@ __global__ void create_world_2(
       }
 
       triangle_material = new Material(
-        vec3(0, 0, 0), vec3(.2, .9, .2), vec3(0, 0, 0), vec3(.1, .3, .1)
+        vec3(0, 0, 0), vec3(.9, .9, .2), vec3(0, 0, 0), vec3(.3, .3, .1)
+      );
+      *(geom_array + num_triangles[0]++) = new Sphere(
+        vec3(0, 4, 1), 1, triangle_material
+      );
+
+      triangle_material = new Material(
+        vec3(0, 0, 0), vec3(.9, .2, .9), vec3(0, 0, 0), vec3(.3, .1, .3)
+      );
+      *(geom_array + num_triangles[0]++) = new Sphere(
+        vec3(4.1, 1.0, 4.1), 1, triangle_material
+      );
+
+      triangle_material = new Material(
+        vec3(0, 0, 0), vec3(.2, .9, .9), vec3(0, 0, 0), vec3(.1, .3, .3)
+      );
+      *(geom_array + num_triangles[0]++) = new Sphere(
+        vec3(-4.1, 1.0, 4.1), 1, triangle_material
+      );
+
+      triangle_material = new Material(
+        vec3(0, 0, 0), vec3(.9, .9, .9), vec3(0, 0, 0), vec3(.3, .3, .3)
       );
       *(geom_array + num_triangles[0]++) = new Triangle(
         vec3(-12, 0, 12), vec3(12, 0, 12), vec3(0, 0, -12),
@@ -105,10 +127,22 @@ __global__ void create_world_2(
       );
 
       triangle_material = new Material(
-        vec3(0, 0, 0), vec3(1, 1, 1), vec3(15.0, 15.0, 15.0), vec3(1, 1, 1)
+        vec3(0, 0, 0), vec3(.9, .9, .9), vec3(0, 0, 0), vec3(.3, .3, .3)
       );
       *(geom_array + num_triangles[0]++) = new Triangle(
-        vec3(0, 5, 12), vec3(12, 0, 12), vec3(-12, 0, 12),
+        vec3(-12, 9, 12), vec3(0, 9, -12), vec3(12, 9, 12),
+        triangle_material
+      );
+
+      triangle_material = new Material(
+        vec3(0, 0, 0), vec3(1, 1, 1), vec3(75.0, 75.0, 75.0), vec3(1, 1, 1)
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(-5, 8.8, 2), vec3(0, 8.8, 0), vec3(-1, 8.8, 2),
+        triangle_material
+      );
+      *(geom_array + num_triangles[0]++) = new Triangle(
+        vec3(1, 8.8, 2), vec3(0, 8.8, 0), vec3(5, 8.8, 2),
         triangle_material
       );
 
@@ -204,7 +238,10 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
-  render<<<blocks, threads>>>(fb, my_camera, my_geom, num_triangles, rand_state);
+  render<<<blocks, threads>>>(
+    fb, my_camera, my_geom, num_triangles, rand_state,
+    std::stoi(argv[7]), std::stoi(argv[8])
+  );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 

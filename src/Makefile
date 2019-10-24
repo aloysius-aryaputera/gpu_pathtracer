@@ -15,7 +15,9 @@ INCS = \
 	model/cartesian_system.h \
 	model/data_structure/local_vector.h \
 	model/geometry/primitive.h \
+	model/geometry/sphere.h \
 	model/geometry/triangle.h \
+	model/grid/bounding_box.h \
 	model/material.h \
 	model/vector_and_matrix/vec3.h \
 	model/ray.h \

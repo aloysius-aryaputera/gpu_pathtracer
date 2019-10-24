@@ -5,6 +5,7 @@
 #include <math.h>
 
 #include "../../param.h"
+#include "../grid/bounding_box.h"
 #include "../material.h"
 #include "../ray.h"
 #include "../vector_and_matrix/vec3.h"
@@ -12,6 +13,9 @@
 struct hit_record;
 
 class Primitive {
+  private:
+    Material *material;
+    BoundingBox *bounding_box;
 
   public:
     __host__ __device__ Primitive() {};
@@ -24,8 +28,9 @@ class Primitive {
     __device__ virtual Material* get_material() {
       return material;
     }
-
-    Material *material;
+    __device__ virtual BoundingBox* get_bounding_box() {
+      return bounding_box;
+    }
 };
 
 struct hit_record

@@ -5,6 +5,7 @@
 #include <math.h>
 
 #include "../../param.h"
+#include "../grid/bounding_box.h"
 #include "../material.h"
 #include "../ray.h"
 #include "../vector_and_matrix/vec3.h"
@@ -15,6 +16,9 @@ class Triangle: public Primitive {
     __host__ __device__ float _compute_tolerance();
 
     float area, tolerance;
+    vec3 point_1, point_2, point_3, normal;
+    Material *material;
+    BoundingBox *bounding_box;
 
   public:
     __host__ __device__ Triangle() {};
@@ -23,9 +27,8 @@ class Triangle: public Primitive {
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
     __device__ vec3 get_normal(vec3 point_on_surface);
     __device__ Material* get_material();
+    __device__ BoundingBox* get_bounding_box();
 
-    vec3 point_1, point_2, point_3, normal;
-    Material *material;
 };
 
 __host__ __device__ float _compute_triangle_area(vec3 point_1, vec3 point_2, vec3 point_3);
@@ -67,6 +70,10 @@ __device__ vec3 Triangle::get_normal(vec3 point_on_surface) {
   return unit_vector(cross_product);
 }
 
+__device__ BoundingBox* Triangle::get_bounding_box() {
+  return bounding_box;
+}
+
 __device__ __device__ bool Triangle::hit(
   Ray ray, float t_max, hit_record& rec) {
   float t = (dot(point_1, normal) - dot(ray.p0, normal)) / dot(ray.dir, normal);
@@ -86,7 +93,7 @@ __device__ __device__ bool Triangle::hit(
   ) {
     rec.t = t;
     rec.point = ray.get_vector(t);
-    rec.normal = get_normal(rec.point);
+    rec.normal = normal;
     rec.object = this;
     return true;
   }
@@ -102,7 +109,7 @@ __device__ __device__ bool Triangle::hit(
   ) {
     rec.t = t;
     rec.point = ray.get_vector(t);
-    rec.normal = get_normal(rec.point);
+    rec.normal = normal;
     rec.object = this;
     return true;
   }
