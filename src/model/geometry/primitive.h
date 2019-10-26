@@ -18,7 +18,7 @@ class Primitive {
     BoundingBox *bounding_box;
 
   public:
-    __host__ __device__ Primitive() {};
+    __host__ __device__ Primitive() {}
     __device__ virtual bool hit(Ray ray, float t_max, hit_record& rec) {
       return false;
     }

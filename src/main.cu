@@ -8,8 +8,11 @@
 #include "model/data_structure/local_vector.h"
 #include "model/geometry/sphere.h"
 #include "model/geometry/triangle.h"
+#include "model/grid/cell.h"
+#include "model/grid/grid.h"
 #include "model/material.h"
 #include "model/ray.h"
+#include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
 #include "util/image_util.h"
@@ -73,15 +76,16 @@ __global__ void create_world_2(
         );
       }
 
-      triangle_material = new Material(
-        vec3(0, 0, 0), vec3(.9, .9, .2), vec3(0, 0, 0), vec3(.3, .3, .1)
-      );
-      *(geom_array + num_triangles[0]++) = new Sphere(
-        vec3(0, 4, 1), 1, triangle_material
-      );
+      // triangle_material = new Material(
+      //   vec3(0, 0, 0), vec3(.9, .9, .2), vec3(0, 0, 0), vec3(.3, .3, .1)
+      // );
+      // *(geom_array + num_triangles[0]++) = new Sphere(
+      //   vec3(0, 4, 1), 1, triangle_material
+      // );
 
       triangle_material = new Material(
-        vec3(0, 0, 0), vec3(.9, .2, .9), vec3(0, 0, 0), vec3(.3, .1, .3)
+        vec3(0, 0, 0), vec3(.9, .2, .9), vec3(40.0, 0.0, 40.0),
+        vec3(.3, .1, .3)
       );
       *(geom_array + num_triangles[0]++) = new Sphere(
         vec3(4.1, 1.0, 4.1), 1, triangle_material

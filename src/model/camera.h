@@ -10,7 +10,7 @@
 
 class Camera {
   private:
-    vec3 eye, center, up, u, v, w;
+    vec3 center, up, u, v, w;
     float fovy, fovx;
 
   public:
@@ -20,7 +20,7 @@ class Camera {
     __host__ __device__ Ray compute_ray(float i, float j);
 
     int width, height;
-
+    vec3 eye;
 };
 
 __host__ __device__ Camera::Camera(

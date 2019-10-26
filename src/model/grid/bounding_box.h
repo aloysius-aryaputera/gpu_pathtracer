@@ -17,7 +17,7 @@ class BoundingBox {
     float tolerance_x, tolerance_y, tolerance_z;
 
   public:
-    __host__ __device__ BoundingBox();
+    __host__ __device__ BoundingBox() {}
     __device__ BoundingBox(
       float x_min_, float x_max_, float y_min_, float y_max_, float z_min_,
       float z_max_

@@ -14,6 +14,7 @@
 class Triangle: public Primitive {
   private:
     __host__ __device__ float _compute_tolerance();
+    __device__ void _compute_bounding_box();
 
     float area, tolerance;
     vec3 point_1, point_2, point_3, normal;
@@ -31,7 +32,35 @@ class Triangle: public Primitive {
 
 };
 
-__host__ __device__ float _compute_triangle_area(vec3 point_1, vec3 point_2, vec3 point_3);
+__host__ __device__ float _compute_triangle_area(
+  vec3 point_1, vec3 point_2, vec3 point_3);
+
+__device__ void Triangle::_compute_bounding_box() {
+  float x_min, x_max, y_min, y_max, z_min, z_max;
+
+  x_min = min(point_1.x(), point_2.x());
+  x_min = min(x_min, point_3.x());
+
+  x_max = max(point_1.x(), point_2.x());
+  x_max = max(x_max, point_3.x());
+
+  y_min = min(point_1.y(), point_2.y());
+  y_min = min(y_min, point_3.y());
+
+  y_max = max(point_1.y(), point_2.y());
+  y_max = max(y_max, point_3.y());
+
+  z_min = min(point_1.z(), point_2.z());
+  z_min = min(z_min, point_3.z());
+
+  z_max = max(point_1.z(), point_2.z());
+  z_max = max(z_max, point_3.z());
+
+  bounding_box = new BoundingBox(
+    x_min - tolerance, x_max + tolerance, y_min - tolerance, y_max + tolerance,
+    z_min - tolerance, z_max + tolerance
+  );
+}
 
 __device__ Triangle::Triangle(
   vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_
