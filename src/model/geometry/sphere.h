@@ -83,11 +83,11 @@ __device__ void Sphere::_compute_bounding_box() {
   z_max = -INFINITY;
   for (iter = 0; iter < 8; iter++) {
     x_min = min(x_min, point[iter].x());
-    x_max = min(x_max, point[iter].x());
+    x_max = max(x_max, point[iter].x());
     y_min = min(y_min, point[iter].y());
-    y_max = min(y_max, point[iter].y());
+    y_max = max(y_max, point[iter].y());
     z_min = min(z_min, point[iter].z());
-    z_max = min(z_max, point[iter].z());
+    z_max = max(z_max, point[iter].z());
   }
 
   bounding_box = new BoundingBox(

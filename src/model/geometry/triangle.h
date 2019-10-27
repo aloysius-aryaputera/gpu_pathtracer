@@ -57,8 +57,12 @@ __device__ void Triangle::_compute_bounding_box() {
   z_max = max(z_max, point_3.z());
 
   bounding_box = new BoundingBox(
-    x_min - tolerance, x_max + tolerance, y_min - tolerance, y_max + tolerance,
-    z_min - tolerance, z_max + tolerance
+    x_min - min(SMALL_DOUBLE, tolerance),
+    x_max + min(SMALL_DOUBLE, tolerance),
+    y_min - min(SMALL_DOUBLE, tolerance),
+    y_max + min(SMALL_DOUBLE, tolerance),
+    z_min - min(SMALL_DOUBLE, tolerance),
+    z_max + min(SMALL_DOUBLE, tolerance)
   );
 }
 
