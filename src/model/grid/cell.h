@@ -14,31 +14,36 @@ class Cell {
 
   private:
     BoundingBox* bounding_box;
+    int max_num_objects;
 
   public:
     __host__ __device__ Cell() {}
     __device__ Cell(
       float x_min, float x_max, float y_min, float y_max, float z_min,
-      float z_max, int i_address_, int j_address_, int k_address_
+      float z_max, int i_address_, int j_address_, int k_address_,
+      Primitive** object_array_, int max_num_objects_
     );
     __device__ bool are_intersecting(BoundingBox* another_bounding_box);
     __device__ void add_object(Primitive* object);
     __device__ BoundingBox* get_bounding_box();
 
-    int i_address, j_address, k_address, num_object;
-    Primitive* object_array[99999];
+    int i_address, j_address, k_address, num_objects;
+    Primitive** object_array;
 
 };
 
 __device__ Cell::Cell(
   float x_min, float x_max, float y_min, float y_max, float z_min,
-  float z_max, int i_address_, int j_address_, int k_address_
+  float z_max, int i_address_, int j_address_, int k_address_,
+  Primitive** object_array_, int max_num_objects_
 ) {
   bounding_box = new BoundingBox(x_min, x_max, y_min, y_max, z_min, z_max);
   i_address = i_address_;
   j_address = j_address_;
   k_address = k_address_;
-  num_object = 0;
+  num_objects = 0;
+  max_num_objects = max_num_objects_;
+  object_array = object_array_;
 }
 
 __device__ BoundingBox* Cell::get_bounding_box() {
@@ -57,7 +62,10 @@ __device__ bool Cell::are_intersecting(BoundingBox* another_bounding_box) {
 }
 
 __device__ void Cell::add_object(Primitive *object) {
-  object_array[num_object++] = object;
+  if (num_objects < max_num_objects) {
+    *(object_array + num_objects) = object;
+    num_objects += 1;
+  }
 }
 
 #endif

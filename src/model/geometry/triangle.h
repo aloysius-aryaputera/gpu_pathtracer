@@ -72,6 +72,7 @@ __device__ Triangle::Triangle(
   tolerance = _compute_tolerance();
   area = _compute_triangle_area(point_1, point_2, point_3);
   normal = get_normal(point_1);
+  _compute_bounding_box();
 }
 
 __host__ __device__ float Triangle::_compute_tolerance() {

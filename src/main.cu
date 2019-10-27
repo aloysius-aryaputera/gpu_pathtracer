@@ -161,6 +161,26 @@ __global__ void set_camera(Camera** camera, int width, int height) {
   }
 }
 
+__global__ void create_scene(
+  Scene** scene, Camera** camera, Grid** grid, int *num_objects
+) {
+  if (threadIdx.x == 0 && blockIdx.x == 0) {
+    *(scene) = new Scene(camera[0], grid[0], num_objects[0]);
+  }
+}
+
+__global__ void create_grid(
+  Grid** grid, Primitive** geom_array, int *num_objects, Cell** cell_array,
+  int n_cell_x, int n_cell_y, int n_cell_z, int max_num_objects_per_cell
+) {
+  if (threadIdx.x == 0 && blockIdx.x == 0) {
+    *(grid) = new Grid(
+      -20.0f, 20.0f, -20.0f, 20.0f, -20.0f, 20.0f, n_cell_x, n_cell_y,
+      n_cell_z, geom_array, num_objects[0], cell_array, max_num_objects_per_cell
+    );
+  }
+}
+
 __global__ void render_init(int im_width, int im_height, curandState *rand_state) {
     int j = threadIdx.x + blockIdx.x * blockDim.x;
     int i = threadIdx.y + blockIdx.y * blockDim.y;
@@ -172,27 +192,37 @@ __global__ void render_init(int im_width, int im_height, curandState *rand_state
     curand_init(1984, pixel_index, 0, &rand_state[pixel_index]);
 }
 
-__global__ void free_world(Primitive **geom_array, Camera **camera, int n) {
+__global__ void free_world(
+  Scene** scene, Grid **grid, Primitive **geom_array, Camera **camera, int n
+) {
     for (int i = 0; i < n; i++){
       delete *(geom_array + i);
     }
     delete *camera;
+    delete *grid;
+    delete *scene;
 }
 
 int main(int argc, char **argv) {
   int im_width = std::stoi(argv[3]), im_height = std::stoi(argv[4]);
   int tx = std::stoi(argv[5]), ty = std::stoi(argv[6]);
+  int n_cell_x = 20, n_cell_y = 20, n_cell_z = 20;
+  int tx2 = 32, ty2 = 32, max_num_objects_per_cell = 500;
 
   printf("im_width = %d, im_height = %d\n", im_width, im_height);
   printf("tx = %d, ty = %d\n", tx, ty);
 
-  Primitive** my_geom;
+  Scene** my_scene;
+  Grid** my_grid;
+  Cell** my_cell;
+  Primitive **my_geom, **my_cell_geom;
   Camera **my_camera;
   vec3 *fb;
   int num_pixels = im_width * im_height;
   size_t fb_size = num_pixels * sizeof(vec3);
   curandState *rand_state;
   size_t rand_state_size = num_pixels * sizeof(curandState);
+  size_t cell_geom_size = max_num_objects_per_cell * n_cell_x * n_cell_y * n_cell_z * sizeof(Primitive*);
 
   checkCudaErrors(cudaMallocManaged((void **)&fb, fb_size));
   checkCudaErrors(cudaMallocManaged((void **)&rand_state, rand_state_size));
@@ -221,6 +251,7 @@ int main(int argc, char **argv) {
   );
 
   checkCudaErrors(cudaMallocManaged((void **)&my_geom, 9999 * sizeof(Primitive *)));
+
   create_world_2<<<1, 1>>>(
     my_geom, x, y, z, point_1_idx, point_2_idx, point_3_idx, num_triangles
   );
@@ -232,7 +263,31 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(point_1_idx));
   checkCudaErrors(cudaFree(point_2_idx));
   checkCudaErrors(cudaFree(point_3_idx));
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
 
+  checkCudaErrors(cudaMallocManaged((void **)&my_grid, sizeof(Grid *)));
+  checkCudaErrors(cudaMallocManaged((void **)&my_cell, 999 * 999 * 999 * sizeof(Cell *)));
+  checkCudaErrors(cudaMallocManaged((void **)&my_cell_geom, cell_geom_size));
+  create_grid<<<1, 1>>>(
+    my_grid, my_geom, num_triangles, my_cell, n_cell_x, n_cell_y, n_cell_z,
+    max_num_objects_per_cell
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+
+  dim3 blocks2(n_cell_x / tx2 + 1, n_cell_y / ty2 + 1);
+  dim3 threads2(tx2, ty2);
+  build_cell_array<<<blocks2, threads2>>>(my_grid, my_cell_geom);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+
+  insert_objects<<<blocks2, threads2>>>(my_grid);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+
+  checkCudaErrors(cudaMallocManaged((void **)&my_scene, sizeof(Scene *)));
+  create_scene<<<1, 1>>>(my_scene, my_camera, my_grid, num_triangles);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
@@ -242,9 +297,12 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
+  // render<<<blocks, threads>>>(
+  //   fb, my_camera, my_geom, num_triangles, rand_state,
+  //   std::stoi(argv[7]), std::stoi(argv[8])
+  // );
   render<<<blocks, threads>>>(
-    fb, my_camera, my_geom, num_triangles, rand_state,
-    std::stoi(argv[7]), std::stoi(argv[8])
+    fb, my_scene, rand_state, std::stoi(argv[7]), std::stoi(argv[8])
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -254,8 +312,10 @@ int main(int argc, char **argv) {
   printf("Image saved!\n");
 
   checkCudaErrors(cudaDeviceSynchronize());
-  free_world<<<1,1>>>(my_geom, my_camera, 9999);
+  free_world<<<1,1>>>(my_scene, my_grid, my_geom, my_camera, 9999);
   checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaFree(my_scene));
+  checkCudaErrors(cudaFree(my_grid));
   checkCudaErrors(cudaFree(my_camera));
   checkCudaErrors(cudaFree(my_geom));
   checkCudaErrors(cudaFree(num_triangles));
