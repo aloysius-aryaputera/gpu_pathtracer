@@ -49,9 +49,9 @@ __device__ BoundingBox::BoundingBox(
   z_min = z_min_;
   z_max = z_max_;
 
-  tolerance_x = (x_max - x_min) / 100;
-  tolerance_y = (y_max - y_min) / 100;
-  tolerance_z = (z_max - z_min) / 100;
+  tolerance_x = max((x_max - x_min) / 100, SMALL_DOUBLE);
+  tolerance_y = max((y_max - y_min) / 100, SMALL_DOUBLE);
+  tolerance_z = max((z_max - z_min) / 100, SMALL_DOUBLE);
 }
 
 __device__ void BoundingBox::_compute_t_x_range(Ray ray, float *t_range) {

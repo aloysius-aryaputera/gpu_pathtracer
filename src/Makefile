@@ -28,7 +28,8 @@ INCS = \
 	param.h \
 	render/pathtracing.h \
 	util/image_util.h \
-	util/read_file_util.h
+	util/read_file_util.h \
+	world_lib.h
 
 all: gpu_path_tracing gpu_path_tracing_debug
 
@@ -43,15 +44,3 @@ gpu_path_tracing_debug: gpu_path_tracing_debug.o
 
 gpu_path_tracing_debug.o: $(SRCS) $(INCS)
 	$(NVCC) $(NVCCFLAGS_DBG) $(GENCODE_FLAGS) -o gpu_path_tracing_debug.o -c main.cu
-
-# gpu_path_tracing: gpu_path_tracing.o
-# 	$(NVCC) $(NVCCFLAGS) -o gpu_path_tracing gpu_path_tracing.o
-#
-# gpu_path_tracing.o: $(SRCS) $(INCS)
-# 	$(NVCC) $(NVCCFLAGS) -o gpu_path_tracing.o -c main.cu
-
-# gpu_path_tracing: gpu_path_tracing.o
-# 	$(NVCC) -o gpu_path_tracing gpu_path_tracing.o
-#
-# gpu_path_tracing.o: $(SRCS) $(INCS)
-# 	$(NVCC) -o gpu_path_tracing.o -c main.cu

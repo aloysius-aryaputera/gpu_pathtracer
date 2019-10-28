@@ -45,6 +45,109 @@ class Grid {
 
 __global__ void build_cell_array(Grid** grid, Primitive** cell_object_array);
 __global__ void insert_objects(Grid** grid);
+__global__ void create_grid(
+  Grid** grid, Primitive** geom_array, int *num_objects, Cell** cell_array,
+  int *n_cell_x, int *n_cell_y, int *n_cell_z, int max_n_cell_x,
+  int max_n_cell_y, int max_n_cell_z, int max_num_objects_per_cell
+);
+__device__ void _compute_scene_boundaries(
+  float &x_min, float &x_max, float &y_min, float &y_max, float &z_min,
+  float &z_max, float &volume, Primitive **geom_array, int num_objects,
+  Camera **camera
+);
+__device__ void _print_grid_details(Grid* grid);
+
+__device__ void _print_grid_details(Grid* grid) {
+  float d_x = grid -> x_max - grid -> x_min;
+  float d_y = grid -> y_max - grid -> y_min;
+  float d_z = grid -> z_max - grid -> z_min;
+
+  printf("================================================================\n");
+  printf("Boundaries\n");
+  printf("================================================================\n");
+  printf("x_min = %5.5f; x_max = %5.5f, d_x = %5.5f\n",
+    grid -> x_min, grid -> x_max, d_x);
+  printf("y_min = %5.5f; y_max = %5.5f, d_y = %5.5f\n",
+    grid -> y_min, grid -> y_max, d_y);
+  printf("z_min = %5.5f; z_max = %5.5f, d_z = %5.5f\n",
+    grid -> z_min, grid -> z_max, d_z);
+  printf("\n");
+  printf("================================================================\n");
+  printf("Elements\n");
+  printf("================================================================\n");
+  printf("Number of objects = %d\n", grid -> num_objects);
+  printf("\n");
+  printf("================================================================\n");
+  printf("Grid\n");
+  printf("================================================================\n");
+  printf("x resolution = %d, y resolution = %d, z resolution = %d\n",
+         grid -> n_cell_x, grid -> n_cell_y, grid -> n_cell_z);
+  printf("\n");
+}
+
+__device__ void _compute_scene_boundaries(
+  float &x_min, float &x_max, float &y_min, float &y_max, float &z_min,
+  float &z_max, Primitive **geom_array, int num_objects, Camera *camera
+) {
+  x_min = camera -> eye.x();
+  x_max = camera -> eye.x();
+  y_min = camera -> eye.y();
+  y_max = camera -> eye.y();
+  z_min = camera -> eye.z();
+  z_max = camera -> eye.z();
+
+  for (int i = 0; i < num_objects; i++) {
+    x_min = min(x_min, geom_array[i] -> get_bounding_box() -> x_min);
+    x_max = max(x_max, geom_array[i] -> get_bounding_box() -> x_max);
+    y_min = min(y_min, geom_array[i] -> get_bounding_box() -> y_min);
+    y_max = max(y_max, geom_array[i] -> get_bounding_box() -> y_max);
+    z_min = min(z_min, geom_array[i] -> get_bounding_box() -> z_min);
+    z_max = max(z_max, geom_array[i] -> get_bounding_box() -> z_max);
+  }
+
+  x_min -= 1;
+  x_max += 1;
+  y_min -= 1;
+  y_max += 1;
+  z_min -= 1;
+  z_max += 1;
+
+}
+
+__global__ void create_grid(
+  Camera** camera, Grid** grid, Primitive** geom_array, int *num_objects,
+  Cell** cell_array, int *n_cell_x, int *n_cell_y, int *n_cell_z,
+  int max_n_cell_x, int max_n_cell_y, int max_n_cell_z,
+  int max_num_objects_per_cell
+) {
+  if (threadIdx.x == 0 && blockIdx.x == 0) {
+    float x_min, x_max, y_min, y_max, z_min, z_max, d_x, d_y, d_z, volume;
+
+    _compute_scene_boundaries(
+      x_min, x_max, y_min, y_max, z_min, z_max, geom_array, num_objects[0],
+      camera[0]
+    );
+
+    d_x = x_max - x_min;
+    d_y = y_max - y_min;
+    d_z = z_max - z_min;
+    volume = d_x * d_y * d_z;
+
+    n_cell_x[0] = min(
+      max_n_cell_x, int(d_x * powf(LAMBDA * num_objects[0] / volume, 1 / 3)));
+    n_cell_y[0] = min(
+      max_n_cell_y, int(d_y * powf(LAMBDA * num_objects[0] / volume, 1 / 3)));
+    n_cell_z[0] = min(
+      max_n_cell_z, int(d_z * powf(LAMBDA * num_objects[0] / volume, 1 / 3)));
+
+    *(grid) = new Grid(
+      x_min, x_max, y_min, y_max, z_min, z_max, n_cell_x[0], n_cell_y[0],
+      n_cell_z[0], geom_array, num_objects[0], cell_array, max_num_objects_per_cell
+    );
+
+    _print_grid_details(grid[0]);
+  }
+}
 
 __global__ void insert_objects(Grid** grid) {
   int cell_address;
@@ -181,6 +284,17 @@ __device__ bool Grid::_grid_hit(
 __device__ bool Grid::do_traversal(Ray ray, hit_record &rec) {
 
   vec3 initial_address = find_cell_address(ray.p0);
+
+  if (
+    ray.p0.x() <= x_min || ray.p0.x() >= x_max || ray.p0.y() <= y_min ||
+    ray.p0.y() >= y_max || ray.p0.z() <= z_min || ray.p0.z() >= z_max
+  ) {
+    print_vec3(ray.p0);
+    print_vec3(initial_address);
+    printf("threadIdx.x = %d, threadIdx.y = %d, blockIdx.x = %d, blockIdx.y = %d\n",
+           threadIdx.x, threadIdx.y, blockIdx.x, blockIdx.y);
+  }
+
   Cell* initial_cell = cell_array[convert_3d_to_1d_cell_address(initial_address)];
   Cell* current_cell;
   float o_x, o_y, o_z, t_x_0, t_y_0, t_z_0, d_t_x, d_t_y, d_t_z, t_x, t_y, t_z;
