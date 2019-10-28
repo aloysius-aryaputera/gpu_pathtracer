@@ -15,7 +15,7 @@
 __global__
 void render(
   vec3 *fb, Scene **scene, curandState *rand_state, int sample_size, int level,
-  vec3 sky_emission
+  vec3 sky_emission, int *progress
 );
 
 __device__ bool _hit(
@@ -84,7 +84,7 @@ __device__ bool _hit(
 __global__
 void render(
   vec3 *fb, Scene **scene, curandState *rand_state, int sample_size, int level,
-  vec3 sky_emission
+  vec3 sky_emission, int *progress
 ) {
 
   hit_record init_rec, cur_rec;
@@ -92,7 +92,9 @@ void render(
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
 
-  if((j >= scene[0] -> camera -> width) || (i >= scene[0] -> camera -> height)) {
+  if(
+    (j >= scene[0] -> camera -> width) || (i >= scene[0] -> camera -> height)
+  ) {
     return;
   }
 
@@ -135,8 +137,16 @@ void render(
   } else {
     color = vec3(0, 0, 0);
   }
+  progress[0]++;
   rand_state[pixel_index] = local_rand_state;
   fb[pixel_index] = color;
+
+  printf(
+    "Progress = %5.5f percent (thread ID = (%d, %d), block ID = (%d, %d)).\n",
+    100.0 * progress[0] / (
+      scene[0] -> camera -> width * scene[0] -> camera -> height),
+    threadIdx.x, threadIdx.y, blockIdx.x, blockIdx.y
+  );
   // }
 }
 

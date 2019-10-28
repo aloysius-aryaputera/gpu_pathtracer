@@ -50,15 +50,20 @@ __global__ void create_scene(
 //   }
 // }
 
-__global__ void render_init(int im_width, int im_height, curandState *rand_state) {
-    int j = threadIdx.x + blockIdx.x * blockDim.x;
-    int i = threadIdx.y + blockIdx.y * blockDim.y;
-    if((j >= im_width) || (i >= im_height)) {
-      return;
-    }
-    int pixel_index = i * im_width + j;
-    //Each thread gets same seed, a different sequence number, no offset
-    curand_init(1984, pixel_index, 0, &rand_state[pixel_index]);
+__global__ void render_init(
+  int im_width, int im_height, curandState *rand_state, int *progress
+) {
+  int j = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.y + blockIdx.y * blockDim.y;
+  if (i == 0 && j == 0) {
+    progress[0] = 0;
+  }
+  if ((j >= im_width) || (i >= im_height)) {
+    return;
+  }
+  int pixel_index = i * im_width + j;
+  //Each thread gets same seed, a different sequence number, no offset
+  curand_init(1984, pixel_index, 0, &rand_state[pixel_index]);
 }
 
 __global__ void free_world(
@@ -77,7 +82,7 @@ int main(int argc, char **argv) {
   int tx = std::stoi(argv[5]), ty = std::stoi(argv[6]);
   int *n_cell_x, *n_cell_y, *n_cell_z;
   int max_n_cell_x = 60, max_n_cell_y = 60, max_n_cell_z = 60;
-  int tx2 = 32, ty2 = 32, max_num_objects_per_cell = 500;
+  int tx2 = 32, ty2 = 32, max_num_objects_per_cell = 500, *progress;
 
   printf("im_width = %d, im_height = %d\n", im_width, im_height);
   printf("tx = %d, ty = %d\n", tx, ty);
@@ -119,7 +124,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&my_geom, 9999 * sizeof(Primitive *)));
   checkCudaErrors(cudaMallocManaged((void **)&my_camera, sizeof(Camera *)));
 
-  create_world<<<1, 1>>>(
+  create_world_2<<<1, 1>>>(
     my_camera, my_geom, x, y, z, point_1_idx, point_2_idx, point_3_idx,
     num_triangles, im_width, im_height
   );
@@ -165,15 +170,16 @@ int main(int argc, char **argv) {
   dim3 blocks(im_width / tx + 1, im_height / ty + 1);
   dim3 threads(tx, ty);
   checkCudaErrors(cudaMallocManaged((void **)&rand_state, rand_state_size));
-  render_init<<<blocks, threads>>>(im_width, im_height, rand_state);
+  checkCudaErrors(cudaMallocManaged((void **)&progress, sizeof(int)));
+  render_init<<<blocks, threads>>>(im_width, im_height, rand_state, progress);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
-  vec3 sky_emission = vec3(.8, .8, 1);
+  vec3 sky_emission = vec3(0, 0, 0);
   checkCudaErrors(cudaMallocManaged((void **)&fb, fb_size));
   render<<<blocks, threads>>>(
     fb, my_scene, rand_state, std::stoi(argv[7]), std::stoi(argv[8]),
-    sky_emission
+    sky_emission, progress
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());

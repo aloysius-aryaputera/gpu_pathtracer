@@ -134,11 +134,11 @@ __global__ void create_grid(
     volume = d_x * d_y * d_z;
 
     n_cell_x[0] = min(
-      max_n_cell_x, int(d_x * powf(LAMBDA * num_objects[0] / volume, 1 / 3)));
+      max_n_cell_x, int(d_x * powf(LAMBDA * num_objects[0] / volume, 1.0f / 3)));
     n_cell_y[0] = min(
-      max_n_cell_y, int(d_y * powf(LAMBDA * num_objects[0] / volume, 1 / 3)));
+      max_n_cell_y, int(d_y * powf(LAMBDA * num_objects[0] / volume, 1.0f / 3)));
     n_cell_z[0] = min(
-      max_n_cell_z, int(d_z * powf(LAMBDA * num_objects[0] / volume, 1 / 3)));
+      max_n_cell_z, int(d_z * powf(LAMBDA * num_objects[0] / volume, 1.0f / 3)));
 
     *(grid) = new Grid(
       x_min, x_max, y_min, y_max, z_min, z_max, n_cell_x[0], n_cell_y[0],
