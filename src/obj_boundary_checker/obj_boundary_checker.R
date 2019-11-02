@@ -1,11 +1,11 @@
-OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/cow-nonormals.obj'
+OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/dragon.obj'
 
-SX = .6
-SY = .6
-SZ = .6
+SX = .45
+SY = .45
+SZ = .45
 
-TX = -.5
-TY = 2.1822216
+TX = 0
+TY = 0
 TZ = 0
 
 obj_df = read.table(OBJ_FILE)
