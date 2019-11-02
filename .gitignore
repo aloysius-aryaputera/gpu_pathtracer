@@ -1,4 +1,5 @@
 *.o
+*.swp
 out*.ppm
 gpu_path_tracing
 gpu_path_tracing_debug

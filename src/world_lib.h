@@ -43,7 +43,7 @@ __global__ void create_world_3(
 ) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
       *(camera) = new Camera(
-        vec3(3, 4, 11), vec3(0, 1, 0), vec3(0, 0, 0), 45, image_width,
+        vec3(30, 30, 20), vec3(0, 1, 0), vec3(0, 0, 0), 45, image_width,
         image_height
       );
 
@@ -60,13 +60,13 @@ __global__ void create_world_3(
         );
       }
 
-      triangle_material = new Material(
-        vec3(.2, .2, .2), vec3(.2, 1, .2), vec3(0, 0, 0), vec3(.1, .3, .1)
-      );
-      *(geom_array + num_triangles[0]++) = new Triangle(
-        vec3(-12, -3.6, 12), vec3(12, -3.6, 12), vec3(0, -3.6, -12),
-        triangle_material
-      );
+      // triangle_material = new Material(
+      //   vec3(.2, .2, .2), vec3(.2, 1, .2), vec3(0, 0, 0), vec3(.1, .3, .1)
+      // );
+      // *(geom_array + num_triangles[0]++) = new Triangle(
+      //   vec3(-12, -3.6, 12), vec3(12, -3.6, 12), vec3(0, -3.6, -12),
+      //   triangle_material
+      // );
 
     }
 }
@@ -86,11 +86,17 @@ __global__ void create_world(
         vec3(.2, .2, .2), vec3(.3, .3, .3), vec3(0, 0, 0), vec3(.3, .3, .3)
       );
 
+      float s_x = .1, s_y = .1, s_z = .1, t_x = 0, t_y = 2.08934, t_z = 0;
+      vec3 t_v = vec3(t_x, t_y, t_z);
+
       for (int idx = 0; idx < num_triangles[0]; idx++) {
         *(geom_array + idx) = new Triangle(
-          vec3(x[point_1_idx[idx]], y[point_1_idx[idx]], z[point_1_idx[idx]]),
-          vec3(x[point_2_idx[idx]], y[point_2_idx[idx]], z[point_2_idx[idx]]),
-          vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]),
+          vec3(x[point_1_idx[idx]], y[point_1_idx[idx]], z[point_1_idx[idx]]) *\
+            s_x + t_v,
+          vec3(x[point_2_idx[idx]], y[point_2_idx[idx]], z[point_2_idx[idx]]) *\
+            s_y + t_v,
+          vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]) *\
+            s_z + t_v,
           triangle_material
         );
       }
@@ -121,21 +127,20 @@ __global__ void create_world_2(
         vec3(0, 0, 0), vec3(.2, .9, .2), vec3(0, 0, 0), vec3(.1, .3, .1)
       );
 
+      float s_x = .6, s_y = .6, s_z = .6, t_x = -.5, t_y = 2.1822216, t_z = 0;
+      vec3 t_v = vec3(t_x, t_y, t_z);
+
       for (int idx = 0; idx < num_triangles[0]; idx++) {
         *(geom_array + idx) = new Triangle(
-          vec3(x[point_1_idx[idx]], y[point_1_idx[idx]], z[point_1_idx[idx]]),
-          vec3(x[point_2_idx[idx]], y[point_2_idx[idx]], z[point_2_idx[idx]]),
-          vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]),
+          vec3(x[point_1_idx[idx]], y[point_1_idx[idx]], z[point_1_idx[idx]]) *\
+            s_x + t_v,
+          vec3(x[point_2_idx[idx]], y[point_2_idx[idx]], z[point_2_idx[idx]]) *\
+            s_y + t_v,
+          vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]) *\
+            s_z + t_v,
           triangle_material
         );
       }
-
-      // triangle_material = new Material(
-      //   vec3(0, 0, 0), vec3(.9, .9, .2), vec3(0, 0, 0), vec3(.3, .3, .1)
-      // );
-      // *(geom_array + num_triangles[0]++) = new Sphere(
-      //   vec3(0, 4, 1), 1, triangle_material
-      // );
 
       triangle_material = new Material(
         vec3(0, 0, 0), vec3(.9, .2, .9), vec3(40.0, 0.0, 40.0),
