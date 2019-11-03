@@ -49,7 +49,7 @@ __device__ vec3 _compute_color(
       if (light.x() > 0 || light.y() > 0 || light.z() > 0) {
         return mask * light;
       } else {
-        mask *= (1 / pdf) * (1 / M_PI) * \
+        mask *= cos_theta * (1 / pdf) * (1 / M_PI) * \
           cur_rec.object -> get_material() -> diffuse * \
           cur_rec.object -> get_material() -> albedo;
       }
@@ -98,14 +98,10 @@ void render(
     return;
   }
 
-  // if (
-  //   threadIdx.x == 2 && threadIdx.y == 3 && blockIdx.x == 19 && blockIdx.y == 1
-  // ) {
   int pixel_index = i * (scene[0] -> camera -> width) + j;
   curandState local_rand_state = rand_state[pixel_index];
 
   Ray camera_ray = scene[0] -> camera -> compute_ray(i + .5, j + .5);
-  // bool hit = _hit(camera_ray, geom_array, num_triangles[0], init_rec);
   bool hit = scene[0] -> grid -> do_traversal(camera_ray, init_rec);
   CartesianSystem new_xyz_system = CartesianSystem(init_rec.normal);
   vec3 v3_rand, v3_rand_world;
@@ -141,13 +137,6 @@ void render(
   rand_state[pixel_index] = local_rand_state;
   fb[pixel_index] = color;
 
-  printf(
-    "Progress = %5.5f percent (thread ID = (%d, %d), block ID = (%d, %d)).\n",
-    100.0 * progress[0] / (
-      scene[0] -> camera -> width * scene[0] -> camera -> height),
-    threadIdx.x, threadIdx.y, blockIdx.x, blockIdx.y
-  );
-  // }
 }
 
 #endif

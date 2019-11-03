@@ -127,7 +127,7 @@ __global__ void create_world_2(
         vec3(0, 0, 0), vec3(.2, .9, .2), vec3(0, 0, 0), vec3(.1, .3, .1)
       );
 
-      float s_x = .6, s_y = .6, s_z = .6, t_x = -.5, t_y = 2.1822216, t_z = 0;
+      float s_x = 1, s_y = 1, s_z = 1, t_x = 0, t_y = 0, t_z = 0;
       vec3 t_v = vec3(t_x, t_y, t_z);
 
       for (int idx = 0; idx < num_triangles[0]; idx++) {
