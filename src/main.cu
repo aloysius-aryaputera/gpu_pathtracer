@@ -8,6 +8,7 @@
 #include "model/data_structure/local_vector.h"
 #include "model/geometry/sphere.h"
 #include "model/geometry/triangle.h"
+#include "model/grid/bounding_box.h"
 #include "model/grid/cell.h"
 #include "model/grid/grid.h"
 #include "model/material.h"

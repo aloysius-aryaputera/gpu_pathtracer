@@ -23,7 +23,8 @@ class Sphere: public Primitive {
 
   public:
     __host__ __device__ Sphere() {};
-    __device__ Sphere(vec3 center_, float r_, Material* material_);
+    __device__ Sphere(
+      vec3 center_, float r_, Material* material_);
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
     __device__ vec3 get_normal(vec3 point_on_surface);
     __device__ Material* get_material();

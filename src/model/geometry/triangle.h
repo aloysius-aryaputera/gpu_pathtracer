@@ -24,7 +24,8 @@ class Triangle: public Primitive {
   public:
     __host__ __device__ Triangle() {};
     __device__ Triangle(
-      vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_);
+      vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_
+    );
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
     __device__ vec3 get_normal(vec3 point_on_surface);
     __device__ Material* get_material();
