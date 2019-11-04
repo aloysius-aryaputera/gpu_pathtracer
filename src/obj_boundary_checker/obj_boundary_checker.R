@@ -1,8 +1,8 @@
-OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/teapot.obj'
+OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/dragon.obj'
 
-SX = 1
-SY = 1
-SZ = 1
+SX = .4
+SY = .4
+SZ = .4
 
 TX = 0
 TY = 0

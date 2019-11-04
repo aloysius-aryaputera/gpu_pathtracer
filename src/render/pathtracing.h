@@ -54,7 +54,7 @@ __device__ vec3 _compute_color(
           cur_rec.object -> get_material() -> albedo;
       }
     } else {
-      light += cos_theta * sky_emission;
+      light += cos_theta * (sky_emission * (v3_rand_world.z() + 1) / 2.0);
       return mask * light;
     }
   }

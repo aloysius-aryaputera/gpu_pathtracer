@@ -46,8 +46,8 @@ class Grid {
 __global__ void build_cell_array(Grid** grid, Primitive** cell_object_array);
 __global__ void insert_objects(Grid** grid);
 __global__ void create_grid(
-  Grid** grid, Primitive** geom_array, int *num_objects, Cell** cell_array,
-  int *n_cell_x, int *n_cell_y, int *n_cell_z, int max_n_cell_x,
+  Camera** camera, Grid** grid, Primitive** geom_array, int *num_objects,
+  Cell** cell_array, int *n_cell_x, int *n_cell_y, int *n_cell_z, int max_n_cell_x,
   int max_n_cell_y, int max_n_cell_z, int max_num_objects_per_cell
 );
 __device__ void _compute_scene_boundaries(
@@ -96,7 +96,9 @@ __device__ void _compute_scene_boundaries(
   z_min = camera -> eye.z();
   z_max = camera -> eye.z();
 
+  printf("num_objects = %d\n", num_objects);
   for (int i = 0; i < num_objects; i++) {
+    printf("i = %d\n", i);
     x_min = min(x_min, geom_array[i] -> get_bounding_box() -> x_min);
     x_max = max(x_max, geom_array[i] -> get_bounding_box() -> x_max);
     y_min = min(y_min, geom_array[i] -> get_bounding_box() -> y_min);
@@ -167,7 +169,7 @@ __global__ void insert_objects(Grid** grid) {
         grid[0] -> cell_array[cell_address] -> are_intersecting(
           grid[0] -> object_array[l] -> get_bounding_box()
         );
-        if (intersecting) {
+        if (intersecting && counter < grid[0] -> max_num_objects_per_cell) {
           grid[0] -> cell_array[cell_address] -> add_object(
             grid[0] -> object_array[l]);
           counter++;

@@ -38,18 +38,6 @@ __global__ void create_scene(
   }
 }
 
-// __global__ void create_grid(
-//   Grid** grid, Primitive** geom_array, int *num_objects, Cell** cell_array,
-//   int &n_cell_x, int &n_cell_y, int &n_cell_z, int max_num_objects_per_cell
-// ) {
-//   if (threadIdx.x == 0 && blockIdx.x == 0) {
-//     *(grid) = new Grid(
-//       -20.0f, 20.0f, -20.0f, 20.0f, -20.0f, 20.0f, n_cell_x, n_cell_y,
-//       n_cell_z, geom_array, num_objects[0], cell_array, max_num_objects_per_cell
-//     );
-//   }
-// }
-
 __global__ void render_init(
   int im_width, int im_height, curandState *rand_state, int *progress
 ) {
@@ -94,6 +82,7 @@ int main(int argc, char **argv) {
   Camera **my_camera;
   vec3 *fb;
   int num_pixels = im_width * im_height;
+  int max_num_vertices = 60000, max_num_faces = 110000;
   size_t fb_size = num_pixels * sizeof(vec3);
   curandState *rand_state;
   size_t rand_state_size = num_pixels * sizeof(curandState);
@@ -109,27 +98,29 @@ int main(int argc, char **argv) {
 
   checkCudaErrors(cudaMallocManaged((void **)&num_triangles, sizeof(int)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&x, 9999 * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&y, 9999 * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&z, 9999 * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&x, max_num_vertices * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&y, max_num_vertices * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&z, max_num_vertices * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&point_1_idx, 9999 * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&point_2_idx, 9999 * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&point_3_idx, 9999 * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&point_1_idx, max_num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&point_2_idx, max_num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&point_3_idx, max_num_faces * sizeof(int)));
 
   extract_triangle_data(
     argv[2], x, y, z, point_1_idx, point_2_idx, point_3_idx, num_triangles
   );
 
-  checkCudaErrors(cudaMallocManaged((void **)&my_geom, 9999 * sizeof(Primitive *)));
+  checkCudaErrors(cudaMallocManaged((void **)&my_geom, max_num_faces * sizeof(Primitive *)));
   checkCudaErrors(cudaMallocManaged((void **)&my_camera, sizeof(Camera *)));
 
+  printf("Creating the world!\n");
   create_world_2<<<1, 1>>>(
     my_camera, my_geom, x, y, z, point_1_idx, point_2_idx, point_3_idx,
     num_triangles, im_width, im_height
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
+  printf("World created!\n");
   checkCudaErrors(cudaFree(x));
   checkCudaErrors(cudaFree(y));
   checkCudaErrors(cudaFree(z));
@@ -144,12 +135,14 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_x, sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_y, sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_z, sizeof(int)));
+  printf("Creating the grid!\n");
   create_grid<<<1, 1>>>(
     my_camera, my_grid, my_geom, num_triangles, my_cell, n_cell_x, n_cell_y,
     n_cell_z, max_n_cell_x, max_n_cell_y, max_n_cell_z, max_num_objects_per_cell
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
+  printf("Grid created!\n");
 
   dim3 blocks2(n_cell_x[0] / tx2 + 1, n_cell_y[0] / ty2 + 1);
   dim3 threads2(tx2, ty2);
@@ -175,7 +168,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
-  vec3 sky_emission = vec3(0, 0, 0);
+  vec3 sky_emission = vec3(1, 1, 1);
   checkCudaErrors(cudaMallocManaged((void **)&fb, fb_size));
   render<<<blocks, threads>>>(
     fb, my_scene, rand_state, std::stoi(argv[7]), std::stoi(argv[8]),
