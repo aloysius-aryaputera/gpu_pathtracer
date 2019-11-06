@@ -1,14 +1,30 @@
-OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/cow-nonormals.obj'
+library(readtext)
 
-SX = .6
-SY = .6
-SZ = .6
+OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/camel.obj'
 
-TX = -.5
-TY = 2.18222160
+raw_text = readtext(OBJ_FILE)
+lines = strsplit(raw_text$text, "\n")
+
+tmp_file = "tmp.txt"
+file.create(tmp_file)
+for(line in lines[[1]]) {
+  sub_line = strsplit(line, " ")[[1]]
+  if (length(sub_line)) {
+    if (sub_line[1] == "v") {
+      write(line, tmp_file, append=TRUE)
+    }
+  }
+}
+
+SX = .08
+SY = .08
+SZ = .08
+
+TX = 0
+TY = 2.6321436
 TZ = 0
 
-obj_df = read.table(OBJ_FILE)
+obj_df = read.table(tmp_file)
 names(obj_df) = c('code', 'x', 'y', 'z')
   obj_df = obj_df[which(obj_df$code == 'v'),]
 
@@ -28,3 +44,5 @@ print(paste0("y max = ", max(obj_df$y)))
 print('')
 print(paste0("z min = ", min(obj_df$z)))
 print(paste0("z max = ", max(obj_df$z)))
+
+file.remove(tmp_file)

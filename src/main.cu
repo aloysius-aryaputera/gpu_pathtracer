@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string>
+#include <time.h>
 
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
@@ -67,14 +68,16 @@ __global__ void free_world(
 }
 
 int main(int argc, char **argv) {
+  time_t my_time = time(NULL);
+  printf("Started at %s\n\n", ctime(&my_time));
+
   int im_width = std::stoi(argv[3]), im_height = std::stoi(argv[4]);
   int tx = std::stoi(argv[5]), ty = std::stoi(argv[6]);
   int *n_cell_x, *n_cell_y, *n_cell_z;
   int max_n_cell_x = 60, max_n_cell_y = 60, max_n_cell_z = 60;
   int tx2 = 32, ty2 = 32, max_num_objects_per_cell = 500, *progress;
 
-  printf("im_width = %d, im_height = %d\n", im_width, im_height);
-  printf("tx = %d, ty = %d\n", tx, ty);
+  printf("image width = %d, image height = %d\n\n", im_width, im_height);
 
   Scene** my_scene;
   Grid** my_grid;
@@ -92,10 +95,13 @@ int main(int argc, char **argv) {
   clock_t start, stop;
 
   start = clock();
-
   float *x, *y, *z;
   int *point_1_idx, *point_2_idx, *point_3_idx;
   int *num_triangles;
+
+  // float x[100000], y[100000], z[100000];
+  // int point_1_idx[100000], point_2_idx[100000], point_3_idx[100000];
+  // int num_triangles[1];
 
   checkCudaErrors(cudaMallocManaged((void **)&num_triangles, sizeof(int)));
 
@@ -107,21 +113,26 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&point_2_idx, max_num_faces * sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&point_3_idx, max_num_faces * sizeof(int)));
 
-  extract_triangle_data(
+  printf("Reading OBJ file!\n");
+  extract_triangle_data_2(
     argv[2], x, y, z, point_1_idx, point_2_idx, point_3_idx, num_triangles
   );
+  my_time = time(NULL);
+  printf("OBJ file read at %s!\n\n", ctime(&my_time));
 
   checkCudaErrors(cudaMallocManaged((void **)&my_geom, max_num_faces * sizeof(Primitive *)));
   checkCudaErrors(cudaMallocManaged((void **)&my_camera, sizeof(Camera *)));
 
   printf("Creating the world!\n");
-  create_world_2<<<1, 1>>>(
+  create_world_3<<<1, 1>>>(
     my_camera, my_geom, x, y, z, point_1_idx, point_2_idx, point_3_idx,
     num_triangles, im_width, im_height
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-  printf("World created!\n");
+  my_time = time(NULL);
+  printf("World created at %s!\n\n", ctime(&my_time));
+
   checkCudaErrors(cudaFree(x));
   checkCudaErrors(cudaFree(y));
   checkCudaErrors(cudaFree(z));
@@ -136,6 +147,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_x, sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_y, sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_z, sizeof(int)));
+
   printf("Creating the grid!\n");
   create_grid<<<1, 1>>>(
     my_camera, my_grid, my_geom, num_triangles, my_cell, n_cell_x, n_cell_y,
@@ -143,51 +155,73 @@ int main(int argc, char **argv) {
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-  printf("Grid created!\n");
+  my_time = time(NULL);
+  printf("Grid created at %s!\n\n", ctime(&my_time));
 
   dim3 blocks2(n_cell_x[0] / tx2 + 1, n_cell_y[0] / ty2 + 1);
   dim3 threads2(tx2, ty2);
   checkCudaErrors(cudaMallocManaged((void **)&my_cell_geom, cell_geom_size));
+
+  printf("Building cell array!\n");
   build_cell_array<<<blocks2, threads2>>>(my_grid, my_cell_geom);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
+  my_time = time(NULL);
+  printf("Cell array built at %s!\n\n", ctime(&my_time));
 
+  printf("Inserting objects into the grid!\n");
   insert_objects<<<blocks2, threads2>>>(my_grid);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
+  my_time = time(NULL);
+  printf("Objects inserted into the grid at %s!\n\n", ctime(&my_time));
 
   checkCudaErrors(cudaMallocManaged((void **)&my_scene, sizeof(Scene *)));
+
+  printf("Creating scene!\n");
   create_scene<<<1, 1>>>(my_scene, my_camera, my_grid, num_triangles);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
+  my_time = time(NULL);
+  printf("Scene created at %s!\n\n", ctime(&my_time));
 
   dim3 blocks(im_width / tx + 1, im_height / ty + 1);
   dim3 threads(tx, ty);
   checkCudaErrors(cudaMallocManaged((void **)&rand_state, rand_state_size));
   checkCudaErrors(cudaMallocManaged((void **)&progress, sizeof(int)));
+
+  printf("Preparing the rendering process!\n");
   render_init<<<blocks, threads>>>(im_width, im_height, rand_state, progress);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
+  my_time = time(NULL);
+  printf("Rendering process is ready to start at %s!\n\n", ctime(&my_time));
 
   vec3 sky_emission = vec3(1, 1, 1);
   checkCudaErrors(cudaMallocManaged((void **)&fb, fb_size));
+
+  printf("Rendering started!\n");
   render<<<blocks, threads>>>(
     fb, my_scene, rand_state, std::stoi(argv[7]), std::stoi(argv[8]),
     sky_emission, progress
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
+  my_time = time(NULL);
+  printf("Rendering done at %s!\n\n", ctime(&my_time));
 
   printf("Saving image!\n");
   save_image(fb, im_width, im_height, argv[1]);
-  printf("Image saved!\n");
+  my_time = time(NULL);
+  printf("Image saved at %s!\n\n", ctime(&my_time));
 
   stop = clock();
   double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;
   printf("\nThe rendering took %5.5f seconds.\n", timer_seconds);
 
   checkCudaErrors(cudaDeviceSynchronize());
-  free_world<<<1,1>>>(my_scene, my_grid, my_geom, my_camera, 9999);
+  printf("Do cleaning!\n");
+  free_world<<<1,1>>>(my_scene, my_grid, my_geom, my_camera, max_num_faces);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaFree(my_scene));
   checkCudaErrors(cudaFree(my_grid));
@@ -199,6 +233,8 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(n_cell_z));
   checkCudaErrors(cudaFree(rand_state));
   checkCudaErrors(cudaFree(fb));
+  my_time = time(NULL);
+  printf("Cleaning done at %s!\n\n", ctime(&my_time));
 
   cudaDeviceReset();
 
