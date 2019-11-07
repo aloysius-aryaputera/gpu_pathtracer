@@ -79,6 +79,7 @@ int main(int argc, char **argv) {
 
   printf("image width = %d, image height = %d\n\n", im_width, im_height);
 
+  BoundingBox** my_cell_bounding_box;
   Scene** my_scene;
   Grid** my_grid;
   Cell** my_cell;
@@ -92,6 +93,8 @@ int main(int argc, char **argv) {
   size_t rand_state_size = num_pixels * sizeof(curandState);
   size_t cell_geom_size = max_num_objects_per_cell * (max_n_cell_x) * \
     (max_n_cell_y) * (max_n_cell_z) * sizeof(Primitive*);
+  size_t cell_bounding_box_size = (max_n_cell_x) * (max_n_cell_y) * \
+    (max_n_cell_z) * sizeof(BoundingBox*);
   clock_t start, stop;
 
   start = clock();
@@ -161,9 +164,11 @@ int main(int argc, char **argv) {
   dim3 blocks2(n_cell_x[0] / tx2 + 1, n_cell_y[0] / ty2 + 1);
   dim3 threads2(tx2, ty2);
   checkCudaErrors(cudaMallocManaged((void **)&my_cell_geom, cell_geom_size));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&my_cell_bounding_box, cell_bounding_box_size));
 
   printf("Building cell array!\n");
-  build_cell_array<<<blocks2, threads2>>>(my_grid, my_cell_geom);
+  build_cell_array<<<blocks2, threads2>>>(my_grid, my_cell_geom, my_cell_bounding_box);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   my_time = time(NULL);

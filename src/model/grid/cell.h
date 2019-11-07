@@ -21,7 +21,8 @@ class Cell {
     __device__ Cell(
       float x_min, float x_max, float y_min, float y_max, float z_min,
       float z_max, int i_address_, int j_address_, int k_address_,
-      Primitive** object_array_, int max_num_objects_
+      Primitive** object_array_, int max_num_objects_,
+      BoundingBox* bounding_box_
     );
     __device__ bool are_intersecting(BoundingBox* another_bounding_box);
     __device__ void add_object(Primitive* object);
@@ -35,9 +36,10 @@ class Cell {
 __device__ Cell::Cell(
   float x_min, float x_max, float y_min, float y_max, float z_min,
   float z_max, int i_address_, int j_address_, int k_address_,
-  Primitive** object_array_, int max_num_objects_
+  Primitive** object_array_, int max_num_objects_, BoundingBox* bounding_box_
 ) {
-  bounding_box = new BoundingBox(x_min, x_max, y_min, y_max, z_min, z_max);
+  bounding_box_ = new BoundingBox(x_min, x_max, y_min, y_max, z_min, z_max);
+  bounding_box = bounding_box_;
   i_address = i_address_;
   j_address = j_address_;
   k_address = k_address_;
@@ -52,12 +54,12 @@ __device__ BoundingBox* Cell::get_bounding_box() {
 
 __device__ bool Cell::are_intersecting(BoundingBox* another_bounding_box) {
   return (
-    bounding_box -> x_min <= another_bounding_box -> x_max &&
-    another_bounding_box -> x_min <= bounding_box -> x_max &&
-    bounding_box -> y_min <= another_bounding_box -> y_max &&
-    another_bounding_box -> y_min <= bounding_box -> y_max &&
-    bounding_box -> z_min <= another_bounding_box -> z_max &&
-    another_bounding_box -> z_min <= bounding_box -> z_max
+    this -> bounding_box -> x_min <= another_bounding_box -> x_max &&
+    another_bounding_box -> x_min <= this -> bounding_box -> x_max &&
+    this -> bounding_box -> y_min <= another_bounding_box -> y_max &&
+    another_bounding_box -> y_min <= this -> bounding_box -> y_max &&
+    this -> bounding_box -> z_min <= another_bounding_box -> z_max &&
+    another_bounding_box -> z_min <= this -> bounding_box -> z_max
   );
 }
 

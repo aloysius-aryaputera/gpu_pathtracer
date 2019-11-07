@@ -43,7 +43,9 @@ class Grid {
 
 };
 
-__global__ void build_cell_array(Grid** grid, Primitive** cell_object_array);
+__global__ void build_cell_array(
+  Grid** grid, Primitive** cell_object_array, BoundingBox** bounding_box_array
+);
 __global__ void insert_objects(Grid** grid);
 __global__ void create_grid(
   Camera** camera, Grid** grid, Primitive** geom_array, int *num_objects,
@@ -161,25 +163,47 @@ __global__ void insert_objects(Grid** grid) {
     return;
   }
 
+  // printf(
+  //   "num_objects = %d ((%d, %d), (%d, %d))\n",
+  //   grid[0] -> num_objects, threadIdx.x, threadIdx.y, blockIdx.x, blockIdx.y
+  // );
+
   for (int k = 0; k < grid[0] -> n_cell_z; k++) {
     int counter = 0;
     for (int l = 0; l < grid[0] -> num_objects; l++) {
+      BoundingBox *obj_bounding_box = grid[0] -> object_array[l] -> get_bounding_box();
       cell_address = grid[0] -> convert_3d_to_1d_cell_address(i, j, k);
       intersecting = \
         grid[0] -> cell_array[cell_address] -> are_intersecting(
-          grid[0] -> object_array[l] -> get_bounding_box()
+          obj_bounding_box
         );
         if (intersecting && counter < grid[0] -> max_num_objects_per_cell) {
           grid[0] -> cell_array[cell_address] -> add_object(
             grid[0] -> object_array[l]);
           counter++;
         }
+
+        if (counter >= grid[0] -> max_num_objects_per_cell) {
+          printf(
+            "Break! (num_objects = %d, max_objects/cell = %d, l = %d, (%d, %d), (%d, %d))\n",
+            grid[0] -> num_objects, grid[0] -> max_num_objects_per_cell,
+            l, threadIdx.x, threadIdx.y, blockIdx.x, blockIdx.y
+          );
+          break;
+        }
     }
   }
+  printf(
+    "Done! (num_objects = %d, max_objects/cell = %d, (%d, %d), (%d, %d))\n",
+    grid[0] -> num_objects, grid[0] -> max_num_objects_per_cell,
+    threadIdx.x, threadIdx.y, blockIdx.x, blockIdx.y
+  );
 
 }
 
-__global__ void build_cell_array(Grid** grid, Primitive** cell_object_array) {
+__global__ void build_cell_array(
+  Grid** grid, Primitive** cell_object_array, BoundingBox** bounding_box_array
+) {
   float cell_x_min, cell_x_max, cell_y_min, cell_y_max, cell_z_min, cell_z_max;
   int cell_address;
 
@@ -206,7 +230,8 @@ __global__ void build_cell_array(Grid** grid, Primitive** cell_object_array) {
         cell_x_min, cell_x_max, cell_y_min, cell_y_max, cell_z_min,
         cell_z_max, i, j, k,
         cell_object_array + (grid[0] -> max_num_objects_per_cell * cell_address),
-        grid[0] -> max_num_objects_per_cell
+        grid[0] -> max_num_objects_per_cell,
+        *(bounding_box_array + cell_address)
       );
   }
 }
