@@ -17,14 +17,15 @@ class Triangle: public Primitive {
     __device__ void _compute_bounding_box();
 
     float area, tolerance;
-    vec3 point_1, point_2, point_3, normal;
+    vec3 point_1, point_2, point_3, norm_1, norm_2, norm_3, normal;
     Material *material;
     BoundingBox *bounding_box;
 
   public:
     __host__ __device__ Triangle() {};
     __device__ Triangle(
-      vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_
+      vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_,
+      vec3 norm_1_, vec3 norm_2_, vec3 norm_3_
     );
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
     __device__ vec3 get_normal(vec3 point_on_surface);
@@ -68,7 +69,9 @@ __device__ void Triangle::_compute_bounding_box() {
 }
 
 __device__ Triangle::Triangle(
-  vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_
+  vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_,
+  vec3 norm_1_=vec3(0, 0, 0), vec3 norm_2_=vec3(0, 0, 0),
+  vec3 norm_3_=vec3(0, 0, 0)
 ) {
   point_1 = vec3(point_1_.x(), point_1_.y(), point_1_.z());
   point_2 = vec3(point_2_.x(), point_2_.y(), point_2_.z());
@@ -76,7 +79,20 @@ __device__ Triangle::Triangle(
   material = material_;
   tolerance = _compute_tolerance();
   area = _compute_triangle_area(point_1, point_2, point_3);
-  normal = get_normal(point_1);
+  normal = unit_vector(cross(point_2 - point_1, point_3 - point_1));
+  norm_1 = unit_vector(norm_1_);
+  norm_2 = unit_vector(norm_2_);
+  norm_3 = unit_vector(norm_3_);
+
+  if (
+    compute_distance(norm_1_, vec3(0, 0, 0)) < SMALL_DOUBLE ||
+    compute_distance(norm_2_, vec3(0, 0, 0)) < SMALL_DOUBLE ||
+    compute_distance(norm_3_, vec3(0, 0, 0)) < SMALL_DOUBLE
+  ) {
+    norm_1 = normal;
+    norm_2 = normal;
+    norm_3 = normal;
+  }
   _compute_bounding_box();
 }
 
@@ -101,8 +117,25 @@ __device__ Material* Triangle::get_material() {
 }
 
 __device__ vec3 Triangle::get_normal(vec3 point_on_surface) {
-  vec3 cross_product = cross(point_2 - point_1, point_3 - point_1);
-  return unit_vector(cross_product);
+  // vec3 cross_product = cross(point_2 - point_1, point_3 - point_1);
+
+  if (compute_distance(point_on_surface, point_1) < SMALL_DOUBLE) {
+    return norm_1;
+  }
+  if (compute_distance(point_on_surface, point_2) < SMALL_DOUBLE) {
+    return norm_2;
+  }
+  if (compute_distance(point_on_surface, point_3) < SMALL_DOUBLE) {
+    return norm_3;
+  }
+
+  float alpha = _compute_triangle_area(point_on_surface, point_2, point_3) / area;
+  float beta = _compute_triangle_area(point_1, point_on_surface, point_3) / area;
+  float gamma = 1 - alpha - beta;
+
+  vec3 new_normal = alpha * norm_1 + beta * norm_2 + gamma * norm_3;
+
+  return unit_vector(new_normal);
 }
 
 __device__ BoundingBox* Triangle::get_bounding_box() {

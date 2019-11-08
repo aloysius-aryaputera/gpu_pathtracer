@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
   int tx = std::stoi(argv[5]), ty = std::stoi(argv[6]);
   int *n_cell_x, *n_cell_y, *n_cell_z;
   int max_n_cell_x = 60, max_n_cell_y = 60, max_n_cell_z = 60;
-  int tx2 = 32, ty2 = 32, max_num_objects_per_cell = 500, *progress;
+  int tx2 = 8, ty2 = 8, max_num_objects_per_cell = 500, *progress;
 
   printf("image width = %d, image height = %d\n\n", im_width, im_height);
 
@@ -98,8 +98,9 @@ int main(int argc, char **argv) {
   clock_t start, stop;
 
   start = clock();
-  float *x, *y, *z;
-  int *point_1_idx, *point_2_idx, *point_3_idx;
+  float *x, *y, *z, *x_norm, *y_norm, *z_norm;
+  int *point_1_idx, *point_2_idx, *point_3_idx, \
+    *norm_1_idx, *norm_2_idx, *norm_3_idx;
   int *num_triangles;
 
   // float x[100000], y[100000], z[100000];
@@ -112,13 +113,23 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&y, max_num_vertices * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&z, max_num_vertices * sizeof(float)));
 
+  checkCudaErrors(cudaMallocManaged((void **)&x_norm, max_num_vertices * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&y_norm, max_num_vertices * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&z_norm, max_num_vertices * sizeof(float)));
+
   checkCudaErrors(cudaMallocManaged((void **)&point_1_idx, max_num_faces * sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&point_2_idx, max_num_faces * sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&point_3_idx, max_num_faces * sizeof(int)));
 
+  checkCudaErrors(cudaMallocManaged((void **)&norm_1_idx, max_num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&norm_2_idx, max_num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&norm_3_idx, max_num_faces * sizeof(int)));
+
   printf("Reading OBJ file!\n");
   extract_triangle_data_2(
-    argv[2], x, y, z, point_1_idx, point_2_idx, point_3_idx, num_triangles
+    argv[2], x, y, z, x_norm, y_norm, z_norm,
+    point_1_idx, point_2_idx, point_3_idx, norm_1_idx, norm_2_idx, norm_3_idx,
+    num_triangles
   );
   my_time = time(NULL);
   printf("OBJ file read at %s!\n\n", ctime(&my_time));
@@ -128,7 +139,11 @@ int main(int argc, char **argv) {
 
   printf("Creating the world!\n");
   create_world_3<<<1, 1>>>(
-    my_camera, my_geom, x, y, z, point_1_idx, point_2_idx, point_3_idx,
+    my_camera, my_geom,
+    x, y, z,
+    x_norm, y_norm, z_norm,
+    point_1_idx, point_2_idx, point_3_idx,
+    norm_1_idx, norm_2_idx, norm_3_idx,
     num_triangles, im_width, im_height
   );
   checkCudaErrors(cudaGetLastError());
@@ -139,9 +154,15 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(x));
   checkCudaErrors(cudaFree(y));
   checkCudaErrors(cudaFree(z));
+  checkCudaErrors(cudaFree(x_norm));
+  checkCudaErrors(cudaFree(y_norm));
+  checkCudaErrors(cudaFree(z_norm));
   checkCudaErrors(cudaFree(point_1_idx));
   checkCudaErrors(cudaFree(point_2_idx));
   checkCudaErrors(cudaFree(point_3_idx));
+  checkCudaErrors(cudaFree(norm_1_idx));
+  checkCudaErrors(cudaFree(norm_2_idx));
+  checkCudaErrors(cudaFree(norm_3_idx));
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 

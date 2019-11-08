@@ -169,8 +169,12 @@ __global__ void create_world_2(
 }
 
 __global__ void create_world_3(
-  Camera** camera, Primitive** geom_array, float *x, float *y, float *z,
-  int *point_1_idx, int *point_2_idx, int *point_3_idx, int* num_triangles,
+  Camera** camera, Primitive** geom_array,
+  float *x, float *y, float *z,
+  float *x_norm, float *y_norm, float *z_norm,
+  int *point_1_idx, int *point_2_idx, int *point_3_idx,
+  int *norm_1_idx, int *norm_2_idx, int *norm_3_idx,
+  int* num_triangles,
   int image_width, int image_height
 ) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
@@ -180,7 +184,7 @@ __global__ void create_world_3(
       );
 
       Material *triangle_material = new Material(
-        vec3(0, 0, 0), vec3(.2, .9, .2), vec3(0, 0, 0), vec3(.5, .5, .5)
+        vec3(0, 0, 0), vec3(.9, .9, .9), vec3(0, 0, 0), vec3(.5, .5, .5)
       );
 
       float s_x = .15, s_y = .15, s_z = .15, t_x = 1, t_y = -25.250105, t_z = 0;
@@ -194,12 +198,15 @@ __global__ void create_world_3(
             s_y + t_v,
           vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]) *\
             s_z + t_v,
-          triangle_material
+          triangle_material,
+          vec3(x_norm[norm_1_idx[idx]], y_norm[norm_1_idx[idx]], z_norm[norm_1_idx[idx]]),
+          vec3(x_norm[norm_2_idx[idx]], y_norm[norm_2_idx[idx]], z_norm[norm_2_idx[idx]]),
+          vec3(x_norm[norm_3_idx[idx]], y_norm[norm_3_idx[idx]], z_norm[norm_3_idx[idx]])
         );
       }
 
       triangle_material = new Material(
-        vec3(0, 0, 0), vec3(.9, .2, .9), vec3(40.0, .2, 40.0),
+        vec3(0, 0, 0), vec3(.9, .9, .4), vec3(25.0, 25.0, 10.0),
         vec3(.3, .1, .3)
       );
       *(geom_array + num_triangles[0]++) = new Sphere(
