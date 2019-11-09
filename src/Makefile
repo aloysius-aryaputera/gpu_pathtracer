@@ -8,7 +8,8 @@ NVCC_DBG       = -g -G
 
 NVCCFLAGS      = -m64
 NVCCFLAGS_DBG  = $(NVCC_DBG) -m64
-GENCODE_FLAGS  = -gencode arch=compute_37,code=sm_37
+GENCODE_FLAGS  = -gencode arch=compute_60,code=sm_60
+GENCODE_FLAGS_2  = -gencode arch=compute_37,code=sm_37
 
 SRCS = main.cu
 INCS = \
@@ -31,16 +32,28 @@ INCS = \
 	util/read_file_util.h \
 	world_lib.h
 
-all: gpu_path_tracing gpu_path_tracing_debug
+all: gpu_path_tracing gpu_path_tracing_debug gpu_path_tracing_2 gpu_path_tracing_debug_2
 
 gpu_path_tracing: gpu_path_tracing.o
-	$(NVCC) $(NVCCFLAGS) $(GENCODE_FLAGS) -o gpu_path_tracing gpu_path_tracing.o
+	$(NVCC) $(NVCCFLAGS) $(GENCODE_FLAGS) -o gpu_path_tracing_60 gpu_path_tracing.o
 
 gpu_path_tracing.o: $(SRCS) $(INCS)
 	$(NVCC) $(NVCCFLAGS) $(GENCODE_FLAGS) -o gpu_path_tracing.o -c main.cu
 
 gpu_path_tracing_debug: gpu_path_tracing_debug.o
-	$(NVCC) $(NVCCFLAGS_DBG) $(GENCODE_FLAGS) -o gpu_path_tracing_debug gpu_path_tracing_debug.o
+	$(NVCC) $(NVCCFLAGS_DBG) $(GENCODE_FLAGS) -o gpu_path_tracing_debug_60 gpu_path_tracing_debug.o
 
 gpu_path_tracing_debug.o: $(SRCS) $(INCS)
 	$(NVCC) $(NVCCFLAGS_DBG) $(GENCODE_FLAGS) -o gpu_path_tracing_debug.o -c main.cu
+
+gpu_path_tracing_2: gpu_path_tracing_2.o
+	$(NVCC) $(NVCCFLAGS) $(GENCODE_FLAGS_2) -o gpu_path_tracing_37 gpu_path_tracing_2.o
+
+gpu_path_tracing_2.o: $(SRCS) $(INCS)
+	$(NVCC) $(NVCCFLAGS) $(GENCODE_FLAGS_2) -o gpu_path_tracing_2.o -c main.cu
+
+gpu_path_tracing_debug_2: gpu_path_tracing_debug_2.o
+	$(NVCC) $(NVCCFLAGS_DBG) $(GENCODE_FLAGS_2) -o gpu_path_tracing_debug_37 gpu_path_tracing_debug_2.o
+
+gpu_path_tracing_debug_2.o: $(SRCS) $(INCS)
+	$(NVCC) $(NVCCFLAGS_DBG) $(GENCODE_FLAGS_2) -o gpu_path_tracing_debug_2.o -c main.cu
