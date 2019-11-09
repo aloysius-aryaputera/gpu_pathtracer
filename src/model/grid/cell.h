@@ -53,7 +53,8 @@ __device__ BoundingBox* Cell::get_bounding_box() {
 }
 
 __device__ bool Cell::are_intersecting(BoundingBox* another_bounding_box) {
-  
+  printf("another_bounding_box -> x_min = %5.5f\n", another_bounding_box -> x_min);
+  printf("bounding_box -> x_min = %5.5f\n", this -> bounding_box -> x_min);
   return (
     this -> bounding_box -> x_min <= another_bounding_box -> x_max &&
     another_bounding_box -> x_min <= this -> bounding_box -> x_max &&

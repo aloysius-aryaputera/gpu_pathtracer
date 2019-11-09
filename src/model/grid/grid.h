@@ -159,6 +159,7 @@ __global__ void insert_objects(Grid** grid) {
 
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   int j = threadIdx.y + blockIdx.y * blockDim.y;
+
   if((j >= grid[0] -> n_cell_y) || (i >= grid[0] -> n_cell_x)) {
     return;
   }

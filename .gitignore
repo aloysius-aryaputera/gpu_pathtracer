@@ -3,3 +3,5 @@
 out*.ppm
 gpu_path_tracing
 gpu_path_tracing_debug
+gpu_path_tracing_2
+gpu_path_tracing_debug_2
