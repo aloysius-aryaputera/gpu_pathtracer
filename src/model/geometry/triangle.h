@@ -58,7 +58,7 @@ __device__ void Triangle::_compute_bounding_box() {
   z_max = max(point_1.z(), point_2.z());
   z_max = max(z_max, point_3.z());
 
-  bounding_box = new BoundingBox(
+  this -> bounding_box = new BoundingBox(
     x_min - min(SMALL_DOUBLE, tolerance),
     x_max + min(SMALL_DOUBLE, tolerance),
     y_min - min(SMALL_DOUBLE, tolerance),
@@ -73,33 +73,35 @@ __device__ Triangle::Triangle(
   vec3 norm_1_=vec3(0, 0, 0), vec3 norm_2_=vec3(0, 0, 0),
   vec3 norm_3_=vec3(0, 0, 0)
 ) {
-  point_1 = vec3(point_1_.x(), point_1_.y(), point_1_.z());
-  point_2 = vec3(point_2_.x(), point_2_.y(), point_2_.z());
-  point_3 = vec3(point_3_.x(), point_3_.y(), point_3_.z());
-  material = material_;
-  tolerance = _compute_tolerance();
-  area = _compute_triangle_area(point_1, point_2, point_3);
-  normal = unit_vector(cross(point_2 - point_1, point_3 - point_1));
-  norm_1 = unit_vector(norm_1_);
-  norm_2 = unit_vector(norm_2_);
-  norm_3 = unit_vector(norm_3_);
+  this -> point_1 = vec3(point_1_.x(), point_1_.y(), point_1_.z());
+  this -> point_2 = vec3(point_2_.x(), point_2_.y(), point_2_.z());
+  this -> point_3 = vec3(point_3_.x(), point_3_.y(), point_3_.z());
+  this -> material = material_;
+  this -> tolerance = this -> _compute_tolerance();
+  this -> area = _compute_triangle_area(
+    this -> point_1, this -> point_2, this -> point_3);
+  this -> normal = unit_vector(
+    cross(this -> point_2 - this -> point_1, this -> point_3 - this -> point_1));
+  this -> norm_1 = unit_vector(norm_1_);
+  this -> norm_2 = unit_vector(norm_2_);
+  this -> norm_3 = unit_vector(norm_3_);
 
   if (
     compute_distance(norm_1_, vec3(0, 0, 0)) < SMALL_DOUBLE ||
     compute_distance(norm_2_, vec3(0, 0, 0)) < SMALL_DOUBLE ||
     compute_distance(norm_3_, vec3(0, 0, 0)) < SMALL_DOUBLE
   ) {
-    norm_1 = normal;
-    norm_2 = normal;
-    norm_3 = normal;
+    this -> norm_1 = this -> normal;
+    this -> norm_2 = this -> normal;
+    this -> norm_3 = this -> normal;
   }
-  _compute_bounding_box();
+  this -> _compute_bounding_box();
 }
 
 __host__ __device__ float Triangle::_compute_tolerance() {
-  float dist_1 = compute_distance(point_1, point_2);
-  float dist_2 = compute_distance(point_1, point_3);
-  float dist_3 = compute_distance(point_2, point_3);
+  float dist_1 = compute_distance(this -> point_1, this -> point_2);
+  float dist_2 = compute_distance(this -> point_1, this -> point_3);
+  float dist_3 = compute_distance(this -> point_2, this -> point_3);
   float tolerance_;
   if (dist_1 < dist_2) {
     tolerance_ = dist_1;
@@ -119,21 +121,24 @@ __device__ Material* Triangle::get_material() {
 __device__ vec3 Triangle::get_normal(vec3 point_on_surface) {
   // vec3 cross_product = cross(point_2 - point_1, point_3 - point_1);
 
-  if (compute_distance(point_on_surface, point_1) < SMALL_DOUBLE) {
-    return norm_1;
+  if (compute_distance(point_on_surface, this -> point_1) < this -> tolerance) {
+    return this -> norm_1;
   }
-  if (compute_distance(point_on_surface, point_2) < SMALL_DOUBLE) {
-    return norm_2;
+  if (compute_distance(point_on_surface, this -> point_2) < this -> tolerance) {
+    return this -> norm_2;
   }
-  if (compute_distance(point_on_surface, point_3) < SMALL_DOUBLE) {
-    return norm_3;
+  if (compute_distance(point_on_surface, this -> point_3) < this -> tolerance) {
+    return this -> norm_3;
   }
 
-  float alpha = _compute_triangle_area(point_on_surface, point_2, point_3) / area;
-  float beta = _compute_triangle_area(point_1, point_on_surface, point_3) / area;
+  float alpha = _compute_triangle_area(
+    point_on_surface, this -> point_2, this -> point_3) / this -> area;
+  float beta = _compute_triangle_area(
+    this -> point_1, point_on_surface, this -> point_3) / this -> area;
   float gamma = 1 - alpha - beta;
 
-  vec3 new_normal = alpha * norm_1 + beta * norm_2 + gamma * norm_3;
+  vec3 new_normal = alpha * this -> norm_1 + beta * this -> norm_2 + \
+    gamma * this -> norm_3;
 
   return unit_vector(new_normal);
 }
@@ -144,7 +149,9 @@ __device__ BoundingBox* Triangle::get_bounding_box() {
 
 __device__ __device__ bool Triangle::hit(
   Ray ray, float t_max, hit_record& rec) {
-  float t = (dot(point_1, normal) - dot(ray.p0, normal)) / dot(ray.dir, normal);
+  float t = (
+    dot(this -> point_1, this -> normal) - dot(ray.p0, this -> normal)) / \
+      dot(ray.dir, this -> normal);
 
   if (t > t_max) {
     return false;
@@ -152,16 +159,28 @@ __device__ __device__ bool Triangle::hit(
 
   vec3 point_4 = ray.get_vector(t);
 
+  float dist_1 = compute_distance(point_4, point_1);
+  float dist_2 = compute_distance(point_4, point_2);
+  float dist_3 = compute_distance(point_4, point_3);
+
   if (
-      (compute_distance(point_4, point_1) < tolerance ||
-       compute_distance(point_4, point_2) < tolerance ||
-       compute_distance(point_4, point_3) < tolerance) &&
+      (dist_1 < tolerance ||
+       dist_2 < tolerance ||
+       dist_3 < tolerance) &&
       t > min(SMALL_DOUBLE, tolerance) &&
       t < (1 / min(SMALL_DOUBLE, tolerance))
   ) {
     rec.t = t;
     rec.point = ray.get_vector(t);
-    rec.normal = normal;
+
+    if (dist_1 < tolerance) {
+      rec.normal = this -> norm_1;
+    } else if (dist_2 < tolerance) {
+      rec.normal = this -> norm_2;
+    } else {
+      rec.normal = this -> norm_3;
+    }
+
     rec.object = this;
     return true;
   }
@@ -177,7 +196,18 @@ __device__ __device__ bool Triangle::hit(
   ) {
     rec.t = t;
     rec.point = ray.get_vector(t);
-    rec.normal = normal;
+    // rec.normal = this -> get_normal(point_4);
+    // rec.normal = this -> normal;
+
+    float alpha = area_3 / this -> area;
+    float beta = area_2 / this -> area;
+    float gamma = 1 - alpha - beta;
+
+    vec3 new_normal = alpha * this -> norm_1 + beta * this -> norm_2 + \
+      gamma * this -> norm_3;
+
+    rec.normal = unit_vector(new_normal);
+
     rec.object = this;
     return true;
   }
