@@ -164,7 +164,7 @@ __global__ void insert_objects(Grid** grid) {
     return;
   }
 
-  printf("threadIdx.x = %d, blockIdx.x = %d, blockDim.x = %d, threadIdx.y = %d, blockIdx.y = %d, blockDim.y = %d\n", threadIdx.x, blockIdx.x, blockDim.x, threadIdx.y, blockIdx.y, blockDim.y);
+  // printf("threadIdx.x = %d, blockIdx.x = %d, blockDim.x = %d, threadIdx.y = %d, blockIdx.y = %d, blockDim.y = %d\n", threadIdx.x, blockIdx.x, blockDim.x, threadIdx.y, blockIdx.y, blockDim.y);
 
   // printf(
   //   "num_objects = %d ((%d, %d), (%d, %d))\n",
