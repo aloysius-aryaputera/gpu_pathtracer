@@ -41,13 +41,10 @@ __global__ void create_scene(
 }
 
 __global__ void render_init(
-  int im_width, int im_height, curandState *rand_state, int *progress
+  int im_width, int im_height, curandState *rand_state
 ) {
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
-  if (i == 0 && j == 0) {
-    progress[0] = 0;
-  }
   if ((j >= im_width) || (i >= im_height)) {
     return;
   }
@@ -69,15 +66,19 @@ __global__ void free_world(
 
 int main(int argc, char **argv) {
   time_t my_time = time(NULL);
+  clock_t start, stop;
+  start = clock();
   printf("Started at %s\n\n", ctime(&my_time));
 
+  const char *image_filename = argv[1], *obj_filename = argv[2];
   int im_width = std::stoi(argv[3]), im_height = std::stoi(argv[4]);
   int tx = std::stoi(argv[5]), ty = std::stoi(argv[6]);
+  int pathtracing_sample_size = std::stoi(argv[7]);
+  int pathtracing_level = std::stoi(argv[8]);
+
   int *n_cell_x, *n_cell_y, *n_cell_z;
   int max_n_cell_x = 60, max_n_cell_y = 60, max_n_cell_z = 60;
-  int tx2 = 8, ty2 = 8, max_num_objects_per_cell = 500, *progress;
-
-  printf("image width = %d, image height = %d\n\n", im_width, im_height);
+  int tx2 = 8, ty2 = 8, max_num_objects_per_cell = 500;
 
   BoundingBox** my_cell_bounding_box;
   Scene** my_scene;
@@ -85,19 +86,19 @@ int main(int argc, char **argv) {
   Cell** my_cell;
   Primitive **my_geom, **my_cell_geom;
   Camera **my_camera;
-  vec3 *fb;
+  vec3 *image_output;
+
   int num_pixels = im_width * im_height;
+  int max_grid_volume = max_n_cell_x * max_n_cell_y * max_n_cell_z;
   int max_num_vertices = 60000, max_num_faces = 110000;
-  size_t fb_size = num_pixels * sizeof(vec3);
+  size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state;
   size_t rand_state_size = num_pixels * sizeof(curandState);
-  size_t cell_geom_size = max_num_objects_per_cell * (max_n_cell_x) * \
-    (max_n_cell_y) * (max_n_cell_z) * sizeof(Primitive*);
-  size_t cell_bounding_box_size = (max_n_cell_x) * (max_n_cell_y) * \
-    (max_n_cell_z) * sizeof(BoundingBox*);
-  clock_t start, stop;
+  size_t cell_size = max_grid_volume * sizeof(Cell*);
+  size_t cell_geom_size = max_num_objects_per_cell * max_grid_volume * \
+    sizeof(Primitive*);
+  size_t cell_bounding_box_size = max_grid_volume * sizeof(BoundingBox*);
 
-  start = clock();
   float *x, *y, *z, *x_norm, *y_norm, *z_norm;
   int *point_1_idx, *point_2_idx, *point_3_idx, \
     *norm_1_idx, *norm_2_idx, *norm_3_idx;
@@ -126,9 +127,11 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&norm_3_idx, max_num_faces * sizeof(int)));
 
   printf("Reading OBJ file!\n");
-  extract_triangle_data_2(
-    argv[2], x, y, z, x_norm, y_norm, z_norm,
-    point_1_idx, point_2_idx, point_3_idx, norm_1_idx, norm_2_idx, norm_3_idx,
+  extract_triangle_data(
+    obj_filename, x, y, z,
+    x_norm, y_norm, z_norm,
+    point_1_idx, point_2_idx, point_3_idx,
+    norm_1_idx, norm_2_idx, norm_3_idx,
     num_triangles
   );
   my_time = time(NULL);
@@ -167,7 +170,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
 
   checkCudaErrors(cudaMallocManaged((void **)&my_grid, sizeof(Grid *)));
-  checkCudaErrors(cudaMallocManaged((void **)&my_cell, max_n_cell_x * max_n_cell_y * max_n_cell_z * sizeof(Cell *)));
+  checkCudaErrors(cudaMallocManaged((void **)&my_cell, cell_size));
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_x, sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_y, sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_z, sizeof(int)));
@@ -214,22 +217,21 @@ int main(int argc, char **argv) {
   dim3 blocks(im_width / tx + 1, im_height / ty + 1);
   dim3 threads(tx, ty);
   checkCudaErrors(cudaMallocManaged((void **)&rand_state, rand_state_size));
-  checkCudaErrors(cudaMallocManaged((void **)&progress, sizeof(int)));
 
   printf("Preparing the rendering process!\n");
-  render_init<<<blocks, threads>>>(im_width, im_height, rand_state, progress);
+  render_init<<<blocks, threads>>>(im_width, im_height, rand_state);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   my_time = time(NULL);
   printf("Rendering process is ready to start at %s!\n\n", ctime(&my_time));
 
   vec3 sky_emission = vec3(1, 1, 1);
-  checkCudaErrors(cudaMallocManaged((void **)&fb, fb_size));
+  checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
 
   printf("Rendering started!\n");
   render<<<blocks, threads>>>(
-    fb, my_scene, rand_state, std::stoi(argv[7]), std::stoi(argv[8]),
-    sky_emission, progress
+    image_output, my_scene, rand_state, pathtracing_sample_size,
+    pathtracing_level, sky_emission
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -237,7 +239,7 @@ int main(int argc, char **argv) {
   printf("Rendering done at %s!\n\n", ctime(&my_time));
 
   printf("Saving image!\n");
-  save_image(fb, im_width, im_height, argv[1]);
+  save_image(image_output, im_width, im_height, image_filename);
   my_time = time(NULL);
   printf("Image saved at %s!\n\n", ctime(&my_time));
 
@@ -258,7 +260,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(n_cell_y));
   checkCudaErrors(cudaFree(n_cell_z));
   checkCudaErrors(cudaFree(rand_state));
-  checkCudaErrors(cudaFree(fb));
+  checkCudaErrors(cudaFree(image_output));
   my_time = time(NULL);
   printf("Cleaning done at %s!\n\n", ctime(&my_time));
 

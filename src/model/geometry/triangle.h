@@ -28,7 +28,6 @@ class Triangle: public Primitive {
       vec3 norm_1_, vec3 norm_2_, vec3 norm_3_
     );
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
-    __device__ vec3 get_normal(vec3 point_on_surface);
     __device__ Material* get_material();
     __device__ BoundingBox* get_bounding_box();
 
@@ -118,31 +117,6 @@ __device__ Material* Triangle::get_material() {
   return material;
 }
 
-__device__ vec3 Triangle::get_normal(vec3 point_on_surface) {
-  // vec3 cross_product = cross(point_2 - point_1, point_3 - point_1);
-
-  if (compute_distance(point_on_surface, this -> point_1) < this -> tolerance) {
-    return this -> norm_1;
-  }
-  if (compute_distance(point_on_surface, this -> point_2) < this -> tolerance) {
-    return this -> norm_2;
-  }
-  if (compute_distance(point_on_surface, this -> point_3) < this -> tolerance) {
-    return this -> norm_3;
-  }
-
-  float alpha = _compute_triangle_area(
-    point_on_surface, this -> point_2, this -> point_3) / this -> area;
-  float beta = _compute_triangle_area(
-    this -> point_1, point_on_surface, this -> point_3) / this -> area;
-  float gamma = 1 - alpha - beta;
-
-  vec3 new_normal = alpha * this -> norm_1 + beta * this -> norm_2 + \
-    gamma * this -> norm_3;
-
-  return unit_vector(new_normal);
-}
-
 __device__ BoundingBox* Triangle::get_bounding_box() {
   return bounding_box;
 }
@@ -196,8 +170,6 @@ __device__ __device__ bool Triangle::hit(
   ) {
     rec.t = t;
     rec.point = ray.get_vector(t);
-    // rec.normal = this -> get_normal(point_4);
-    // rec.normal = this -> normal;
 
     float alpha = area_3 / this -> area;
     float beta = area_2 / this -> area;

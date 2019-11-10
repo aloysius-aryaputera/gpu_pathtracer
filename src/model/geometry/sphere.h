@@ -15,6 +15,7 @@ class Sphere: public Primitive {
   private:
     __host__ __device__ float _compute_tolerance();
     __device__ void _compute_bounding_box();
+    __device__ vec3 _get_normal(vec3 point_on_surface);
 
     vec3 center;
     float r, tolerance;
@@ -26,7 +27,6 @@ class Sphere: public Primitive {
     __device__ Sphere(
       vec3 center_, float r_, Material* material_);
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
-    __device__ vec3 get_normal(vec3 point_on_surface);
     __device__ Material* get_material();
     __device__ BoundingBox* get_bounding_box();
 };
@@ -40,20 +40,14 @@ __device__ int _get_num_roots(float a, float b, float c, float* root_array) {
   discriminant = _get_discriminant(a, b, c);
   if (discriminant == 0) {
     root = -b / (2 * a);
-    // if (root > SMALL_DOUBLE) {
-      *(root_array + iter++) = root;
-    // }
+    *(root_array + iter++) = root;
   }
   if (discriminant > 0) {
     root = (-b - sqrt(discriminant)) / (2 * a);
-    // if (root > SMALL_DOUBLE) {
-      *(root_array + iter++) = root;
-    // }
+    *(root_array + iter++) = root;
 
     root = (-b + sqrt(discriminant)) / (2 * a);
-    // if (root > SMALL_DOUBLE) {
-      *(root_array + iter++) = root;
-    // }
+    *(root_array + iter++) = root;
   }
   return iter;
 }
@@ -91,9 +85,10 @@ __device__ void Sphere::_compute_bounding_box() {
     z_max = max(z_max, point[iter].z());
   }
 
-  bounding_box = new BoundingBox(
-    x_min - tolerance, x_max + tolerance, y_min - tolerance,
-    y_max + tolerance, z_min - tolerance, z_max + tolerance
+  this -> bounding_box = new BoundingBox(
+    x_min - this -> tolerance, x_max + this -> tolerance,
+    y_min - this -> tolerance, y_max + this -> tolerance,
+    z_min - this -> tolerance, z_max + this -> tolerance
   );
 }
 
@@ -114,7 +109,7 @@ __device__ bool Sphere::hit(Ray ray, float t_max, hit_record& rec) {
     t = root_array[0];
     rec.t = t;
     rec.point = ray.get_vector(t);
-    rec.normal = get_normal(rec.point);
+    rec.normal = this -> _get_normal(rec.point);
     rec.object = this;
     return true;
   }
@@ -122,27 +117,27 @@ __device__ bool Sphere::hit(Ray ray, float t_max, hit_record& rec) {
 }
 
 __device__ Sphere::Sphere(vec3 center_, float r_, Material *material_) {
-  center = center_;
-  r = r_;
-  material = material_;
-  tolerance = _compute_tolerance();
-  _compute_bounding_box();
+  this -> center = center_;
+  this -> r = r_;
+  this -> material = material_;
+  this -> tolerance = this -> _compute_tolerance();
+  this -> _compute_bounding_box();
 }
 
 __device__ Material* Sphere::get_material() {
-  return material;
+  return this -> material;
 }
 
-__device__ vec3 Sphere::get_normal(vec3 point_on_surface) {
-  return unit_vector(point_on_surface - center);
+__device__ vec3 Sphere::_get_normal(vec3 point_on_surface) {
+  return unit_vector(point_on_surface - this -> center);
 }
 
 __device__ float Sphere::_compute_tolerance() {
-  return min(SMALL_DOUBLE, r / 100.0);
+  return min(SMALL_DOUBLE, this -> r / 100.0);
 }
 
 __device__ BoundingBox* Sphere::get_bounding_box() {
-  return bounding_box;
+  return this -> bounding_box;
 }
 
 #endif

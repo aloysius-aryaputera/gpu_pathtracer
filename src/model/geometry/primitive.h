@@ -22,14 +22,11 @@ class Primitive {
     __device__ virtual bool hit(Ray ray, float t_max, hit_record& rec) {
       return false;
     }
-    __device__ virtual vec3 get_normal(vec3 point_on_surface) {
-      return vec3(0, 0, 0);
-    }
     __device__ virtual Material* get_material() {
-      return material;
+      return this -> material;
     }
     __device__ virtual BoundingBox* get_bounding_box() {
-      return bounding_box;
+      return this -> bounding_box;
     }
 };
 

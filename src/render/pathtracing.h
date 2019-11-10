@@ -15,11 +15,8 @@
 __global__
 void render(
   vec3 *fb, Scene **scene, curandState *rand_state, int sample_size, int level,
-  vec3 sky_emission, int *progress
+  vec3 sky_emission
 );
-
-__device__ bool _hit(
-  Ray ray, Primitive **geom_array, int num_triangles, hit_record &rec);
 
 __device__ vec3 _compute_color(
   hit_record rec, int level, Scene **scene, vec3 sky_emission,
@@ -42,7 +39,6 @@ __device__ vec3 _compute_color(
     cos_theta = v3_rand.z();
     v3_rand_world = new_xyz_system.to_world_system(v3_rand);
     ray = Ray(cur_rec.point, v3_rand_world);
-    // hit = _hit(ray, geom_array, num_triangles, cur_rec);
     hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
     if (hit) {
       light += cos_theta * cur_rec.object -> get_material() -> emission;
@@ -62,29 +58,10 @@ __device__ vec3 _compute_color(
   return mask * light;
 }
 
-__device__ bool _hit(
-  Ray ray, Primitive **geom_array, int num_triangles, hit_record &rec) {
-
-  hit_record cur_rec;
-  bool hit = false, intersection_found = false;
-
-  rec.t = INFINITY;
-
-  for (int idx = 0; idx < num_triangles; idx++) {
-      hit = (geom_array[idx]) -> hit(ray, rec.t, cur_rec);
-    if (hit) {
-      intersection_found = true;
-      rec = cur_rec;
-    }
-  }
-
-  return intersection_found;
-}
-
 __global__
 void render(
   vec3 *fb, Scene **scene, curandState *rand_state, int sample_size, int level,
-  vec3 sky_emission, int *progress
+  vec3 sky_emission
 ) {
 
   hit_record init_rec, cur_rec;
@@ -115,7 +92,6 @@ void render(
       cos_theta = v3_rand.z();
       v3_rand_world = new_xyz_system.to_world_system(v3_rand);
       ray = Ray(cur_rec.point, v3_rand_world);
-      // hit = _hit(ray, geom_array, num_triangles[0], cur_rec);
       hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
       if (hit) {
         color += cos_theta * _compute_color(
@@ -133,7 +109,6 @@ void render(
   } else {
     color = vec3(0, 0, 0);
   }
-  progress[0]++;
   rand_state[pixel_index] = local_rand_state;
   fb[pixel_index] = color;
 
