@@ -33,7 +33,9 @@ __global__ void create_world_2(
 __global__ void create_world_3(
   Camera** camera, Primitive** geom_array, float *x, float *y, float *z,
   int *point_1_idx, int *point_2_idx, int *point_3_idx, int* num_triangles,
-  int image_width, int image_height
+  int image_width, int image_height,
+  float s_x, float s_y, float s_z,
+  float t_x, float t_y, float t_z
 );
 
 __global__ void create_world(
@@ -159,12 +161,6 @@ __global__ void create_world_2(
         vec3(-8, 9, 8), vec3(0, 9, -12), vec3(8, 9, 8), triangle_material
       );
 
-      // triangle_material = new Material(
-      //   vec3(0, 0, 0), vec3(1, 1, 1), vec3(30.0, 30.0, 30.0), vec3(1, 1, 1)
-      // );
-      // *(geom_array + num_triangles[0]++) = new Sphere(
-      //   vec3(0, 11, 0), 3, triangle_material);
-
     }
 }
 
@@ -175,7 +171,9 @@ __global__ void create_world_3(
   int *point_1_idx, int *point_2_idx, int *point_3_idx,
   int *norm_1_idx, int *norm_2_idx, int *norm_3_idx,
   int* num_triangles,
-  int image_width, int image_height
+  int image_width, int image_height,
+  float s_x=1, float s_y=1, float s_z=1,
+  float t_x=0, float t_y=0, float t_z=0
 ) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
       *(camera) = new Camera(
@@ -187,7 +185,6 @@ __global__ void create_world_3(
         vec3(0, 0, 0), vec3(.9, .9, .9), vec3(0, 0, 0), vec3(.5, .5, .5)
       );
 
-      float s_x = .6, s_y = .6, s_z = .6, t_x = -.5, t_y = 2.1822216, t_z = 0;
       vec3 t_v = vec3(t_x, t_y, t_z);
 
       for (int idx = 0; idx < num_triangles[0]; idx++) {

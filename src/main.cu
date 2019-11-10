@@ -75,6 +75,10 @@ int main(int argc, char **argv) {
   int tx = std::stoi(argv[5]), ty = std::stoi(argv[6]);
   int pathtracing_sample_size = std::stoi(argv[7]);
   int pathtracing_level = std::stoi(argv[8]);
+  float s_x = std::stof(argv[9]), s_y = std::stof(argv[10]), \
+    s_z = std::stof(argv[11]);
+  float t_x = std::stof(argv[12]), t_y = std::stof(argv[13]), \
+    t_z = std::stof(argv[14]);
 
   int *n_cell_x, *n_cell_y, *n_cell_z;
   int max_n_cell_x = 60, max_n_cell_y = 60, max_n_cell_z = 60;
@@ -147,7 +151,9 @@ int main(int argc, char **argv) {
     x_norm, y_norm, z_norm,
     point_1_idx, point_2_idx, point_3_idx,
     norm_1_idx, norm_2_idx, norm_3_idx,
-    num_triangles, im_width, im_height
+    num_triangles, im_width, im_height,
+    s_x, s_y, s_z,
+    t_x, t_y, t_z
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
