@@ -1,6 +1,6 @@
 library(readtext)
 
-OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/cow.obj'
+OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/f16.obj'
 
 raw_text = readtext(OBJ_FILE)
 lines = strsplit(raw_text$text, "\n")
@@ -16,12 +16,12 @@ for(line in lines[[1]]) {
   }
 }
 
-SX = .6
-SY = .6
-SZ = .6
+SX = 2.5
+SY = 2.5
+SZ = 2.5
 
-TX = -.5
-TY = 2.1822216
+TX = 0
+TY = 0.5159575
 TZ = 0
 
 obj_df = read.table(tmp_file)
