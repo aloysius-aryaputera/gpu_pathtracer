@@ -81,8 +81,8 @@ int main(int argc, char **argv) {
     t_z = std::stof(argv[14]);
 
   int *n_cell_x, *n_cell_y, *n_cell_z;
-  int max_n_cell_x = 60, max_n_cell_y = 60, max_n_cell_z = 60;
-  int tx2 = 8, ty2 = 8, max_num_objects_per_cell = 500;
+  int max_n_cell_x = 30, max_n_cell_y = 30, max_n_cell_z = 30;
+  int tx2 = 8, ty2 = 8, max_num_objects_per_cell = 200;
 
   BoundingBox** my_cell_bounding_box;
   Scene** my_scene;
