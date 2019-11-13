@@ -39,6 +39,7 @@ __device__ vec3 _compute_color(
     cos_theta = v3_rand.z();
     v3_rand_world = new_xyz_system.to_world_system(v3_rand);
     ray = Ray(cur_rec.point, v3_rand_world);
+
     hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
     if (hit) {
       light += cos_theta * cur_rec.object -> get_material() -> emission;
@@ -88,10 +89,12 @@ void render(
   if (hit) {
     for(int idx = 0; idx < sample_size; idx++) {
       cur_rec = init_rec;
+
       v3_rand = get_random_unit_vector_hemisphere(&local_rand_state);
       cos_theta = v3_rand.z();
       v3_rand_world = new_xyz_system.to_world_system(v3_rand);
       ray = Ray(cur_rec.point, v3_rand_world);
+
       hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
       if (hit) {
         color += cos_theta * _compute_color(

@@ -33,16 +33,27 @@ __host__ __device__ CartesianSystem::CartesianSystem(vec3 new_z_axis_) {
 }
 
 __host__ __device__ vec3 CartesianSystem::to_world_system(vec3 input_vector) {
-  vec3 v3_rand_world = unit_vector(
-    vec3(
-      input_vector.x() * new_x_axis.x() + input_vector.y() * new_y_axis.x() + \
-      input_vector.z() * new_z_axis.x(),
-      input_vector.x() * new_x_axis.y() + input_vector.y() * new_y_axis.y() + \
-      input_vector.z() * new_z_axis.y(),
-      input_vector.x() * new_x_axis.z() + input_vector.y() * new_y_axis.z() + \
-      input_vector.z() * new_z_axis.z()
-    )
+  vec3 v3_rand_world = vec3(
+    input_vector.x() * new_x_axis.x() + input_vector.y() * new_y_axis.x() + \
+    input_vector.z() * new_z_axis.x(),
+    input_vector.x() * new_x_axis.y() + input_vector.y() * new_y_axis.y() + \
+    input_vector.z() * new_z_axis.y(),
+    input_vector.x() * new_x_axis.z() + input_vector.y() * new_y_axis.z() + \
+    input_vector.z() * new_z_axis.z()
   );
+  v3_rand_world.make_unit_vector();
+  if (isnan(v3_rand_world.x()) || isnan(v3_rand_world.y()) || isnan(v3_rand_world.z())) {
+    printf(
+      "input_vector = %5.5f, %5.5f, %5.5f; \
+      new_x_axis = %5.5f, %5.5f, %5.5f;\
+      new_y_axis = %5.5f, %5.5f, %5.5f;\
+      new_z_axis = %5.5f, %5.5f, %5.5f;\n",
+      input_vector.x(), input_vector.y(), input_vector.z(),
+      new_x_axis.x(), new_x_axis.y(), new_x_axis.z(),
+      new_y_axis.x(), new_y_axis.y(), new_y_axis.z(),
+      new_z_axis.x(), new_z_axis.y(), new_z_axis.z()
+    );
+  }
   return v3_rand_world;
 }
 

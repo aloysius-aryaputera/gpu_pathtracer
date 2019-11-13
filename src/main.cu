@@ -81,8 +81,8 @@ int main(int argc, char **argv) {
     t_z = std::stof(argv[14]);
 
   int *n_cell_x, *n_cell_y, *n_cell_z;
-  int max_n_cell_x = 30, max_n_cell_y = 30, max_n_cell_z = 30;
-  int tx2 = 8, ty2 = 8, max_num_objects_per_cell = 200;
+  int max_n_cell_x = 70, max_n_cell_y = 70, max_n_cell_z = 70;
+  int tx2 = 8, ty2 = 8, max_num_objects_per_cell = 500;
 
   BoundingBox** my_cell_bounding_box;
   Scene** my_scene;
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
 
   int num_pixels = im_width * im_height;
   int max_grid_volume = max_n_cell_x * max_n_cell_y * max_n_cell_z;
-  int max_num_vertices = 60000, max_num_faces = 110000;
+  int max_num_vertices = 100000, max_num_faces = 100000;
   size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state;
   size_t rand_state_size = num_pixels * sizeof(curandState);

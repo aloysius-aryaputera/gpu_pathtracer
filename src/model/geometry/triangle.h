@@ -136,13 +136,14 @@ __device__ __device__ bool Triangle::hit(
   float dist_1 = compute_distance(point_4, point_1);
   float dist_2 = compute_distance(point_4, point_2);
   float dist_3 = compute_distance(point_4, point_3);
+  float factor = 1.0f / min(SMALL_DOUBLE, tolerance);
 
   if (
       (dist_1 < tolerance ||
        dist_2 < tolerance ||
        dist_3 < tolerance) &&
       t > min(SMALL_DOUBLE, tolerance) &&
-      t < (1 / min(SMALL_DOUBLE, tolerance))
+      t < factor
   ) {
     rec.t = t;
     rec.point = ray.get_vector(t);
@@ -166,19 +167,23 @@ __device__ __device__ bool Triangle::hit(
   if (
     (area_1 + area_2 + area_3 - area) < tolerance &&
     t > min(SMALL_DOUBLE, tolerance) &&
-    t < (1 / min(SMALL_DOUBLE, tolerance))
+    t < factor
   ) {
     rec.t = t;
     rec.point = ray.get_vector(t);
 
-    float alpha = area_3 / this -> area;
-    float beta = area_2 / this -> area;
-    float gamma = 1 - alpha - beta;
+    if (this -> area > min(SMALL_DOUBLE, tolerance)) {
+      float alpha = (factor * area_3) / (factor * this -> area);
+      float beta = (factor * area_2) / (factor * this -> area);
+      float gamma = 1 - alpha - beta;
 
-    vec3 new_normal = alpha * this -> norm_1 + beta * this -> norm_2 + \
-      gamma * this -> norm_3;
+      vec3 new_normal = alpha * this -> norm_1 + beta * this -> norm_2 + \
+        gamma * this -> norm_3;
 
-    rec.normal = unit_vector(new_normal);
+      rec.normal = unit_vector(new_normal);
+    } else {
+      rec.normal = this -> norm_1;
+    }
 
     rec.object = this;
     return true;

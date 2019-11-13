@@ -364,26 +364,50 @@ __device__ bool Grid::do_traversal(Ray ray, hit_record &rec) {
   j = initial_cell -> j_address;
   k = initial_cell -> k_address;
 
+  float inc_i = round(9999 * ray.dir.x() / fabsf(9999 * ray.dir.x()));
+  float inc_j = round(9999 * ray.dir.y() / fabsf(9999 * ray.dir.y()));
+  float inc_k = round(9999 * ray.dir.z() / fabsf(9999 * ray.dir.z()));
+
+  float t_x_prev, t_y_prev, t_z_prev;
+  int count = 0;
+
   while(
     i < n_cell_x && j < n_cell_y && k < n_cell_z && i >= 0 && j >= 0 && k >= 0
   ) {
+    count++;
 
     current_cell = cell_array[convert_3d_to_1d_cell_address(i, j, k)];
     hit = _grid_hit(
       ray, current_cell -> object_array, current_cell -> num_objects, rec);
-    // printf("hit_2 = %d, num objects in the cell = %d\n", hit, current_cell -> num_objects);
 
-    if (t_x <= t_y && t_x <= t_z) {
+    if (t_x <= t_y && t_x <= t_z && fabsf(ray.dir.x()) > 0) {
+      t_x_prev = t_x;
       t_x += d_t_x;
-      i += (int)(ray.dir.x() / fabsf(ray.dir.x()));
+      i += inc_i;
     } else {
-      if (t_y <= t_x && t_y <= t_z) {
+      if (t_y <= t_x && t_y <= t_z && fabsf(ray.dir.y()) > 0) {
+        t_y_prev = t_y;
         t_y += d_t_y;
-        j += (int)(ray.dir.y() / fabsf(ray.dir.y()));
+        j += inc_j;
       } else {
-        if (t_z <= t_x && t_z <= t_y) {
+        if (t_z <= t_x && t_z <= t_y && fabsf(ray.dir.z()) > 0) {
+          t_z_prev = t_z;
           t_z += d_t_z;
-          k += (int)(ray.dir.z() / fabsf(ray.dir.z()));
+          k += inc_k;
+        } else {
+          printf(
+            "count = %d, i = %d, j = %d, k = %d, \
+            t_x_prev = %5.5f, t_y_prev = %5.5f, t_z_prev = %5.5f, \
+            t_x = %5.5f, t_y = %5.5f, t_z = %5.5f, \
+            d_t_x = %5.5f, d_t_y = %5.5f, d_t_z = %5.5f, \
+            ray_dir_x = %5.5f, ray_dir_y = %5.5f, ray_dir_z = %5.5f\n",
+            count, i, j, k,
+            t_x_prev, t_y_prev, t_z_prev,
+            t_x, t_y, t_z,
+            d_t_x, d_t_y, d_t_z,
+            ray.dir.x(), ray.dir.y(), ray.dir.z()
+          );
+          return false;
         }
       }
     }

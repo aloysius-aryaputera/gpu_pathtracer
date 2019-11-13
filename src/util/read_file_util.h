@@ -77,12 +77,23 @@ void extract_triangle_data(
               *(norm_1_idx + triangle_idx) = std::stoi(sub_chunks_1[2]) - 1;
               *(norm_2_idx + triangle_idx) = std::stoi(sub_chunks_2[2]) - 1;
               *(norm_3_idx + triangle_idx) = std::stoi(sub_chunks_3[2]) - 1;
+            } else {
+              *(norm_1_idx + triangle_idx) = 0;
+              *(norm_2_idx + triangle_idx) = 0;
+              *(norm_3_idx + triangle_idx) = 0;
             }
 
             triangle_idx++;
           }
         }
       }
+    }
+
+    if (norm_idx == 0) {
+      *(x_norm + norm_idx) = 0;
+      *(y_norm + norm_idx) = 0;
+      *(z_norm + norm_idx) = 0;
+      norm_idx++;
     }
 
     myfile.close();
