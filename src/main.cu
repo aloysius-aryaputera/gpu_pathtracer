@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
 
   int num_pixels = im_width * im_height;
   int max_grid_volume = max_n_cell_x * max_n_cell_y * max_n_cell_z;
-  int max_num_vertices = 100000, max_num_faces = 100000;
+  int max_num_vertices = 200000, max_num_faces = 200000;
   size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state;
   size_t rand_state_size = num_pixels * sizeof(curandState);

@@ -1,7 +1,7 @@
 library(readtext)
 
-#OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/camel.obj'
-OBJ_FILE = '/home/aloysius/Downloads/statue.obj'
+#OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/f16.obj'
+OBJ_FILE = '/home/aloysius/Downloads/f-16-2.obj'
 #OBJ_FILE = '/home/aloysius/Desktop/car.obj'
 
 raw_text = readtext(OBJ_FILE)
@@ -18,12 +18,12 @@ for(line in lines[[1]]) {
   }
 }
 
-SX = .4
-SY = .4
-SZ = .4
+SX = 2.4
+SY = 2.4
+SZ = 2.4
 
 TX = 0
-TY = 0.8662064
+TY = 2.5
 TZ = 0
 
 obj_df = read.table(tmp_file)
