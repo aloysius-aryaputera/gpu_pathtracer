@@ -112,6 +112,8 @@ int main(int argc, char **argv) {
   // int point_1_idx[100000], point_2_idx[100000], point_3_idx[100000];
   // int num_triangles[1];
 
+  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128*1024*1024);
+
   checkCudaErrors(cudaMallocManaged((void **)&num_triangles, sizeof(int)));
 
   checkCudaErrors(cudaMallocManaged((void **)&x, max_num_vertices * sizeof(float)));
