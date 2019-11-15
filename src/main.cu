@@ -82,13 +82,14 @@ int main(int argc, char **argv) {
 
   int *n_cell_x, *n_cell_y, *n_cell_z;
   int max_n_cell_x = 70, max_n_cell_y = 70, max_n_cell_z = 70;
-  int tx2 = 8, ty2 = 8, max_num_objects_per_cell = 500;
+  int tx2 = 8, ty2 = 8, tz2 = 8, max_num_objects_per_cell = 500;
 
   BoundingBox** my_cell_bounding_box;
   Scene** my_scene;
   Grid** my_grid;
   Cell** my_cell;
   Primitive **my_geom, **my_cell_geom;
+  Material **my_material;
   Camera **my_camera;
   vec3 *image_output;
 
@@ -112,7 +113,7 @@ int main(int argc, char **argv) {
   // int point_1_idx[100000], point_2_idx[100000], point_3_idx[100000];
   // int num_triangles[1];
 
-  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128*1024*1024);
+  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
 
   checkCudaErrors(cudaMallocManaged((void **)&num_triangles, sizeof(int)));
 
@@ -143,12 +144,23 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("OBJ file read at %s!\n\n", ctime(&my_time));
 
-  checkCudaErrors(cudaMallocManaged((void **)&my_geom, max_num_faces * sizeof(Primitive *)));
+  checkCudaErrors(cudaMallocManaged((void **)&my_material, 5 * sizeof(Material *)));
+
+  printf("Creating the materials!\n");
+  create_material<<<1, 1>>>(my_material);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  my_time = time(NULL);
+  printf("Materials created at %s!\n\n", ctime(&my_time));
+
+  checkCudaErrors(cudaMallocManaged((void **)&my_geom, num_triangles[0] * sizeof(Primitive *)));
   checkCudaErrors(cudaMallocManaged((void **)&my_camera, sizeof(Camera *)));
 
   printf("Creating the world!\n");
-  create_world_3<<<1, 1>>>(
-    my_camera, my_geom,
+  dim3 blocks_world(num_triangles[0] / 256 + 1);
+  dim3 threads_world(256);
+  create_world<<<blocks_world, threads_world>>>(
+    my_camera, my_geom, my_material,
     x, y, z,
     x_norm, y_norm, z_norm,
     point_1_idx, point_2_idx, point_3_idx,
@@ -193,12 +205,12 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("Grid created at %s!\n\n", ctime(&my_time));
 
-  dim3 blocks2(n_cell_x[0] / tx2 + 1, n_cell_y[0] / ty2 + 1);
-  dim3 threads2(tx2, ty2);
+
   checkCudaErrors(cudaMallocManaged((void **)&my_cell_geom, cell_geom_size));
   checkCudaErrors(cudaMallocManaged(
     (void **)&my_cell_bounding_box, cell_bounding_box_size));
-
+  dim3 blocks2(n_cell_x[0] / tx2 + 1, n_cell_y[0] / ty2 + 1, n_cell_z[0] / tz2 + 1);
+  dim3 threads2(tx2, ty2, tz2);
   printf("Building cell array!\n");
   build_cell_array<<<blocks2, threads2>>>(my_grid, my_cell_geom, my_cell_bounding_box);
   checkCudaErrors(cudaGetLastError());

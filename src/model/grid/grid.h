@@ -100,7 +100,6 @@ __device__ void _compute_scene_boundaries(
 
   printf("num_objects = %d\n", num_objects);
   for (int i = 0; i < num_objects; i++) {
-    printf("i = %d\n", i);
     x_min = min(x_min, geom_array[i] -> get_bounding_box() -> x_min);
     x_max = max(x_max, geom_array[i] -> get_bounding_box() -> x_max);
     y_min = min(y_min, geom_array[i] -> get_bounding_box() -> y_min);
@@ -159,48 +158,45 @@ __global__ void insert_objects(Grid** grid) {
 
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   int j = threadIdx.y + blockIdx.y * blockDim.y;
+  int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-  if((j >= grid[0] -> n_cell_y) || (i >= grid[0] -> n_cell_x)) {
-    return;
-  }
+  if(
+    (k >= grid[0] -> n_cell_z) || (j >= grid[0] -> n_cell_y) ||
+    (i >= grid[0] -> n_cell_x)
+  ) return;
 
-  // printf("threadIdx.x = %d, blockIdx.x = %d, blockDim.x = %d, threadIdx.y = %d, blockIdx.y = %d, blockDim.y = %d\n", threadIdx.x, blockIdx.x, blockDim.x, threadIdx.y, blockIdx.y, blockDim.y);
+  // for (int k = 0; k < grid[0] -> n_cell_z; k++) {
+  int counter = 0;
+  for (int l = 0; l < grid[0] -> num_objects; l++) {
+    BoundingBox *obj_bounding_box = grid[0] -> object_array[l] -> get_bounding_box();
+    cell_address = grid[0] -> convert_3d_to_1d_cell_address(i, j, k);
+    intersecting = \
+      grid[0] -> cell_array[cell_address] -> are_intersecting(
+        obj_bounding_box
+      );
+      if (intersecting && counter < grid[0] -> max_num_objects_per_cell) {
+        grid[0] -> cell_array[cell_address] -> add_object(
+          grid[0] -> object_array[l]);
+        counter++;
+      }
 
-  // printf(
-  //   "num_objects = %d ((%d, %d), (%d, %d))\n",
-  //   grid[0] -> num_objects, threadIdx.x, threadIdx.y, blockIdx.x, blockIdx.y
-  // );
-
-  for (int k = 0; k < grid[0] -> n_cell_z; k++) {
-    int counter = 0;
-    for (int l = 0; l < grid[0] -> num_objects; l++) {
-      BoundingBox *obj_bounding_box = grid[0] -> object_array[l] -> get_bounding_box();
-      cell_address = grid[0] -> convert_3d_to_1d_cell_address(i, j, k);
-      intersecting = \
-        grid[0] -> cell_array[cell_address] -> are_intersecting(
-          obj_bounding_box
+      if (counter >= grid[0] -> max_num_objects_per_cell) {
+        printf(
+          "Break! (num_objects = %d, max_objects/cell = %d, l = %d, \
+            (%d, %d, %d), (%d, %d, %d))\n",
+          grid[0] -> num_objects, grid[0] -> max_num_objects_per_cell,
+          l, threadIdx.x, threadIdx.y, threadIdx.z,
+          blockIdx.x, blockIdx.y, blockIdx.z
         );
-        if (intersecting && counter < grid[0] -> max_num_objects_per_cell) {
-          grid[0] -> cell_array[cell_address] -> add_object(
-            grid[0] -> object_array[l]);
-          counter++;
-        }
-
-        if (counter >= grid[0] -> max_num_objects_per_cell) {
-          printf(
-            "Break! (num_objects = %d, max_objects/cell = %d, l = %d, (%d, %d), (%d, %d))\n",
-            grid[0] -> num_objects, grid[0] -> max_num_objects_per_cell,
-            l, threadIdx.x, threadIdx.y, blockIdx.x, blockIdx.y
-          );
-          break;
-        }
-    }
+        break;
+      }
   }
-  printf(
-    "Done! (num_objects = %d, max_objects/cell = %d, (%d, %d), (%d, %d))\n",
-    grid[0] -> num_objects, grid[0] -> max_num_objects_per_cell,
-    threadIdx.x, threadIdx.y, blockIdx.x, blockIdx.y
-  );
+  // }
+  // printf(
+  //   "Done! (num_objects = %d, max_objects/cell = %d, (%d, %d, %d), (%d, %d, %d))\n",
+  //   grid[0] -> num_objects, grid[0] -> max_num_objects_per_cell,
+  //   threadIdx.x, threadIdx.y, threadIdx.z, blockIdx.x, blockIdx.y, blockIdx.z
+  // );
 
 }
 
@@ -212,31 +208,38 @@ __global__ void build_cell_array(
 
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   int j = threadIdx.y + blockIdx.y * blockDim.y;
-  if((j >= grid[0] -> n_cell_y) || (i >= grid[0] -> n_cell_x)) {
-    return;
-  }
+  int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-  for (int k = 0; k < grid[0] -> n_cell_z; k++) {
+  // if((j >= grid[0] -> n_cell_y) || (i >= grid[0] -> n_cell_x)) {
+  //   return;
+  // }
 
-    cell_x_min = grid[0] -> x_min + i * grid[0] -> cell_size_x;
-    cell_x_max = cell_x_min + grid[0] -> cell_size_x;
+  if(
+    (k >= grid[0] -> n_cell_z) || (j >= grid[0] -> n_cell_y) ||
+    (i >= grid[0] -> n_cell_x)
+  ) return;
 
-    cell_y_min = grid[0] -> y_min + j * grid[0] -> cell_size_y;
-    cell_y_max = cell_y_min + grid[0] -> cell_size_y;
+  // for (int k = 0; k < grid[0] -> n_cell_z; k++) {
 
-    cell_z_min = grid[0] -> z_min + k * grid[0] -> cell_size_z;
-    cell_z_max = cell_z_min + grid[0] -> cell_size_z;
+  cell_x_min = grid[0] -> x_min + i * grid[0] -> cell_size_x;
+  cell_x_max = cell_x_min + grid[0] -> cell_size_x;
 
-    cell_address = grid[0] -> convert_3d_to_1d_cell_address(i, j, k);
-    *((grid[0] -> cell_array) + cell_address) = \
-      new Cell(
-        cell_x_min, cell_x_max, cell_y_min, cell_y_max, cell_z_min,
-        cell_z_max, i, j, k,
-        cell_object_array + (grid[0] -> max_num_objects_per_cell * cell_address),
-        grid[0] -> max_num_objects_per_cell,
-        *(bounding_box_array + cell_address)
-      );
-  }
+  cell_y_min = grid[0] -> y_min + j * grid[0] -> cell_size_y;
+  cell_y_max = cell_y_min + grid[0] -> cell_size_y;
+
+  cell_z_min = grid[0] -> z_min + k * grid[0] -> cell_size_z;
+  cell_z_max = cell_z_min + grid[0] -> cell_size_z;
+
+  cell_address = grid[0] -> convert_3d_to_1d_cell_address(i, j, k);
+  *((grid[0] -> cell_array) + cell_address) = \
+    new Cell(
+      cell_x_min, cell_x_max, cell_y_min, cell_y_max, cell_z_min,
+      cell_z_max, i, j, k,
+      cell_object_array + (grid[0] -> max_num_objects_per_cell * cell_address),
+      grid[0] -> max_num_objects_per_cell,
+      *(bounding_box_array + cell_address)
+    );
+  // }
 }
 
 __device__ int Grid::convert_3d_to_1d_cell_address(int i, int j, int k) {

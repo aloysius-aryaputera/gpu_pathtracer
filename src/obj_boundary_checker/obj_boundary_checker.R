@@ -1,6 +1,6 @@
 library(readtext)
 
-OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/dragon_2.obj'
+OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/dragon.obj'
 #OBJ_FILE = '/home/aloysius/Downloads/e45_2.obj'
 #OBJ_FILE = '/home/aloysius/Desktop/car.obj'
 
@@ -18,13 +18,13 @@ for(line in lines[[1]]) {
   }
 }
 
-SX = 1.5
-SY = 1.5
-SZ = 1.5
+SX = .5
+SY = .5
+SZ = .5
 
 TX = 0
-TY = 2.1
-TZ = -1
+TY = 0
+TZ = 0
 
 obj_df = read.table(tmp_file)
 names(obj_df) = c('code', 'x', 'y', 'z')
