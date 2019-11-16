@@ -1,5 +1,7 @@
 # GPU Pathtracer
 
+![](images/dragon.jpg)
+
 ![](images/image_1.jpg)
 
 ![](images/image_2.jpg)
