@@ -12,6 +12,6 @@
 
 ![](images/image_5.jpg)
 
-![](images/image_6.jpg)
+![](images/image.jpg)
 
 ![](images/image_7.jpg)
