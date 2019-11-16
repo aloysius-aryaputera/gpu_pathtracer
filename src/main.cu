@@ -65,6 +65,8 @@ __global__ void free_world(
 }
 
 int main(int argc, char **argv) {
+  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+
   time_t my_time = time(NULL);
   clock_t start, stop;
   start = clock();
@@ -72,17 +74,19 @@ int main(int argc, char **argv) {
 
   const char *image_filename = argv[1], *obj_filename = argv[2];
   int im_width = std::stoi(argv[3]), im_height = std::stoi(argv[4]);
-  int tx = std::stoi(argv[5]), ty = std::stoi(argv[6]);
-  int pathtracing_sample_size = std::stoi(argv[7]);
-  int pathtracing_level = std::stoi(argv[8]);
-  float s_x = std::stof(argv[9]), s_y = std::stof(argv[10]), \
-    s_z = std::stof(argv[11]);
-  float t_x = std::stof(argv[12]), t_y = std::stof(argv[13]), \
-    t_z = std::stof(argv[14]);
+  int pathtracing_sample_size = std::stoi(argv[5]);
+  int pathtracing_level = std::stoi(argv[6]);
+  float eye_x = std::stof(argv[7]), eye_y = std::stof(argv[8]), \
+    eye_z = std::stof(argv[9]);
+  float center_x = std::stof(argv[10]), center_y = std::stof(argv[11]), \
+    center_z = std::stof(argv[12]);
+  float up_x = std::stof(argv[13]), up_y = std::stof(argv[14]), \
+    up_z = std::stof(argv[15]);
+  float fovy = std::stof(argv[16]);
 
   int *n_cell_x, *n_cell_y, *n_cell_z;
   int max_n_cell_x = 70, max_n_cell_y = 70, max_n_cell_z = 70;
-  int tx2 = 8, ty2 = 8, tz2 = 8, max_num_objects_per_cell = 500;
+  int tx = 8, ty = 8, tx2 = 8, ty2 = 8, tz2 = 8, max_num_objects_per_cell = 500;
 
   BoundingBox** my_cell_bounding_box;
   Scene** my_scene;
@@ -113,8 +117,6 @@ int main(int argc, char **argv) {
   // int point_1_idx[100000], point_2_idx[100000], point_3_idx[100000];
   // int num_triangles[1];
 
-  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
-
   checkCudaErrors(cudaMallocManaged((void **)&num_triangles, sizeof(int)));
 
   checkCudaErrors(cudaMallocManaged((void **)&x, max_num_vertices * sizeof(float)));
@@ -133,7 +135,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&norm_2_idx, max_num_faces * sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&norm_3_idx, max_num_faces * sizeof(int)));
 
-  printf("Reading OBJ file!\n");
+  printf("Reading OBJ file...\n");
   extract_triangle_data(
     obj_filename, x, y, z,
     x_norm, y_norm, z_norm,
@@ -144,9 +146,24 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("OBJ file read at %s!\n\n", ctime(&my_time));
 
+  checkCudaErrors(cudaMallocManaged((void **)&my_camera, sizeof(Camera *)));
+
+  printf("Creating the camera...\n");
+  create_camera<<<1, 1>>>(
+    my_camera,
+    eye_x, eye_y, eye_z,
+    center_x, center_y, center_z,
+    up_x, up_y, up_z, fovy,
+    im_width, im_height
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  my_time = time(NULL);
+  printf("Camera created at %s!\n\n", ctime(&my_time));
+
   checkCudaErrors(cudaMallocManaged((void **)&my_material, 5 * sizeof(Material *)));
 
-  printf("Creating the materials!\n");
+  printf("Creating the materials...\n");
   create_material<<<1, 1>>>(my_material);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -154,20 +171,17 @@ int main(int argc, char **argv) {
   printf("Materials created at %s!\n\n", ctime(&my_time));
 
   checkCudaErrors(cudaMallocManaged((void **)&my_geom, num_triangles[0] * sizeof(Primitive *)));
-  checkCudaErrors(cudaMallocManaged((void **)&my_camera, sizeof(Camera *)));
 
-  printf("Creating the world!\n");
+  printf("Creating the world...\n");
   dim3 blocks_world(num_triangles[0] / 256 + 1);
   dim3 threads_world(256);
   create_world<<<blocks_world, threads_world>>>(
-    my_camera, my_geom, my_material,
+    my_geom, my_material,
     x, y, z,
     x_norm, y_norm, z_norm,
     point_1_idx, point_2_idx, point_3_idx,
     norm_1_idx, norm_2_idx, norm_3_idx,
-    num_triangles, im_width, im_height,
-    s_x, s_y, s_z,
-    t_x, t_y, t_z
+    num_triangles
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -195,7 +209,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_y, sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_z, sizeof(int)));
 
-  printf("Creating the grid!\n");
+  printf("Creating the grid...\n");
   create_grid<<<1, 1>>>(
     my_camera, my_grid, my_geom, num_triangles, my_cell, n_cell_x, n_cell_y,
     n_cell_z, max_n_cell_x, max_n_cell_y, max_n_cell_z, max_num_objects_per_cell
@@ -211,14 +225,14 @@ int main(int argc, char **argv) {
     (void **)&my_cell_bounding_box, cell_bounding_box_size));
   dim3 blocks2(n_cell_x[0] / tx2 + 1, n_cell_y[0] / ty2 + 1, n_cell_z[0] / tz2 + 1);
   dim3 threads2(tx2, ty2, tz2);
-  printf("Building cell array!\n");
+  printf("Building cell array...\n");
   build_cell_array<<<blocks2, threads2>>>(my_grid, my_cell_geom, my_cell_bounding_box);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   my_time = time(NULL);
   printf("Cell array built at %s!\n\n", ctime(&my_time));
 
-  printf("Inserting objects into the grid!\n");
+  printf("Inserting objects into the grid...\n");
   insert_objects<<<blocks2, threads2>>>(my_grid);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -227,7 +241,7 @@ int main(int argc, char **argv) {
 
   checkCudaErrors(cudaMallocManaged((void **)&my_scene, sizeof(Scene *)));
 
-  printf("Creating scene!\n");
+  printf("Creating scene...\n");
   create_scene<<<1, 1>>>(my_scene, my_camera, my_grid, num_triangles);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -238,7 +252,7 @@ int main(int argc, char **argv) {
   dim3 threads(tx, ty);
   checkCudaErrors(cudaMallocManaged((void **)&rand_state, rand_state_size));
 
-  printf("Preparing the rendering process!\n");
+  printf("Preparing the rendering process...\n");
   render_init<<<blocks, threads>>>(im_width, im_height, rand_state);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -248,7 +262,7 @@ int main(int argc, char **argv) {
   vec3 sky_emission = vec3(1, 1, 1);
   checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
 
-  printf("Rendering started!\n");
+  printf("Rendering started...\n");
   render<<<blocks, threads>>>(
     image_output, my_scene, rand_state, pathtracing_sample_size,
     pathtracing_level, sky_emission
@@ -258,7 +272,7 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("Rendering done at %s!\n\n", ctime(&my_time));
 
-  printf("Saving image!\n");
+  printf("Saving image...\n");
   save_image(image_output, im_width, im_height, image_filename);
   my_time = time(NULL);
   printf("Image saved at %s!\n\n", ctime(&my_time));
@@ -268,13 +282,14 @@ int main(int argc, char **argv) {
   printf("\nThe rendering took %5.5f seconds.\n", timer_seconds);
 
   checkCudaErrors(cudaDeviceSynchronize());
-  printf("Do cleaning!\n");
+  printf("Do cleaning...\n");
   free_world<<<1,1>>>(my_scene, my_grid, my_geom, my_camera, max_num_faces);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaFree(my_scene));
   checkCudaErrors(cudaFree(my_grid));
   checkCudaErrors(cudaFree(my_camera));
   checkCudaErrors(cudaFree(my_geom));
+  checkCudaErrors(cudaFree(my_material));
   checkCudaErrors(cudaFree(num_triangles));
   checkCudaErrors(cudaFree(n_cell_x));
   checkCudaErrors(cudaFree(n_cell_y));
