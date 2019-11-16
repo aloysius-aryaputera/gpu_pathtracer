@@ -11,7 +11,7 @@
 
 std::vector<std::string> split(const std::string& s, char delimiter);
 void extract_triangle_data(
-  const char* filename,
+  char* filename,
   float* x, float* y, float* z,
   float* x_norm, float* y_norm, float* z_norm,
   int* point_1_idx, int* point_2_idx, int* point_3_idx,
@@ -32,7 +32,7 @@ std::vector<std::string> split(const std::string& s, char delimiter)
 }
 
 void extract_triangle_data(
-  const char* filename,
+  std::string filename,
   float* x, float* y, float* z,
   float* x_norm, float* y_norm, float* z_norm,
   int* point_1_idx, int* point_2_idx, int* point_3_idx,

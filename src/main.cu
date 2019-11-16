@@ -72,17 +72,20 @@ int main(int argc, char **argv) {
   start = clock();
   printf("Started at %s\n\n", ctime(&my_time));
 
-  const char *image_filename = argv[1], *obj_filename = argv[2];
-  int im_width = std::stoi(argv[3]), im_height = std::stoi(argv[4]);
-  int pathtracing_sample_size = std::stoi(argv[5]);
-  int pathtracing_level = std::stoi(argv[6]);
-  float eye_x = std::stof(argv[7]), eye_y = std::stof(argv[8]), \
-    eye_z = std::stof(argv[9]);
-  float center_x = std::stof(argv[10]), center_y = std::stof(argv[11]), \
-    center_z = std::stof(argv[12]);
-  float up_x = std::stof(argv[13]), up_y = std::stof(argv[14]), \
-    up_z = std::stof(argv[15]);
-  float fovy = std::stof(argv[16]);
+  std::string input_folder_path = argv[1];
+  std::string image_filename = argv[2], obj_filename = argv[3];
+  int im_width = std::stoi(argv[4]), im_height = std::stoi(argv[5]);
+  int pathtracing_sample_size = std::stoi(argv[6]);
+  int pathtracing_level = std::stoi(argv[7]);
+  float eye_x = std::stof(argv[8]), eye_y = std::stof(argv[9]), \
+    eye_z = std::stof(argv[10]);
+  float center_x = std::stof(argv[11]), center_y = std::stof(argv[12]), \
+    center_z = std::stof(argv[13]);
+  float up_x = std::stof(argv[14]), up_y = std::stof(argv[15]), \
+    up_z = std::stof(argv[16]);
+  float fovy = std::stof(argv[17]);
+
+  std::string obj_filename_path = input_folder_path + obj_filename;
 
   int *n_cell_x, *n_cell_y, *n_cell_z;
   int max_n_cell_x = 70, max_n_cell_y = 70, max_n_cell_z = 70;
@@ -137,7 +140,7 @@ int main(int argc, char **argv) {
 
   printf("Reading OBJ file...\n");
   extract_triangle_data(
-    obj_filename, x, y, z,
+    obj_filename_path, x, y, z,
     x_norm, y_norm, z_norm,
     point_1_idx, point_2_idx, point_3_idx,
     norm_1_idx, norm_2_idx, norm_3_idx,
@@ -283,7 +286,7 @@ int main(int argc, char **argv) {
 
   checkCudaErrors(cudaDeviceSynchronize());
   printf("Do cleaning...\n");
-  free_world<<<1,1>>>(my_scene, my_grid, my_geom, my_camera, max_num_faces);
+  // free_world<<<1,1>>>(my_scene, my_grid, my_geom, my_camera, max_num_faces);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaFree(my_scene));
   checkCudaErrors(cudaFree(my_grid));

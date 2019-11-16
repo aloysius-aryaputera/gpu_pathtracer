@@ -3,17 +3,18 @@
 
 #include <fstream>
 #include <sstream>
+#include <string>
 
 __host__ float clamp(const float &lo, const float &hi, const float &v);
 __host__ void save_image(
-  vec3* image, int width, int height, const char * filename
+  vec3* image, int width, int height, std::string filename
 );
 
 __host__ float clamp(const float &lo, const float &hi, const float &v)
 { return std::max(lo, std::min(hi, v)); }
 
 __host__ void save_image(
-  vec3* image, int width, int height, const char * filename
+  vec3* image, int width, int height, std::string filename
 ) {
   std::ofstream ofs;
   ofs.open(filename);
