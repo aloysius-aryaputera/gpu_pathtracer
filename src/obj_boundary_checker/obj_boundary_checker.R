@@ -1,7 +1,7 @@
 library(readtext)
 
-OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/dragon.obj'
-#OBJ_FILE = '/home/aloysius/Downloads/e45_2.obj'
+#OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/dragon.obj'
+OBJ_FILE = '/home/aloysius/Downloads/venus.obj'
 #OBJ_FILE = '/home/aloysius/Desktop/car.obj'
 
 raw_text = readtext(OBJ_FILE)
@@ -18,9 +18,9 @@ for(line in lines[[1]]) {
   }
 }
 
-SX = .5
-SY = .5
-SZ = .5
+SX = 1
+SY = 1
+SZ = 1
 
 TX = 0
 TY = 0
