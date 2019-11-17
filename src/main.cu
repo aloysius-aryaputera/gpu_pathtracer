@@ -74,21 +74,18 @@ int main(int argc, char **argv) {
 
   std::string input_folder_path = argv[1];
   std::string obj_filename = argv[2];
-  std::string material_filename = argv[3];
-  std::string image_output_path = argv[4];
+  std::string image_output_path = argv[3];
 
-  int im_width = std::stoi(argv[5]), im_height = std::stoi(argv[6]);
-  int pathtracing_sample_size = std::stoi(argv[7]);
-  int pathtracing_level = std::stoi(argv[8]);
-  float eye_x = std::stof(argv[9]), eye_y = std::stof(argv[10]), \
-    eye_z = std::stof(argv[11]);
-  float center_x = std::stof(argv[12]), center_y = std::stof(argv[13]), \
-    center_z = std::stof(argv[14]);
-  float up_x = std::stof(argv[15]), up_y = std::stof(argv[16]), \
-    up_z = std::stof(argv[17]);
-  float fovy = std::stof(argv[18]);
-
-  std::string obj_filename_path = input_folder_path + obj_filename;
+  int im_width = std::stoi(argv[4]), im_height = std::stoi(argv[5]);
+  int pathtracing_sample_size = std::stoi(argv[6]);
+  int pathtracing_level = std::stoi(argv[7]);
+  float eye_x = std::stof(argv[8]), eye_y = std::stof(argv[9]), \
+    eye_z = std::stof(argv[10]);
+  float center_x = std::stof(argv[11]), center_y = std::stof(argv[12]), \
+    center_z = std::stof(argv[13]);
+  float up_x = std::stof(argv[14]), up_y = std::stof(argv[15]), \
+    up_z = std::stof(argv[16]);
+  float fovy = std::stof(argv[17]);
 
   int *n_cell_x, *n_cell_y, *n_cell_z;
   int max_n_cell_x = 70, max_n_cell_y = 70, max_n_cell_z = 70;
@@ -117,7 +114,7 @@ int main(int argc, char **argv) {
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
   float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z;
   int *num_materials;
-  std::vector <std::string> material_name;
+  std::vector <std::string> material_file_name_array, material_name;
 
   checkCudaErrors(cudaMallocManaged((void **)&num_materials, sizeof(int)));
 
@@ -137,9 +134,19 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&ke_y, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&ke_z, max_num_materials * sizeof(float)));
 
-  printf("Extract material data...\n");
+  printf("Extracting material file names...\n");
+  extract_material_file_names(
+    input_folder_path,
+    obj_filename,
+    material_file_name_array
+  );
+  my_time = time(NULL);
+  printf("Material file names extracted at %s!\n\n", ctime(&my_time));
+
+  printf("Extracting material data...\n");
   extract_material_data(
-    input_folder_path, material_filename,
+    input_folder_path,
+    material_file_name_array,
     ka_x, ka_y, ka_z,
     kd_x, kd_y, kd_z,
     ks_x, ks_y, ks_z,
@@ -177,13 +184,16 @@ int main(int argc, char **argv) {
 
   printf("Reading OBJ file...\n");
   extract_triangle_data(
-    obj_filename_path, x, y, z,
+    input_folder_path,
+    obj_filename,
+    x, y, z,
     x_norm, y_norm, z_norm,
     point_1_idx, point_2_idx, point_3_idx,
     norm_1_idx, norm_2_idx, norm_3_idx,
     material_name,
     material_idx,
-    num_triangles
+    num_triangles,
+    num_materials
   );
   my_time = time(NULL);
   printf("OBJ file read at %s!\n\n", ctime(&my_time));
@@ -218,6 +228,21 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   my_time = time(NULL);
   printf("Materials created at %s!\n\n", ctime(&my_time));
+
+  checkCudaErrors(cudaFree(ka_x));
+  checkCudaErrors(cudaFree(ka_y));
+  checkCudaErrors(cudaFree(ka_z));
+  checkCudaErrors(cudaFree(kd_x));
+  checkCudaErrors(cudaFree(kd_y));
+  checkCudaErrors(cudaFree(kd_z));
+  checkCudaErrors(cudaFree(ks_x));
+  checkCudaErrors(cudaFree(ks_y));
+  checkCudaErrors(cudaFree(ks_z));
+  checkCudaErrors(cudaFree(ke_x));
+  checkCudaErrors(cudaFree(ke_y));
+  checkCudaErrors(cudaFree(ke_z));
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
 
   checkCudaErrors(cudaMallocManaged((void **)&my_geom, num_triangles[0] * sizeof(Primitive *)));
 

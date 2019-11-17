@@ -78,7 +78,6 @@ __global__ void create_material(
     vec3(.49, .49, .49)
   );
 
-  print_vec3((*(material_array + i)) -> diffuse);
 }
 
 __global__ void create_world(
