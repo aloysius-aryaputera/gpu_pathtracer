@@ -105,7 +105,6 @@ void render(
 
     }
     color = init_rec.object -> get_material() -> emission + \
-      init_rec.object -> get_material() -> ambient + \
       (1.0f / sample_size) * (1 / pdf) * (1 / M_PI) * color * \
       init_rec.object -> get_material() -> diffuse * \
       init_rec.object -> get_material() -> albedo;
