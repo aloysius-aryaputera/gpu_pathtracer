@@ -25,10 +25,18 @@ __global__ void create_world(
   float *x_norm, float *y_norm, float *z_norm,
   int *point_1_idx, int *point_2_idx, int *point_3_idx,
   int *norm_1_idx, int *norm_2_idx, int *norm_3_idx,
+  int *material_idx,
   int* num_triangles
 );
 
-__global__ void create_material(Material** material_array);
+__global__ void create_material(
+  Material** material_array,
+  float *ka_x, float *ka_y, float *ka_z,
+  float *kd_x, float *kd_y, float *kd_z,
+  float *ks_x, float *ks_y, float *ks_z,
+  float *ke_x, float *ke_y, float *ke_z,
+  int *num_materials
+);
 
 __global__ void create_camera(
   Camera** camera, float eye_x, float eye_y, float eye_z,
@@ -51,12 +59,25 @@ __global__ void create_camera(
   }
 }
 
-__global__ void create_material(Material** material_array) {
-  if (threadIdx.x == 0 && blockIdx.x == 0) {
-    *(material_array) = new Material(
-      vec3(0, 0, 0), vec3(.9, .9, .9), vec3(0, 0, 0), vec3(.5, .5, .5)
-    );
-  }
+__global__ void create_material(
+  Material** material_array,
+  float *ka_x, float *ka_y, float *ka_z,
+  float *kd_x, float *kd_y, float *kd_z,
+  float *ks_x, float *ks_y, float *ks_z,
+  float *ke_x, float *ke_y, float *ke_z,
+  int *num_materials
+) {
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (i >= num_materials[0]) return;
+
+  *(material_array + i) = new Material(
+    vec3(ka_x[i], ka_y[i], ka_z[i]),
+    vec3(kd_x[i], kd_y[i], kd_z[i]),
+    vec3(ke_x[i], ke_y[i], ke_z[i]),
+    vec3(.49, .49, .49)
+  );
+
 }
 
 __global__ void create_world(
@@ -66,6 +87,7 @@ __global__ void create_world(
   float *x_norm, float *y_norm, float *z_norm,
   int *point_1_idx, int *point_2_idx, int *point_3_idx,
   int *norm_1_idx, int *norm_2_idx, int *norm_3_idx,
+  int *material_idx,
   int* num_triangles
 ) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -77,7 +99,7 @@ __global__ void create_world(
     vec3(x[point_1_idx[idx]], y[point_1_idx[idx]], z[point_1_idx[idx]]),
     vec3(x[point_2_idx[idx]], y[point_2_idx[idx]], z[point_2_idx[idx]]),
     vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]),
-    material_array[0],
+    material_array[material_idx[idx]],
     vec3(x_norm[norm_1_idx[idx]], y_norm[norm_1_idx[idx]], z_norm[norm_1_idx[idx]]),
     vec3(x_norm[norm_2_idx[idx]], y_norm[norm_2_idx[idx]], z_norm[norm_2_idx[idx]]),
     vec3(x_norm[norm_3_idx[idx]], y_norm[norm_3_idx[idx]], z_norm[norm_3_idx[idx]])
