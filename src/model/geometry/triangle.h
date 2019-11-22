@@ -133,39 +133,13 @@ __device__ __device__ bool Triangle::hit(
 
   vec3 point_4 = ray.get_vector(t);
 
-  float dist_1 = compute_distance(point_4, point_1);
-  float dist_2 = compute_distance(point_4, point_2);
-  float dist_3 = compute_distance(point_4, point_3);
-  float factor = 1.0f / min(SMALL_DOUBLE, tolerance);
-
-  if (
-      (dist_1 < tolerance ||
-       dist_2 < tolerance ||
-       dist_3 < tolerance) &&
-      t > min(SMALL_DOUBLE, tolerance) &&
-      t < factor
-  ) {
-    rec.t = t;
-    rec.point = ray.get_vector(t);
-
-    if (dist_1 < tolerance) {
-      rec.normal = this -> norm_1;
-    } else if (dist_2 < tolerance) {
-      rec.normal = this -> norm_2;
-    } else {
-      rec.normal = this -> norm_3;
-    }
-
-    rec.object = this;
-    return true;
-  }
-
   float area_1 = _compute_triangle_area(point_1, point_2, point_4);
   float area_2 = _compute_triangle_area(point_1, point_3, point_4);
   float area_3 = _compute_triangle_area(point_2, point_3, point_4);
+  float factor = 1.0f / min(SMALL_DOUBLE, tolerance);
 
   if (
-    (area_1 + area_2 + area_3 - area) < tolerance &&
+    (area_1 + area_2 + area_3 - area) < min(SMALL_DOUBLE, tolerance) &&
     t > min(SMALL_DOUBLE, tolerance) &&
     t < factor
   ) {
@@ -183,6 +157,32 @@ __device__ __device__ bool Triangle::hit(
       rec.normal = unit_vector(new_normal);
     } else {
       rec.normal = this -> norm_1;
+    }
+
+    rec.object = this;
+    return true;
+  }
+
+  float dist_1 = compute_distance(point_4, point_1);
+  float dist_2 = compute_distance(point_4, point_2);
+  float dist_3 = compute_distance(point_4, point_3);
+
+  if (
+      (dist_1 < min(SMALL_DOUBLE, tolerance) ||
+       dist_2 < min(SMALL_DOUBLE, tolerance) ||
+       dist_3 < min(SMALL_DOUBLE, tolerance)) &&
+      t > min(SMALL_DOUBLE, tolerance) &&
+      t < factor
+  ) {
+    rec.t = t;
+    rec.point = ray.get_vector(t);
+
+    if (dist_1 <= dist_2 && dist_1 <= dist_3) {
+      rec.normal = this -> norm_1;
+    } else if (dist_2 <= dist_1 && dist_2 <= dist_3) {
+      rec.normal = this -> norm_2;
+    } else {
+      rec.normal = this -> norm_3;
     }
 
     rec.object = this;

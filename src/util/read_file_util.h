@@ -84,8 +84,12 @@ void extract_material_file_names(
         std::vector <std::string> chunks = split(str, ' ');
         if (chunks[0] == "mtllib") {
           for (int i = 1; i < chunks.size(); i++) {
-            printf("Material file name %d: %s\n", i, chunks[i].c_str());
-            material_file_name_array.push_back(chunks[i]);
+            std::pair<bool, int> result = find_in_vector<std::string>(
+              material_file_name_array, chunks[i]);
+            if (!result.first) {
+              printf("Material file name: %s\n", chunks[i].c_str());
+              material_file_name_array.push_back(chunks[i]);
+            }
           }
         }
       }
@@ -117,28 +121,33 @@ void _extract_single_material_data(
   std::vector <std::string> &material_name
 ) {
   std::string complete_material_filename = folder_path + material_filename;
-  std::ifstream myfile (complete_material_filename);
   std::string str;
   int idx = material_name.size();
 
-  material_name.push_back("Default_123");
+  printf("%s\n", complete_material_filename.c_str());
 
-  *(ka_x + idx) = 0;
-  *(ka_y + idx) = 0;
-  *(ka_z + idx) = 0;
+  if (idx == 0) {
+    material_name.push_back("Default_123");
 
-  *(kd_x + idx) = .9;
-  *(kd_y + idx) = .9;
-  *(kd_z + idx) = .9;
+    *(ka_x + idx) = 0;
+    *(ka_y + idx) = 0;
+    *(ka_z + idx) = 0;
 
-  *(ks_x + idx) = 0;
-  *(ks_y + idx) = 0;
-  *(ks_z + idx) = 0;
+    *(kd_x + idx) = .9;
+    *(kd_y + idx) = .9;
+    *(kd_z + idx) = .9;
 
-  *(ke_x + idx) = 0;
-  *(ke_y + idx) = 0;
-  *(ke_z + idx) = 0;
+    *(ks_x + idx) = 0;
+    *(ks_y + idx) = 0;
+    *(ks_z + idx) = 0;
 
+    *(ke_x + idx) = 0;
+    *(ke_y + idx) = 0;
+    *(ke_z + idx) = 0;
+  }
+
+  std::ifstream myfile (complete_material_filename);
+  printf("myfile is open? %d\n", myfile.is_open());
   if (myfile.is_open()) {
     while(std::getline(myfile, str)) {
       if (str.length() > 0) {
@@ -186,6 +195,7 @@ void _extract_single_material_data(
     myfile.close();
   }
   num_materials[0] = idx + 1;
+  printf("num_materials = %d\n", num_materials[0]);
 }
 
 void extract_material_data(

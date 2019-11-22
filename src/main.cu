@@ -87,9 +87,13 @@ int main(int argc, char **argv) {
     up_z = std::stof(argv[16]);
   float fovy = std::stof(argv[17]);
 
+  float sky_emission_r = std::stof(argv[18]);
+  float sky_emission_g = std::stof(argv[19]);
+  float sky_emission_b = std::stof(argv[20]);
+
   int *n_cell_x, *n_cell_y, *n_cell_z;
   int max_n_cell_x = 70, max_n_cell_y = 70, max_n_cell_z = 70;
-  int tx = 8, ty = 8, tx2 = 8, ty2 = 8, tz2 = 8, max_num_objects_per_cell = 500;
+  int tx = 8, ty = 8, tx2 = 8, ty2 = 8, tz2 = 8, max_num_objects_per_cell = 700;
 
   BoundingBox** my_cell_bounding_box;
   Scene** my_scene;
@@ -334,7 +338,7 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("Rendering process is ready to start at %s!\n\n", ctime(&my_time));
 
-  vec3 sky_emission = vec3(1, 1, 1);
+  vec3 sky_emission = vec3(sky_emission_r, sky_emission_g, sky_emission_b);
   checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
 
   printf("Rendering started...\n");

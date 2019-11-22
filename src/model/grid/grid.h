@@ -247,8 +247,9 @@ __device__ int Grid::convert_3d_to_1d_cell_address(int i, int j, int k) {
 }
 
 __device__ int Grid::convert_3d_to_1d_cell_address(vec3 address_3d) {
-  int k = floorf(address_3d.z()), j = floorf(address_3d.y()), \
-    i = floorf(address_3d.x());
+  int k = floorf(fminf(address_3d.z(), n_cell_z - 1));
+  int j = floorf(fminf(address_3d.y(), n_cell_y - 1));
+  int i = floorf(fminf(address_3d.x(), n_cell_x - 1));
   return k + j * n_cell_z + i * n_cell_z * n_cell_y;
 }
 
@@ -335,9 +336,9 @@ __device__ bool Grid::do_traversal(Ray ray, hit_record &rec) {
   bool hit = false;
   hit_record cur_rec;
 
-  o_x = ray.p0.x() - initial_cell -> get_bounding_box() -> x_min;
-  o_y = ray.p0.y() - initial_cell -> get_bounding_box() -> y_min;
-  o_z = ray.p0.z() - initial_cell -> get_bounding_box() -> z_min;
+  o_x = fmaxf(fminf(ray.p0.x(), x_max), x_min) - initial_cell -> get_bounding_box() -> x_min;
+  o_y = fmaxf(fminf(ray.p0.y(), y_max), y_min) - initial_cell -> get_bounding_box() -> y_min;
+  o_z = fmaxf(fminf(ray.p0.z(), z_max), z_min) - initial_cell -> get_bounding_box() -> z_min;
 
   if (ray.dir.x() < 0) {
     t_x_0 = o_x / fabsf(ray.dir.x());
