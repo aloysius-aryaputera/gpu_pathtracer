@@ -16,7 +16,7 @@ class Triangle: public Primitive {
     __host__ __device__ float _compute_tolerance();
     __device__ void _compute_bounding_box();
 
-    float area, tolerance;
+    float area, tolerance, inv_tolerance;
     vec3 point_1, point_2, point_3, norm_1, norm_2, norm_3, normal;
     Material *material;
     BoundingBox *bounding_box;
@@ -58,12 +58,9 @@ __device__ void Triangle::_compute_bounding_box() {
   z_max = max(z_max, point_3.z());
 
   this -> bounding_box = new BoundingBox(
-    x_min - min(SMALL_DOUBLE, tolerance),
-    x_max + min(SMALL_DOUBLE, tolerance),
-    y_min - min(SMALL_DOUBLE, tolerance),
-    y_max + min(SMALL_DOUBLE, tolerance),
-    z_min - min(SMALL_DOUBLE, tolerance),
-    z_max + min(SMALL_DOUBLE, tolerance)
+    x_min - this -> tolerance, x_max + this -> tolerance,
+    y_min - this -> tolerance, y_max + this -> tolerance,
+    z_min - this -> tolerance, z_max + this -> tolerance
   );
 }
 
@@ -77,6 +74,7 @@ __device__ Triangle::Triangle(
   this -> point_3 = vec3(point_3_.x(), point_3_.y(), point_3_.z());
   this -> material = material_;
   this -> tolerance = this -> _compute_tolerance();
+  this -> inv_tolerance = 1.0f / this -> tolerance;
   this -> area = _compute_triangle_area(
     this -> point_1, this -> point_2, this -> point_3);
   this -> normal = unit_vector(
@@ -86,9 +84,9 @@ __device__ Triangle::Triangle(
   this -> norm_3 = unit_vector(norm_3_);
 
   if (
-    compute_distance(norm_1_, vec3(0, 0, 0)) < SMALL_DOUBLE ||
-    compute_distance(norm_2_, vec3(0, 0, 0)) < SMALL_DOUBLE ||
-    compute_distance(norm_3_, vec3(0, 0, 0)) < SMALL_DOUBLE
+    compute_distance(norm_1_, vec3(0, 0, 0)) < this -> tolerance ||
+    compute_distance(norm_2_, vec3(0, 0, 0)) < this -> tolerance ||
+    compute_distance(norm_3_, vec3(0, 0, 0)) < this -> tolerance
   ) {
     this -> norm_1 = this -> normal;
     this -> norm_2 = this -> normal;
@@ -110,7 +108,7 @@ __host__ __device__ float Triangle::_compute_tolerance() {
   if (dist_3 < tolerance_) {
     tolerance_ = dist_3;
   }
-  return tolerance_ / 100;
+  return min(SMALL_DOUBLE, tolerance_ / 100);
 }
 
 __device__ Material* Triangle::get_material() {
@@ -136,10 +134,8 @@ __device__ bool Triangle::hit(Ray ray, float t_max, hit_record& rec) {
   float gamma = m_gamma / m;
   float alpha = 1 - beta - gamma;
 
-  float factor = 1.0f / min(SMALL_DOUBLE, tolerance);
-
   if (t > t_max) return false;
-  if (t < min(SMALL_DOUBLE, tolerance) || t > factor) return false;
+  if (t < this -> tolerance || t > this -> inv_tolerance) return false;
   if (beta < 0 || beta > 1) return false;
   if (gamma < 0 || gamma + beta > 1) return false;
 
