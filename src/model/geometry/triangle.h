@@ -16,7 +16,7 @@ class Triangle: public Primitive {
     __host__ __device__ float _compute_tolerance();
     __device__ void _compute_bounding_box();
 
-    float area, tolerance;
+    float area, tolerance, inv_tolerance;
     vec3 point_1, point_2, point_3, norm_1, norm_2, norm_3, normal;
     Material *material;
     BoundingBox *bounding_box;
@@ -58,12 +58,9 @@ __device__ void Triangle::_compute_bounding_box() {
   z_max = max(z_max, point_3.z());
 
   this -> bounding_box = new BoundingBox(
-    x_min - min(SMALL_DOUBLE, tolerance),
-    x_max + min(SMALL_DOUBLE, tolerance),
-    y_min - min(SMALL_DOUBLE, tolerance),
-    y_max + min(SMALL_DOUBLE, tolerance),
-    z_min - min(SMALL_DOUBLE, tolerance),
-    z_max + min(SMALL_DOUBLE, tolerance)
+    x_min - this -> tolerance, x_max + this -> tolerance,
+    y_min - this -> tolerance, y_max + this -> tolerance,
+    z_min - this -> tolerance, z_max + this -> tolerance
   );
 }
 
@@ -77,6 +74,7 @@ __device__ Triangle::Triangle(
   this -> point_3 = vec3(point_3_.x(), point_3_.y(), point_3_.z());
   this -> material = material_;
   this -> tolerance = this -> _compute_tolerance();
+  this -> inv_tolerance = 1.0f / this -> tolerance;
   this -> area = _compute_triangle_area(
     this -> point_1, this -> point_2, this -> point_3);
   this -> normal = unit_vector(
@@ -86,9 +84,9 @@ __device__ Triangle::Triangle(
   this -> norm_3 = unit_vector(norm_3_);
 
   if (
-    compute_distance(norm_1_, vec3(0, 0, 0)) < SMALL_DOUBLE ||
-    compute_distance(norm_2_, vec3(0, 0, 0)) < SMALL_DOUBLE ||
-    compute_distance(norm_3_, vec3(0, 0, 0)) < SMALL_DOUBLE
+    compute_distance(norm_1_, vec3(0, 0, 0)) < this -> tolerance ||
+    compute_distance(norm_2_, vec3(0, 0, 0)) < this -> tolerance ||
+    compute_distance(norm_3_, vec3(0, 0, 0)) < this -> tolerance
   ) {
     this -> norm_1 = this -> normal;
     this -> norm_2 = this -> normal;
@@ -110,7 +108,7 @@ __host__ __device__ float Triangle::_compute_tolerance() {
   if (dist_3 < tolerance_) {
     tolerance_ = dist_3;
   }
-  return tolerance_ / 100;
+  return min(SMALL_DOUBLE, tolerance_ / 100);
 }
 
 __device__ Material* Triangle::get_material() {
@@ -121,75 +119,33 @@ __device__ BoundingBox* Triangle::get_bounding_box() {
   return bounding_box;
 }
 
-__device__ __device__ bool Triangle::hit(
-  Ray ray, float t_max, hit_record& rec) {
-  float t = (
-    dot(this -> point_1, this -> normal) - dot(ray.p0, this -> normal)) / \
-      dot(ray.dir, this -> normal);
+__device__ bool Triangle::hit(Ray ray, float t_max, hit_record& rec) {
+  vec3 o_point_1 = ray.p0 - this -> point_1;
+  vec3 point_2_point_1 = this -> point_2 - this -> point_1;
+  vec3 point_3_point_1 = this -> point_3 - this -> point_1;
 
-  if (t > t_max) {
-    return false;
-  }
+  float m_t = dot(cross(point_3_point_1, o_point_1), point_2_point_1);
+  float m_beta = dot(cross(point_3_point_1, -ray.dir), o_point_1);
+  float m_gamma = dot(cross(o_point_1, -ray.dir), point_2_point_1);
+  float m = dot(cross(point_3_point_1, -ray.dir), point_2_point_1);
 
-  vec3 point_4 = ray.get_vector(t);
+  float t = m_t / m;
+  float beta = m_beta / m;
+  float gamma = m_gamma / m;
+  float alpha = 1 - beta - gamma;
 
-  float area_1 = _compute_triangle_area(point_1, point_2, point_4);
-  float area_2 = _compute_triangle_area(point_1, point_3, point_4);
-  float area_3 = _compute_triangle_area(point_2, point_3, point_4);
-  float factor = 1.0f / min(SMALL_DOUBLE, tolerance);
+  if (t > t_max) return false;
+  if (t < this -> tolerance || t > this -> inv_tolerance) return false;
+  if (beta < 0 || beta > 1) return false;
+  if (gamma < 0 || gamma + beta > 1) return false;
 
-  if (
-    (area_1 + area_2 + area_3 - area) < min(SMALL_DOUBLE, tolerance) &&
-    t > min(SMALL_DOUBLE, tolerance) &&
-    t < factor
-  ) {
-    rec.t = t;
-    rec.point = ray.get_vector(t);
+  rec.t = t;
+  rec.object = this;
+  rec.point = ray.get_vector(t);
+  rec.normal = unit_vector(
+    alpha * this -> norm_1 + beta * this -> norm_2 + gamma * this -> norm_3);
 
-    if (this -> area > min(SMALL_DOUBLE, tolerance)) {
-      float alpha = (factor * area_3) / (factor * this -> area);
-      float beta = (factor * area_2) / (factor * this -> area);
-      float gamma = 1 - alpha - beta;
-
-      vec3 new_normal = alpha * this -> norm_1 + beta * this -> norm_2 + \
-        gamma * this -> norm_3;
-
-      rec.normal = unit_vector(new_normal);
-    } else {
-      rec.normal = this -> norm_1;
-    }
-
-    rec.object = this;
-    return true;
-  }
-
-  float dist_1 = compute_distance(point_4, point_1);
-  float dist_2 = compute_distance(point_4, point_2);
-  float dist_3 = compute_distance(point_4, point_3);
-
-  if (
-      (dist_1 < min(SMALL_DOUBLE, tolerance) ||
-       dist_2 < min(SMALL_DOUBLE, tolerance) ||
-       dist_3 < min(SMALL_DOUBLE, tolerance)) &&
-      t > min(SMALL_DOUBLE, tolerance) &&
-      t < factor
-  ) {
-    rec.t = t;
-    rec.point = ray.get_vector(t);
-
-    if (dist_1 <= dist_2 && dist_1 <= dist_3) {
-      rec.normal = this -> norm_1;
-    } else if (dist_2 <= dist_1 && dist_2 <= dist_3) {
-      rec.normal = this -> norm_2;
-    } else {
-      rec.normal = this -> norm_3;
-    }
-
-    rec.object = this;
-    return true;
-  }
-
-  return false;
+  return true;
 }
 
 __host__ __device__ float _compute_triangle_area(
