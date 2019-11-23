@@ -128,6 +128,13 @@ void _extract_single_material_data(
   std::string complete_material_filename = folder_path + material_filename;
   std::string str;
   int idx = material_name.size();
+  int last_char_ascii = int(complete_material_filename[complete_material_filename.size() - 1]);
+
+  if (last_char_ascii < 33 || last_char_ascii > 126) {
+    complete_material_filename = complete_material_filename.substr(
+      0, complete_material_filename.size() - 1
+    );
+  }
 
   if (idx == 0) {
     material_name.push_back("Default_123");
@@ -149,16 +156,12 @@ void _extract_single_material_data(
     *(ke_z + idx) = 0;
   }
 
-  std::ifstream myfile (complete_material_filename.c_str());
+  std::ifstream myfile (complete_material_filename);
 
-  printf("Material file name = %s\n", complete_material_filename.c_str());
-  printf("myfile is open? %d\n", myfile.is_open());
-  printf("Material file name = %s\n", complete_material_filename.c_str());
   if (myfile.is_open()) {
     while(std::getline(myfile, str)) {
       if (str.length() > 0) {
         str = reduce(str);
-        printf("%s\n", str.c_str());
         std::vector <std::string> chunks = split(str, ' ');
         if (chunks[0] == "newmtl") {
           printf("Extracting material %s...\n", chunks[1].c_str());
@@ -202,8 +205,8 @@ void _extract_single_material_data(
     }
     myfile.close();
   }
-  num_materials[0] = idx + 1;
-  printf("num_materials = %d\n", num_materials[0]);
+  num_materials[0] = material_name.size();
+  printf("Number of materials so far = %d\n", num_materials[0]);
 }
 
 void extract_material_data(

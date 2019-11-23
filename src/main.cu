@@ -120,6 +120,15 @@ int main(int argc, char **argv) {
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
   float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z;
   int *num_materials;
+
+  /////////////////////////////////////////////////////////////////////////////
+  // For offline testing
+  /////////////////////////////////////////////////////////////////////////////
+  // float ka_x[100], ka_y[100], ka_z[100], kd_x[100], kd_y[100], kd_z[100];
+  // float ks_x[100], ks_y[100], ks_z[100], ke_x[100], ke_y[100], ke_z[100];
+  // int num_materials[1];
+  /////////////////////////////////////////////////////////////////////////////
+
   std::vector <std::string> material_file_name_array, material_name;
 
   checkCudaErrors(cudaMallocManaged((void **)&num_materials, sizeof(int)));
