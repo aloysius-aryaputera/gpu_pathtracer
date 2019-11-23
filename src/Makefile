@@ -13,6 +13,7 @@ GENCODE_FLAGS_2  = -gencode arch=compute_37,code=sm_37
 
 SRCS = main.cu
 INCS = \
+  external/jpeg.h \
 	model/camera.h \
 	model/cartesian_system.h \
 	model/data_structure/local_vector.h \
@@ -30,6 +31,7 @@ INCS = \
 	render/pathtracing.h \
 	util/image_util.h \
 	util/read_file_util.h \
+	util/string_util.h \
 	world_lib.h
 
 all: gpu_path_tracing gpu_path_tracing_debug gpu_path_tracing_2 gpu_path_tracing_debug_2

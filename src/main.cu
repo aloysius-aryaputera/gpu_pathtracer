@@ -5,6 +5,8 @@
 #include <string>
 #include <time.h>
 
+#include "external/jpeg.h"
+
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
 #include "model/geometry/sphere.h"

@@ -10,6 +10,7 @@
 
 #include "../model/geometry/triangle.h"
 #include "../model/vector_and_matrix/vec3.h"
+#include "string_util.h"
 
 void _extract_single_material_data(
   std::string folder_path, std::string material_filename,
@@ -75,12 +76,16 @@ void extract_material_file_names(
   std::vector <std::string> &material_file_name_array
 ) {
   std::string complete_obj_filename = folder_path + obj_filename;
-  std::ifstream myfile (complete_obj_filename);
+  std::ifstream myfile (complete_obj_filename.c_str());
   std::string str;
 
   if (myfile.is_open()){
+
+    material_file_name_array.push_back("file_default_123.mtl");
+
     while(std::getline(myfile, str)) {
       if (str.length() > 0) {
+        str = reduce(str);
         std::vector <std::string> chunks = split(str, ' ');
         if (chunks[0] == "mtllib") {
           for (int i = 1; i < chunks.size(); i++) {
@@ -124,8 +129,6 @@ void _extract_single_material_data(
   std::string str;
   int idx = material_name.size();
 
-  printf("%s\n", complete_material_filename.c_str());
-
   if (idx == 0) {
     material_name.push_back("Default_123");
 
@@ -146,11 +149,16 @@ void _extract_single_material_data(
     *(ke_z + idx) = 0;
   }
 
-  std::ifstream myfile (complete_material_filename);
+  std::ifstream myfile (complete_material_filename.c_str());
+
+  printf("Material file name = %s\n", complete_material_filename.c_str());
   printf("myfile is open? %d\n", myfile.is_open());
+  printf("Material file name = %s\n", complete_material_filename.c_str());
   if (myfile.is_open()) {
     while(std::getline(myfile, str)) {
       if (str.length() > 0) {
+        str = reduce(str);
+        printf("%s\n", str.c_str());
         std::vector <std::string> chunks = split(str, ' ');
         if (chunks[0] == "newmtl") {
           printf("Extracting material %s...\n", chunks[1].c_str());
@@ -238,13 +246,14 @@ void extract_triangle_data(
   int point_idx = 0, triangle_idx = 0, norm_idx = 0, current_material_idx = 0;
   std::string str;
   std::string filename = folder_path + obj_filename;
-  std::ifstream myfile (filename);
+  std::ifstream myfile (filename.c_str());
   std::vector <int> index;
   std::vector <std::string> sub_chunks_1, sub_chunks_2, sub_chunks_3;
 
   if (myfile.is_open()){
     while(std::getline(myfile, str)) {
       if (str.length() > 0) {
+        str = reduce(str);
         std::vector <std::string> chunks = split(str, ' ');
         if (chunks[0] == "usemtl") {
           if (material_name.size() > 1) {
