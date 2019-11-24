@@ -97,7 +97,6 @@ int main(int argc, char **argv) {
   int max_n_cell_x = 70, max_n_cell_y = 70, max_n_cell_z = 70;
   int tx = 8, ty = 8, tx2 = 8, ty2 = 8, tz2 = 8, max_num_objects_per_cell = 700;
 
-  BoundingBox** my_cell_bounding_box;
   Scene** my_scene;
   Grid** my_grid;
   Cell** my_cell;
@@ -115,7 +114,6 @@ int main(int argc, char **argv) {
   size_t cell_size = max_grid_volume * sizeof(Cell*);
   size_t cell_geom_size = max_num_objects_per_cell * max_grid_volume * \
     sizeof(Primitive*);
-  size_t cell_bounding_box_size = max_grid_volume * sizeof(BoundingBox*);
 
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
   float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z;
@@ -311,12 +309,10 @@ int main(int argc, char **argv) {
 
 
   checkCudaErrors(cudaMallocManaged((void **)&my_cell_geom, cell_geom_size));
-  checkCudaErrors(cudaMallocManaged(
-    (void **)&my_cell_bounding_box, cell_bounding_box_size));
   dim3 blocks2(n_cell_x[0] / tx2 + 1, n_cell_y[0] / ty2 + 1, n_cell_z[0] / tz2 + 1);
   dim3 threads2(tx2, ty2, tz2);
   printf("Building cell array...\n");
-  build_cell_array<<<blocks2, threads2>>>(my_grid, my_cell_geom, my_cell_bounding_box);
+  build_cell_array<<<blocks2, threads2>>>(my_grid, my_cell_geom);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   my_time = time(NULL);

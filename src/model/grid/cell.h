@@ -21,8 +21,7 @@ class Cell {
     __device__ Cell(
       float x_min, float x_max, float y_min, float y_max, float z_min,
       float z_max, int i_address_, int j_address_, int k_address_,
-      Primitive** object_array_, int max_num_objects_,
-      BoundingBox* bounding_box_
+      Primitive** object_array_, int max_num_objects_
     );
     __device__ bool are_intersecting(BoundingBox* another_bounding_box);
     __device__ void add_object(Primitive* object);
@@ -36,10 +35,9 @@ class Cell {
 __device__ Cell::Cell(
   float x_min, float x_max, float y_min, float y_max, float z_min,
   float z_max, int i_address_, int j_address_, int k_address_,
-  Primitive** object_array_, int max_num_objects_, BoundingBox* bounding_box_
+  Primitive** object_array_, int max_num_objects_
 ) {
-  bounding_box_ = new BoundingBox(x_min, x_max, y_min, y_max, z_min, z_max);
-  bounding_box = bounding_box_;
+  bounding_box = new BoundingBox(x_min, x_max, y_min, y_max, z_min, z_max);
   i_address = i_address_;
   j_address = j_address_;
   k_address = k_address_;

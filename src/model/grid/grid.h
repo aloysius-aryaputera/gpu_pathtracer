@@ -43,9 +43,7 @@ class Grid {
 
 };
 
-__global__ void build_cell_array(
-  Grid** grid, Primitive** cell_object_array, BoundingBox** bounding_box_array
-);
+__global__ void build_cell_array(Grid** grid, Primitive** cell_object_array);
 __global__ void insert_objects(Grid** grid);
 __global__ void create_grid(
   Camera** camera, Grid** grid, Primitive** geom_array, int *num_objects,
@@ -165,7 +163,6 @@ __global__ void insert_objects(Grid** grid) {
     (i >= grid[0] -> n_cell_x)
   ) return;
 
-  // for (int k = 0; k < grid[0] -> n_cell_z; k++) {
   int counter = 0;
   for (int l = 0; l < grid[0] -> num_objects; l++) {
     BoundingBox *obj_bounding_box = grid[0] -> object_array[l] -> get_bounding_box();
@@ -191,18 +188,9 @@ __global__ void insert_objects(Grid** grid) {
         break;
       }
   }
-  // }
-  // printf(
-  //   "Done! (num_objects = %d, max_objects/cell = %d, (%d, %d, %d), (%d, %d, %d))\n",
-  //   grid[0] -> num_objects, grid[0] -> max_num_objects_per_cell,
-  //   threadIdx.x, threadIdx.y, threadIdx.z, blockIdx.x, blockIdx.y, blockIdx.z
-  // );
-
 }
 
-__global__ void build_cell_array(
-  Grid** grid, Primitive** cell_object_array, BoundingBox** bounding_box_array
-) {
+__global__ void build_cell_array(Grid** grid, Primitive** cell_object_array) {
   float cell_x_min, cell_x_max, cell_y_min, cell_y_max, cell_z_min, cell_z_max;
   int cell_address;
 
@@ -210,16 +198,10 @@ __global__ void build_cell_array(
   int j = threadIdx.y + blockIdx.y * blockDim.y;
   int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-  // if((j >= grid[0] -> n_cell_y) || (i >= grid[0] -> n_cell_x)) {
-  //   return;
-  // }
-
   if(
     (k >= grid[0] -> n_cell_z) || (j >= grid[0] -> n_cell_y) ||
     (i >= grid[0] -> n_cell_x)
   ) return;
-
-  // for (int k = 0; k < grid[0] -> n_cell_z; k++) {
 
   cell_x_min = grid[0] -> x_min + i * grid[0] -> cell_size_x;
   cell_x_max = cell_x_min + grid[0] -> cell_size_x;
@@ -236,10 +218,8 @@ __global__ void build_cell_array(
       cell_x_min, cell_x_max, cell_y_min, cell_y_max, cell_z_min,
       cell_z_max, i, j, k,
       cell_object_array + (grid[0] -> max_num_objects_per_cell * cell_address),
-      grid[0] -> max_num_objects_per_cell,
-      *(bounding_box_array + cell_address)
+      grid[0] -> max_num_objects_per_cell
     );
-  // }
 }
 
 __device__ int Grid::convert_3d_to_1d_cell_address(int i, int j, int k) {
