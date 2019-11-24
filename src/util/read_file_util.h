@@ -127,7 +127,7 @@ void _extract_single_material_data(
 ) {
   std::string complete_material_filename = folder_path + material_filename;
   std::string str;
-  int idx = material_name.size();
+  int idx = material_name.size() - 1;
   int last_char_ascii = int(complete_material_filename[complete_material_filename.size() - 1]);
 
   if (last_char_ascii < 33 || last_char_ascii > 126) {
@@ -136,7 +136,8 @@ void _extract_single_material_data(
     );
   }
 
-  if (idx == 0) {
+  if (material_name.size() == 0) {
+    idx = 0;
     material_name.push_back("Default_123");
 
     *(ka_x + idx) = 0;
@@ -206,6 +207,7 @@ void _extract_single_material_data(
     myfile.close();
   }
   num_materials[0] = material_name.size();
+  // num_materials[0] = idx + 1;
   printf("Number of materials so far = %d\n", num_materials[0]);
 }
 
@@ -263,6 +265,7 @@ void extract_triangle_data(
             std::pair<bool, int> result = find_in_vector<std::string>(
               material_name, chunks[1]);
             current_material_idx = result.second;
+            printf("Current material idx = %d\n", current_material_idx);
           } else {
             current_material_idx = 0;
           }
