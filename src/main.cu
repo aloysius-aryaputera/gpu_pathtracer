@@ -5,7 +5,7 @@
 #include <string>
 #include <time.h>
 
-#include "external/jpeg.h"
+#include "external/libjpeg_cpp/jpeg.h"
 
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
@@ -117,7 +117,8 @@ int main(int argc, char **argv) {
 
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
   float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z;
-  int *num_materials;
+  float *material_image_r, *material_image_g, *material_image_b;
+  int *num_materials, *material_image_height, *material_image_width, *material_image_offset;
 
   /////////////////////////////////////////////////////////////////////////////
   // For offline testing
@@ -147,6 +148,17 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&ke_y, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&ke_z, max_num_materials * sizeof(float)));
 
+  checkCudaErrors(cudaMallocManaged((void **)&material_image_r, 10000000 * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&material_image_g, 10000000 * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&material_image_b, 10000000 * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_height, max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_width, max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_offset, max_num_materials * sizeof(int)));
+
   printf("Extracting material file names...\n");
   extract_material_file_names(
     input_folder_path,
@@ -164,6 +176,8 @@ int main(int argc, char **argv) {
     kd_x, kd_y, kd_z,
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
+    material_image_r, material_image_g, material_image_b,
+    material_image_height, material_image_width, material_image_offset,
     num_materials,
     material_name
   );
@@ -254,6 +268,9 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(ke_x));
   checkCudaErrors(cudaFree(ke_y));
   checkCudaErrors(cudaFree(ke_z));
+  checkCudaErrors(cudaFree(material_image_height));
+  checkCudaErrors(cudaFree(material_image_width));
+  checkCudaErrors(cudaFree(material_image_offset));
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
@@ -381,6 +398,9 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(n_cell_y));
   checkCudaErrors(cudaFree(n_cell_z));
   checkCudaErrors(cudaFree(rand_state));
+  checkCudaErrors(cudaFree(material_image_r));
+  checkCudaErrors(cudaFree(material_image_g));
+  checkCudaErrors(cudaFree(material_image_b));
   checkCudaErrors(cudaFree(image_output));
   my_time = time(NULL);
   printf("Cleaning done at %s!\n\n", ctime(&my_time));

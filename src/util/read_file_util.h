@@ -8,6 +8,8 @@
 #include <fstream>
 #include <vector>
 
+#include "../external/libjpeg_cpp/jpeg.h"
+
 #include "../model/geometry/triangle.h"
 #include "../model/vector_and_matrix/vec3.h"
 #include "string_util.h"
@@ -122,19 +124,17 @@ void _extract_single_material_data(
   float *kd_x, float *kd_y, float *kd_z,
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
+  float *material_image_r, float *material_image_g, float *material_image_b,
+  int *material_image_height, int *material_image_width,
+  int *material_image_offset,
   int *num_materials,
   std::vector <std::string> &material_name
 ) {
   std::string complete_material_filename = folder_path + material_filename;
-  std::string str;
+  std::string str, complete_image_filename;
   int idx = material_name.size() - 1;
-  int last_char_ascii = int(complete_material_filename[complete_material_filename.size() - 1]);
 
-  if (last_char_ascii < 33 || last_char_ascii > 126) {
-    complete_material_filename = complete_material_filename.substr(
-      0, complete_material_filename.size() - 1
-    );
-  }
+  complete_material_filename = clean_string_end(complete_material_filename);
 
   if (material_name.size() == 0) {
     idx = 0;
@@ -185,6 +185,9 @@ void _extract_single_material_data(
           *(ke_y + idx) = 0;
           *(ke_z + idx) = 0;
 
+          *(material_image_height + idx) = 0;
+          *(material_image_width + idx) = 0;
+
         } else if (chunks[0] == "Ka") {
           *(ka_x + idx) = std::stof(chunks[1]);
           *(ka_y + idx) = std::stof(chunks[2]);
@@ -201,6 +204,15 @@ void _extract_single_material_data(
           *(ke_x + idx) = std::stof(chunks[1]);
           *(ke_y + idx) = std::stof(chunks[2]);
           *(ke_z + idx) = std::stof(chunks[3]);
+        } else if (chunks[0] == "map_Kd") {
+          complete_image_filename = folder_path + clean_string_end(chunks[1]);
+          marengo::jpeg::Image img(complete_image_filename.c_str());
+          *(material_image_height + idx) = img.getHeight();
+          *(material_image_width + idx) = img.getWidth();
+          printf(
+            "Image %s (%d x %d) extracted\n", chunks[1].c_str(),
+            *(material_image_height + idx), *(material_image_width + idx)
+          );
         }
       }
     }
@@ -218,6 +230,9 @@ void extract_material_data(
   float *kd_x, float *kd_y, float *kd_z,
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
+  float *material_image_r, float *material_image_g, float *material_image_b,
+  int *material_image_height, int *material_image_width,
+  int *material_image_offset,
   int *num_materials,
   std::vector <std::string> &material_name
 ) {
@@ -229,6 +244,8 @@ void extract_material_data(
       kd_x, kd_y, kd_z,
       ks_x, ks_y, ks_z,
       ke_x, ke_y, ke_z,
+      material_image_r, material_image_g, material_image_b,
+      material_image_height, material_image_width, material_image_offset,
       num_materials,
       material_name
     );
