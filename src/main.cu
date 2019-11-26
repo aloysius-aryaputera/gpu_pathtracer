@@ -67,7 +67,7 @@ __global__ void free_world(
 }
 
 int main(int argc, char **argv) {
-  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1028 * 1024 * 1024);
 
   time_t my_time = time(NULL);
   clock_t start, stop;
@@ -94,8 +94,8 @@ int main(int argc, char **argv) {
   float sky_emission_b = std::stof(argv[20]);
 
   int *n_cell_x, *n_cell_y, *n_cell_z;
-  int max_n_cell_x = 70, max_n_cell_y = 70, max_n_cell_z = 70;
-  int tx = 8, ty = 8, tx2 = 8, ty2 = 8, tz2 = 8, max_num_objects_per_cell = 700;
+  int max_n_cell_x = 120, max_n_cell_y = 120, max_n_cell_z = 120;
+  int tx = 8, ty = 8, tx2 = 8, ty2 = 8, tz2 = 8, max_num_objects_per_cell = 1000;
 
   Scene** my_scene;
   Grid** my_grid;
@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
 
   int num_pixels = im_width * im_height;
   int max_grid_volume = max_n_cell_x * max_n_cell_y * max_n_cell_z;
-  int max_num_vertices = 200000, max_num_faces = 200000, max_num_materials = 100;
+  int max_num_vertices = 1500000, max_num_faces = 1500000, max_num_materials = 100;
   size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state;
   size_t rand_state_size = num_pixels * sizeof(curandState);
@@ -125,7 +125,8 @@ int main(int argc, char **argv) {
   /////////////////////////////////////////////////////////////////////////////
   // float ka_x[100], ka_y[100], ka_z[100], kd_x[100], kd_y[100], kd_z[100];
   // float ks_x[100], ks_y[100], ks_z[100], ke_x[100], ke_y[100], ke_z[100];
-  // int num_materials[1];
+  // float material_image_r[1000], material_image_g[1000], material_image_b[1000];
+  // int num_materials[1], material_image_height[100], material_image_width[100], material_image_offset[100];
   /////////////////////////////////////////////////////////////////////////////
 
   std::vector <std::string> material_file_name_array, material_name;

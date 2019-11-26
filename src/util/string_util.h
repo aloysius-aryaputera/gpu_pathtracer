@@ -43,8 +43,12 @@ std::string clean_string_end(std::string str) {
   int last_char_ascii = int(str[str.size() - 1]);
   std::string new_str;
 
+  if (str.size() <= 1) return str;
+
   if (last_char_ascii < 33 || last_char_ascii > 126) {
     new_str = str.substr(0, str.size() - 1);
+  } else {
+    new_str = str;
   }
 
   return new_str;

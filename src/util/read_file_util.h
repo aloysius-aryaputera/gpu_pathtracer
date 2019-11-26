@@ -79,7 +79,7 @@ void extract_material_file_names(
 ) {
   std::string complete_obj_filename = folder_path + obj_filename;
   std::ifstream myfile (complete_obj_filename.c_str());
-  std::string str;
+  std::string str, material_file_name;
 
   if (myfile.is_open()){
 
@@ -88,14 +88,16 @@ void extract_material_file_names(
     while(std::getline(myfile, str)) {
       if (str.length() > 0) {
         str = reduce(str);
+        str = clean_string_end(str);
         std::vector <std::string> chunks = split(str, ' ');
         if (chunks[0] == "mtllib") {
           for (int i = 1; i < chunks.size(); i++) {
+            material_file_name = chunks[i];
             std::pair<bool, int> result = find_in_vector<std::string>(
-              material_file_name_array, chunks[i]);
+              material_file_name_array, material_file_name);
             if (!result.first) {
-              printf("Material file name: %s\n", chunks[i].c_str());
-              material_file_name_array.push_back(chunks[i]);
+              printf("Material file name: %s\n", material_file_name.c_str());
+              material_file_name_array.push_back(material_file_name);
             }
           }
         }
@@ -131,10 +133,10 @@ void _extract_single_material_data(
   std::vector <std::string> &material_name
 ) {
   std::string complete_material_filename = folder_path + material_filename;
-  std::string str, complete_image_filename;
+  std::string str, complete_image_filename, single_material_name;
   int idx = material_name.size() - 1;
 
-  complete_material_filename = clean_string_end(complete_material_filename);
+  // complete_material_filename = clean_string_end(complete_material_filename);
 
   if (material_name.size() == 0) {
     idx = 0;
@@ -155,6 +157,9 @@ void _extract_single_material_data(
     *(ke_x + idx) = 0;
     *(ke_y + idx) = 0;
     *(ke_z + idx) = 0;
+
+    *(material_image_height + idx) = 0;
+    *(material_image_width + idx) = 0;
   }
 
   std::ifstream myfile (complete_material_filename);
@@ -163,10 +168,12 @@ void _extract_single_material_data(
     while(std::getline(myfile, str)) {
       if (str.length() > 0) {
         str = reduce(str);
+        str = clean_string_end(str);
         std::vector <std::string> chunks = split(str, ' ');
         if (chunks[0] == "newmtl") {
-          printf("Extracting material %s...\n", chunks[1].c_str());
-          material_name.push_back(chunks[1]);
+          single_material_name = chunks[1];
+          printf("Extracting material %s...\n", single_material_name.c_str());
+          material_name.push_back(single_material_name);
           idx++;
 
           *(ka_x + idx) = 0;
@@ -205,14 +212,22 @@ void _extract_single_material_data(
           *(ke_y + idx) = std::stof(chunks[2]);
           *(ke_z + idx) = std::stof(chunks[3]);
         } else if (chunks[0] == "map_Kd") {
-          complete_image_filename = folder_path + clean_string_end(chunks[1]);
-          marengo::jpeg::Image img(complete_image_filename.c_str());
-          *(material_image_height + idx) = img.getHeight();
-          *(material_image_width + idx) = img.getWidth();
-          printf(
-            "Image %s (%d x %d) extracted\n", chunks[1].c_str(),
-            *(material_image_height + idx), *(material_image_width + idx)
-          );
+          complete_image_filename = folder_path + chunks[1];
+          try {
+            marengo::jpeg::Image img(complete_image_filename.c_str());
+            *(material_image_height + idx) = img.getHeight();
+            *(material_image_width + idx) = img.getWidth();
+            printf(
+              "Image %s (%d x %d) extracted.\n", complete_image_filename.c_str(),
+              *(material_image_height + idx), *(material_image_width + idx)
+            );
+          } catch(int i) {
+            *(material_image_height + idx) = 0;
+            *(material_image_width + idx) = 0;
+            printf(
+              "Image %s not found.\n", complete_image_filename.c_str()
+            );
+          }
         }
       }
     }
@@ -266,7 +281,7 @@ void extract_triangle_data(
 ) {
 
   int point_idx = 0, triangle_idx = 0, norm_idx = 0, current_material_idx = 0;
-  std::string str;
+  std::string str, single_material_name;
   std::string filename = folder_path + obj_filename;
   std::ifstream myfile (filename.c_str());
   std::vector <int> index;
@@ -276,11 +291,13 @@ void extract_triangle_data(
     while(std::getline(myfile, str)) {
       if (str.length() > 0) {
         str = reduce(str);
+        str = clean_string_end(str);
         std::vector <std::string> chunks = split(str, ' ');
         if (chunks[0] == "usemtl") {
           if (material_name.size() > 1) {
+            single_material_name = chunks[1];
             std::pair<bool, int> result = find_in_vector<std::string>(
-              material_name, chunks[1]);
+              material_name, single_material_name);
             current_material_idx = result.second;
             printf("Current material idx = %d\n", current_material_idx);
           } else {
