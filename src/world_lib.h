@@ -35,6 +35,10 @@ __global__ void create_material(
   float *kd_x, float *kd_y, float *kd_z,
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
+  int *material_image_height,
+  int *material_image_width,
+  int *material_image_offset,
+  vec3 **texture,
   int *num_materials
 );
 
@@ -44,6 +48,31 @@ __global__ void create_camera(
   float up_x, float up_y, float up_z, float fovy,
   int image_width, int image_height
 );
+
+__global__ void create_texture_vector(
+  vec3 **texture,
+  float *material_image_r,
+  float *material_image_g,
+  float *material_image_b,
+  int *len_texture
+);
+
+__global__ void create_texture_vector(
+  vec3 **texture,
+  float *material_image_r,
+  float *material_image_g,
+  float *material_image_b,
+  int *len_texture
+) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (idx >= len_texture[0]) return;
+
+  *(texture + idx) = new vec3(
+    material_image_r[idx], material_image_g[idx], material_image_b[idx]
+  );
+
+}
 
 __global__ void create_camera(
   Camera** camera, float eye_x, float eye_y, float eye_z,
@@ -65,6 +94,10 @@ __global__ void create_material(
   float *kd_x, float *kd_y, float *kd_z,
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
+  int *material_image_height,
+  int *material_image_width,
+  int *material_image_offset,
+  vec3 **texture,
   int *num_materials
 ) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -75,7 +108,10 @@ __global__ void create_material(
     vec3(ka_x[i], ka_y[i], ka_z[i]),
     vec3(kd_x[i], kd_y[i], kd_z[i]),
     vec3(ke_x[i], ke_y[i], ke_z[i]),
-    vec3(.49, .49, .49)
+    vec3(.49, .49, .49),
+    material_image_height[i],
+    material_image_width[i],
+    texture[material_image_offset[i]]
   );
 
 }

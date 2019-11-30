@@ -20,6 +20,7 @@ void _extract_single_material_data(
   float *kd_x, float *kd_y, float *kd_z,
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
+  int *len_texture,
   int *num_materials,
   std::vector <std::string> &material_name
 );
@@ -29,8 +30,10 @@ void extract_triangle_data(
   std::string obj_filename,
   float* x, float* y, float* z,
   float* x_norm, float* y_norm, float* z_norm,
+  float* x_tex, float* y_tex,
   int* point_1_idx, int* point_2_idx, int* point_3_idx,
   int* norm_1_idx, int* norm_2_idx, int* norm_3_idx,
+  int* tex_1_idx, int* tex_2_idx, int* tex_3_idx,
   std::vector <std::string> material_name,
   int *material_idx,
   int* num_triangles,
@@ -42,12 +45,17 @@ void extract_material_data(
   float *kd_x, float *kd_y, float *kd_z,
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
+  int *len_texture,
   int *num_materials,
   std::vector <std::string> &material_name
 );
 void extract_material_file_names(
   std::string folder_path, std::string obj_filename,
   std::vector <std::string> &material_file_name_array
+);
+void extract_num_elements(
+  std::string folder_path, std::string obj_filename,
+  int &num_vertices, int &num_vt, int &num_vn, int &num_faces
 );
 
 // https://thispointer.com/c-how-to-find-an-element-in-vector-and-get-its-index/
@@ -71,6 +79,44 @@ std::pair<bool, int > find_in_vector(const std::vector<T>  & vecOfElements, cons
 	}
 
 	return result;
+}
+
+void extract_num_elements(
+  std::string folder_path, std::string obj_filename,
+  int &num_vertices, int &num_vt, int &num_vn, int &num_faces
+) {
+  std::string complete_obj_filename = folder_path + obj_filename;
+  std::ifstream myfile (complete_obj_filename.c_str());
+  std::string str;
+
+  num_vertices = 0;
+  num_vt = 0;
+  num_vn = 0;
+  num_faces = 0;
+
+  if (myfile.is_open()){
+    while(std::getline(myfile, str)) {
+      if (str.length() > 0) {
+        str = reduce(str);
+        str = clean_string_end(str);
+        std::vector <std::string> chunks = split(str, ' ');
+        if (chunks[0] == "v") {
+          num_vertices += 1;
+        } else if (chunks[0] == "vt") {
+          num_vt += 1;
+        } else if (chunks[0] == "vn") {
+          num_vn += 1;
+        } else if (chunks[0] == "f") {
+          num_faces += chunks.size() - 3;
+        }
+      }
+    }
+    myfile.close();
+  }
+  printf("Number of vertices = %d\n", num_vertices);
+  printf("Number of vt       = %d\n", num_vt);
+  printf("Number of vn       = %d\n", num_vn);
+  printf("Number of faces    = %d\n", num_faces);
 }
 
 void extract_material_file_names(
@@ -129,6 +175,7 @@ void _extract_single_material_data(
   float *material_image_r, float *material_image_g, float *material_image_b,
   int *material_image_height, int *material_image_width,
   int *material_image_offset,
+  int *len_texture,
   int *num_materials,
   std::vector <std::string> &material_name
 ) {
@@ -160,6 +207,8 @@ void _extract_single_material_data(
 
     *(material_image_height + idx) = 0;
     *(material_image_width + idx) = 0;
+
+    *(material_image_offset + idx) = 0;
   }
 
   std::ifstream myfile (complete_material_filename);
@@ -195,6 +244,11 @@ void _extract_single_material_data(
           *(material_image_height + idx) = 0;
           *(material_image_width + idx) = 0;
 
+          *(material_image_offset + idx) = \
+            *(material_image_offset + idx - 1) +
+            (*(material_image_height + idx - 1)) * \
+            (*(material_image_width + idx - 1));
+
         } else if (chunks[0] == "Ka") {
           *(ka_x + idx) = std::stof(chunks[1]);
           *(ka_y + idx) = std::stof(chunks[2]);
@@ -213,28 +267,38 @@ void _extract_single_material_data(
           *(ke_z + idx) = std::stof(chunks[3]);
         } else if (chunks[0] == "map_Kd") {
           complete_image_filename = folder_path + chunks[1];
-          try {
-            marengo::jpeg::Image img(complete_image_filename.c_str());
-            *(material_image_height + idx) = img.getHeight();
-            *(material_image_width + idx) = img.getWidth();
-            printf(
-              "Image %s (%d x %d) extracted.\n", complete_image_filename.c_str(),
-              *(material_image_height + idx), *(material_image_width + idx)
-            );
-          } catch(int i) {
-            *(material_image_height + idx) = 0;
-            *(material_image_width + idx) = 0;
-            printf(
-              "Image %s not found.\n", complete_image_filename.c_str()
-            );
+          marengo::jpeg::Image img(complete_image_filename.c_str());
+          *(material_image_height + idx) = img.getHeight();
+          *(material_image_width + idx) = img.getWidth();
+          int local_offset = 0;
+          for ( std::size_t y = 0; y < *(material_image_height + idx); ++y )
+          {
+            for ( std::size_t x = 0; x < *(material_image_width + idx); ++x ) {
+              float r = 1.0 * img.getLuminance(x, y, 0) / 255.0;
+              float g = 1.0 * img.getLuminance(x, y, 1) / 255.0;
+              float b = 1.0 * img.getLuminance(x, y, 2) / 255.0;
+
+              *(material_image_r + local_offset) = r;
+              *(material_image_g + local_offset) = g;
+              *(material_image_b + local_offset) = b;
+
+              local_offset++;
+            }
           }
+          printf(
+            "Image %s (%d x %d) extracted.\n", complete_image_filename.c_str(),
+            *(material_image_height + idx), *(material_image_width + idx)
+          );
         }
       }
     }
     myfile.close();
   }
   num_materials[0] = material_name.size();
-  // num_materials[0] = idx + 1;
+  len_texture[0] = \
+    (*(material_image_offset + idx)) + (*(material_image_height + idx)) *
+    (*(material_image_width + idx));
+  printf("Texture length so far      = %d\n", len_texture[0]);
   printf("Number of materials so far = %d\n", num_materials[0]);
 }
 
@@ -248,6 +312,7 @@ void extract_material_data(
   float *material_image_r, float *material_image_g, float *material_image_b,
   int *material_image_height, int *material_image_width,
   int *material_image_offset,
+  int *len_texture,
   int *num_materials,
   std::vector <std::string> &material_name
 ) {
@@ -261,6 +326,7 @@ void extract_material_data(
       ke_x, ke_y, ke_z,
       material_image_r, material_image_g, material_image_b,
       material_image_height, material_image_width, material_image_offset,
+      len_texture,
       num_materials,
       material_name
     );
@@ -272,8 +338,10 @@ void extract_triangle_data(
   std::string obj_filename,
   float* x, float* y, float* z,
   float* x_norm, float* y_norm, float* z_norm,
+  float* x_tex, float* y_tex,
   int* point_1_idx, int* point_2_idx, int* point_3_idx,
   int* norm_1_idx, int* norm_2_idx, int* norm_3_idx,
+  int* tex_1_idx, int* tex_2_idx, int* tex_3_idx,
   std::vector <std::string> material_name,
   int *material,
   int* num_triangles,
