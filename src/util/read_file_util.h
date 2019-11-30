@@ -298,6 +298,7 @@ void _extract_single_material_data(
   len_texture[0] = \
     (*(material_image_offset + idx)) + (*(material_image_height + idx)) *
     (*(material_image_width + idx));
+  len_texture[0] = max(1, len_texture[0]);
   printf("Texture length so far      = %d\n", len_texture[0]);
   printf("Number of materials so far = %d\n", num_materials[0]);
 }
@@ -348,7 +349,8 @@ void extract_triangle_data(
   int* num_materials
 ) {
 
-  int point_idx = 0, triangle_idx = 0, norm_idx = 0, current_material_idx = 0;
+  int point_idx = 0, triangle_idx = 0, norm_idx = 0, tex_idx = 0, \
+    current_material_idx = 0;
   std::string str, single_material_name;
   std::string filename = folder_path + obj_filename;
   std::ifstream myfile (filename.c_str());
@@ -361,6 +363,7 @@ void extract_triangle_data(
         str = reduce(str);
         str = clean_string_end(str);
         std::vector <std::string> chunks = split(str, ' ');
+
         if (chunks[0] == "usemtl") {
           if (material_name.size() > 1) {
             single_material_name = chunks[1];
@@ -381,6 +384,10 @@ void extract_triangle_data(
           *(y_norm + norm_idx) = std::stof(chunks[2]);
           *(z_norm + norm_idx) = std::stof(chunks[3]);
           norm_idx++;
+        } else if (chunks[0] == "vt") {
+          *(x_tex + tex_idx) = std::stof(chunks[1]);
+          *(y_tex + tex_idx) = std::stof(chunks[2]);
+          tex_idx++;
         } else if (chunks[0] == "f") {
 
           sub_chunks_1 = split(chunks[1], '/');
@@ -392,6 +399,16 @@ void extract_triangle_data(
             *(point_1_idx + triangle_idx) = std::stoi(sub_chunks_1[0]) - 1;
             *(point_2_idx + triangle_idx) = std::stoi(sub_chunks_2[0]) - 1;
             *(point_3_idx + triangle_idx) = std::stoi(sub_chunks_3[0]) - 1;
+
+            if (sub_chunks_1.size() > 1 & sub_chunks_1[1].length() > 0) {
+              *(tex_1_idx + triangle_idx) = std::stoi(sub_chunks_1[1]) - 1;
+              *(tex_2_idx + triangle_idx) = std::stoi(sub_chunks_2[1]) - 1;
+              *(tex_3_idx + triangle_idx) = std::stoi(sub_chunks_3[1]) - 1;
+            } else {
+              *(tex_1_idx + triangle_idx) = 0;
+              *(tex_2_idx + triangle_idx) = 0;
+              *(tex_3_idx + triangle_idx) = 0;
+            }
 
             if (sub_chunks_1.size() > 2) {
               *(norm_1_idx + triangle_idx) = std::stoi(sub_chunks_1[2]) - 1;
@@ -416,6 +433,12 @@ void extract_triangle_data(
       *(y_norm + norm_idx) = 0;
       *(z_norm + norm_idx) = 0;
       norm_idx++;
+    }
+
+    if (tex_idx == 0) {
+      *(x_tex + norm_idx) = 0;
+      *(y_tex + norm_idx) = 0;
+      tex_idx++;
     }
 
     myfile.close();

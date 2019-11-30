@@ -207,16 +207,16 @@ int main(int argc, char **argv) {
 
   checkCudaErrors(cudaMallocManaged((void **)&material_idx, num_faces * sizeof(int)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&x, num_vertices * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&y, num_vertices * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&z, num_vertices * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&x, max(1, num_vertices) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&y, max(1, num_vertices) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&z, max(1, num_vertices) * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&x_norm, num_vn * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&y_norm, num_vn * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&z_norm, num_vn * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&x_norm, max(1, num_vn) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&y_norm, max(1, num_vn) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&z_norm, max(1, num_vn) * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&x_tex, num_vt * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&y_tex, num_vt * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&x_tex, max(1, num_vt) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&y_tex, max(1, num_vt) * sizeof(float)));
 
   checkCudaErrors(cudaMallocManaged((void **)&point_1_idx, num_faces * sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&point_2_idx, num_faces * sizeof(int)));
