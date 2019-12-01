@@ -266,10 +266,16 @@ void _extract_single_material_data(
           *(ke_y + idx) = std::stof(chunks[2]);
           *(ke_z + idx) = std::stof(chunks[3]);
         } else if (chunks[0] == "map_Kd") {
+          printf("Extracting image...\n");
           complete_image_filename = folder_path + chunks[1];
           marengo::jpeg::Image img(complete_image_filename.c_str());
           *(material_image_height + idx) = img.getHeight();
           *(material_image_width + idx) = img.getWidth();
+          printf(
+            "Extracting image %s (%d x %d)...\n",
+            complete_image_filename.c_str(),
+            *(material_image_height + idx), *(material_image_width + idx)
+          );
           int local_offset = 0;
           for ( std::size_t y = 0; y < *(material_image_height + idx); ++y )
           {

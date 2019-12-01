@@ -129,6 +129,7 @@ int main(int argc, char **argv) {
   // float ks_x[100], ks_y[100], ks_z[100], ke_x[100], ke_y[100], ke_z[100];
   // float material_image_r[1000], material_image_g[1000], material_image_b[1000];
   // int num_materials[1], material_image_height[100], material_image_width[100], material_image_offset[100];
+  // int len_texture[1];
   /////////////////////////////////////////////////////////////////////////////
 
   std::vector <std::string> material_file_name_array, material_name;
@@ -152,9 +153,9 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&ke_y, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&ke_z, max_num_materials * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&material_image_r, 10000000 * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&material_image_g, 10000000 * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&material_image_b, 10000000 * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&material_image_r, 100000000 * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&material_image_g, 100000000 * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&material_image_b, 100000000 * sizeof(float)));
 
   checkCudaErrors(cudaMallocManaged(
     (void **)&material_image_height, max_num_materials * sizeof(int)));
