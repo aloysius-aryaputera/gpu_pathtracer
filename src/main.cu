@@ -327,8 +327,10 @@ int main(int argc, char **argv) {
     my_geom, my_material,
     x, y, z,
     x_norm, y_norm, z_norm,
+    x_tex, y_tex,
     point_1_idx, point_2_idx, point_3_idx,
     norm_1_idx, norm_2_idx, norm_3_idx,
+    tex_1_idx, tex_2_idx, tex_3_idx,
     material_idx,
     num_triangles
   );
@@ -422,6 +424,11 @@ int main(int argc, char **argv) {
   save_image(image_output, im_width, im_height, image_output_path);
   my_time = time(NULL);
   printf("Image saved at %s!\n\n", ctime(&my_time));
+
+  // printf("Saving image 2...\n");
+  // save_image(texture, 500, 500, image_output_path);
+  // my_time = time(NULL);
+  // printf("Image saved at %s!\n\n", ctime(&my_time));
 
   stop = clock();
   double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;

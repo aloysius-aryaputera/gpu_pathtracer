@@ -23,8 +23,10 @@ __global__ void create_world(
   Material** material_array,
   float *x, float *y, float *z,
   float *x_norm, float *y_norm, float *z_norm,
+  float *x_tex, float *y_tex,
   int *point_1_idx, int *point_2_idx, int *point_3_idx,
   int *norm_1_idx, int *norm_2_idx, int *norm_3_idx,
+  int *tex_1_idx, int *tex_2_idx, int *tex_3_idx,
   int *material_idx,
   int* num_triangles
 );
@@ -111,7 +113,7 @@ __global__ void create_material(
     vec3(.49, .49, .49),
     material_image_height[i],
     material_image_width[i],
-    texture[material_image_offset[i]]
+    texture + material_image_offset[i]
   );
 
 }
@@ -121,8 +123,10 @@ __global__ void create_world(
   Material** material_array,
   float *x, float *y, float *z,
   float *x_norm, float *y_norm, float *z_norm,
+  float *x_tex, float *y_tex,
   int *point_1_idx, int *point_2_idx, int *point_3_idx,
   int *norm_1_idx, int *norm_2_idx, int *norm_3_idx,
+  int *tex_1_idx, int *tex_2_idx, int *tex_3_idx,
   int *material_idx,
   int* num_triangles
 ) {
@@ -135,10 +139,16 @@ __global__ void create_world(
     vec3(x[point_1_idx[idx]], y[point_1_idx[idx]], z[point_1_idx[idx]]),
     vec3(x[point_2_idx[idx]], y[point_2_idx[idx]], z[point_2_idx[idx]]),
     vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]),
+
     material_array[material_idx[idx]],
+
     vec3(x_norm[norm_1_idx[idx]], y_norm[norm_1_idx[idx]], z_norm[norm_1_idx[idx]]),
     vec3(x_norm[norm_2_idx[idx]], y_norm[norm_2_idx[idx]], z_norm[norm_2_idx[idx]]),
-    vec3(x_norm[norm_3_idx[idx]], y_norm[norm_3_idx[idx]], z_norm[norm_3_idx[idx]])
+    vec3(x_norm[norm_3_idx[idx]], y_norm[norm_3_idx[idx]], z_norm[norm_3_idx[idx]]),
+
+    vec3(x_tex[tex_1_idx[idx]], y_tex[tex_1_idx[idx]], 0),
+    vec3(x_tex[tex_2_idx[idx]], y_tex[tex_2_idx[idx]], 0),
+    vec3(x_tex[tex_3_idx[idx]], y_tex[tex_3_idx[idx]], 0)
   );
 
 }

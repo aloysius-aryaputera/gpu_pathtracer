@@ -47,7 +47,7 @@ __device__ vec3 _compute_color(
         return mask * light;
       } else {
         mask *= cos_theta * (1 / pdf) * (1 / M_PI) * \
-          cur_rec.object -> get_material() -> diffuse * \
+          cur_rec.object -> get_material() -> get_texture(cur_rec.uv_vector) * \
           cur_rec.object -> get_material() -> albedo;
       }
     } else {
@@ -106,7 +106,7 @@ void render(
     }
     color = init_rec.object -> get_material() -> emission + \
       (1.0f / sample_size) * (1 / pdf) * (1 / M_PI) * color * \
-      init_rec.object -> get_material() -> diffuse * \
+      init_rec.object -> get_material() -> get_texture(init_rec.uv_vector) * \
       init_rec.object -> get_material() -> albedo;
   } else {
     color = vec3(0, 0, 0);

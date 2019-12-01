@@ -278,9 +278,9 @@ void _extract_single_material_data(
               float g = 1.0 * img.getLuminance(x, y, 1) / 255.0;
               float b = 1.0 * img.getLuminance(x, y, 2) / 255.0;
 
-              *(material_image_r + local_offset) = r;
-              *(material_image_g + local_offset) = g;
-              *(material_image_b + local_offset) = b;
+              *(material_image_r + (*(material_image_offset + idx)) + local_offset) = r;
+              *(material_image_g + (*(material_image_offset + idx)) + local_offset) = g;
+              *(material_image_b + (*(material_image_offset + idx)) + local_offset) = b;
 
               local_offset++;
             }
