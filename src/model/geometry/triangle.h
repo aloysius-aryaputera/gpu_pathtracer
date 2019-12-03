@@ -18,6 +18,7 @@ class Triangle: public Primitive {
 
     float area, tolerance, inv_tolerance;
     vec3 point_1, point_2, point_3, norm_1, norm_2, norm_3, normal;
+    vec3 tex_1, tex_2, tex_3;
     Material *material;
     BoundingBox *bounding_box;
 
@@ -25,7 +26,8 @@ class Triangle: public Primitive {
     __host__ __device__ Triangle() {};
     __device__ Triangle(
       vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_,
-      vec3 norm_1_, vec3 norm_2_, vec3 norm_3_
+      vec3 norm_1_, vec3 norm_2_, vec3 norm_3_, vec3 tex_1_, vec3 tex_2_,
+      vec3 tex_3_
     );
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
     __device__ Material* get_material();
@@ -67,7 +69,8 @@ __device__ void Triangle::_compute_bounding_box() {
 __device__ Triangle::Triangle(
   vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_,
   vec3 norm_1_=vec3(0, 0, 0), vec3 norm_2_=vec3(0, 0, 0),
-  vec3 norm_3_=vec3(0, 0, 0)
+  vec3 norm_3_=vec3(0, 0, 0), vec3 tex_1_=vec3(0, 0, 0),
+  vec3 tex_2_=vec3(0, 0, 0), vec3 tex_3_=vec3(0, 0, 0)
 ) {
   this -> point_1 = vec3(point_1_.x(), point_1_.y(), point_1_.z());
   this -> point_2 = vec3(point_2_.x(), point_2_.y(), point_2_.z());
@@ -79,9 +82,14 @@ __device__ Triangle::Triangle(
     this -> point_1, this -> point_2, this -> point_3);
   this -> normal = unit_vector(
     cross(this -> point_2 - this -> point_1, this -> point_3 - this -> point_1));
+
   this -> norm_1 = unit_vector(norm_1_);
   this -> norm_2 = unit_vector(norm_2_);
   this -> norm_3 = unit_vector(norm_3_);
+
+  this -> tex_1 = tex_1_;
+  this -> tex_2 = tex_2_;
+  this -> tex_3 = tex_3_;
 
   if (
     compute_distance(norm_1_, vec3(0, 0, 0)) < this -> tolerance ||
@@ -144,6 +152,8 @@ __device__ bool Triangle::hit(Ray ray, float t_max, hit_record& rec) {
   rec.point = ray.get_vector(t);
   rec.normal = unit_vector(
     alpha * this -> norm_1 + beta * this -> norm_2 + gamma * this -> norm_3);
+  rec.uv_vector = alpha * this -> tex_1 + beta * this -> tex_2 + \
+    gamma * this -> tex_3;
 
   return true;
 }

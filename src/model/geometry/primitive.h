@@ -35,6 +35,7 @@ struct hit_record
     float t;
     vec3 point;
     vec3 normal;
+    vec3 uv_vector;
     Primitive* object;
 };
 

@@ -5,6 +5,8 @@
 #include <string>
 #include <time.h>
 
+#include "external/libjpeg_cpp/jpeg.h"
+
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
 #include "model/geometry/sphere.h"
@@ -65,7 +67,7 @@ __global__ void free_world(
 }
 
 int main(int argc, char **argv) {
-  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1028 * 1024 * 1024);
 
   time_t my_time = time(NULL);
   clock_t start, stop;
@@ -92,35 +94,48 @@ int main(int argc, char **argv) {
   float sky_emission_b = std::stof(argv[20]);
 
   int *n_cell_x, *n_cell_y, *n_cell_z;
-  int max_n_cell_x = 70, max_n_cell_y = 70, max_n_cell_z = 70;
-  int tx = 8, ty = 8, tx2 = 8, ty2 = 8, tz2 = 8, max_num_objects_per_cell = 700;
+  int max_n_cell_x = 100, max_n_cell_y = 100, max_n_cell_z = 100;
+  int tx = 8, ty = 8, tx2 = 8, ty2 = 8, tz2 = 8, max_num_objects_per_cell = 1000;
 
-  BoundingBox** my_cell_bounding_box;
   Scene** my_scene;
   Grid** my_grid;
   Cell** my_cell;
   Primitive **my_geom, **my_cell_geom;
   Material **my_material;
   Camera **my_camera;
-  vec3 *image_output;
+  vec3 *image_output, **texture;
 
   int num_pixels = im_width * im_height;
   int max_grid_volume = max_n_cell_x * max_n_cell_y * max_n_cell_z;
-  int max_num_vertices = 200000, max_num_faces = 200000, max_num_materials = 100;
+  int max_num_materials = 100;
+  int num_vertices, num_faces, num_vt, num_vn;
   size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state;
   size_t rand_state_size = num_pixels * sizeof(curandState);
   size_t cell_size = max_grid_volume * sizeof(Cell*);
   size_t cell_geom_size = max_num_objects_per_cell * max_grid_volume * \
     sizeof(Primitive*);
-  size_t cell_bounding_box_size = max_grid_volume * sizeof(BoundingBox*);
 
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
   float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z;
-  int *num_materials;
+  float *material_image_r, *material_image_g, *material_image_b;
+  int *num_materials, *material_image_height, *material_image_width, \
+    *material_image_offset, *len_texture;
+
+  /////////////////////////////////////////////////////////////////////////////
+  // For offline testing
+  /////////////////////////////////////////////////////////////////////////////
+  // float ka_x[100], ka_y[100], ka_z[100], kd_x[100], kd_y[100], kd_z[100];
+  // float ks_x[100], ks_y[100], ks_z[100], ke_x[100], ke_y[100], ke_z[100];
+  // float material_image_r[1000], material_image_g[1000], material_image_b[1000];
+  // int num_materials[1], material_image_height[100], material_image_width[100], material_image_offset[100];
+  // int len_texture[1];
+  /////////////////////////////////////////////////////////////////////////////
+
   std::vector <std::string> material_file_name_array, material_name;
 
   checkCudaErrors(cudaMallocManaged((void **)&num_materials, sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&len_texture, sizeof(int)));
 
   checkCudaErrors(cudaMallocManaged((void **)&ka_x, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&ka_y, max_num_materials * sizeof(float)));
@@ -138,6 +153,17 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&ke_y, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&ke_z, max_num_materials * sizeof(float)));
 
+  checkCudaErrors(cudaMallocManaged((void **)&material_image_r, 100000000 * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&material_image_g, 100000000 * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&material_image_b, 100000000 * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_height, max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_width, max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_offset, max_num_materials * sizeof(int)));
+
   printf("Extracting material file names...\n");
   extract_material_file_names(
     input_folder_path,
@@ -147,6 +173,14 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("Material file names extracted at %s!\n\n", ctime(&my_time));
 
+  printf("Extracting the number of the elements...\n");
+  extract_num_elements(
+    input_folder_path, obj_filename,
+    num_vertices, num_vt, num_vn, num_faces
+  );
+  my_time = time(NULL);
+  printf("The number of the elements extracted at %s!\n\n", ctime(&my_time));
+
   printf("Extracting material data...\n");
   extract_material_data(
     input_folder_path,
@@ -155,36 +189,47 @@ int main(int argc, char **argv) {
     kd_x, kd_y, kd_z,
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
+    material_image_r, material_image_g, material_image_b,
+    material_image_height, material_image_width, material_image_offset,
+    len_texture,
     num_materials,
     material_name
   );
   my_time = time(NULL);
   printf("Material data extracted at %s!\n\n", ctime(&my_time));
 
-  float *x, *y, *z, *x_norm, *y_norm, *z_norm;
+  float *x, *y, *z, *x_norm, *y_norm, *z_norm, *x_tex, *y_tex;
   int *point_1_idx, *point_2_idx, *point_3_idx, \
-    *norm_1_idx, *norm_2_idx, *norm_3_idx;
+    *norm_1_idx, *norm_2_idx, *norm_3_idx, \
+    *tex_1_idx, *tex_2_idx, *tex_3_idx;
   int *num_triangles, *material_idx;
 
   checkCudaErrors(cudaMallocManaged((void **)&num_triangles, sizeof(int)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&material_idx, max_num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&material_idx, num_faces * sizeof(int)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&x, max_num_vertices * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&y, max_num_vertices * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&z, max_num_vertices * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&x, max(1, num_vertices) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&y, max(1, num_vertices) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&z, max(1, num_vertices) * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&x_norm, max_num_vertices * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&y_norm, max_num_vertices * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&z_norm, max_num_vertices * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&x_norm, max(1, num_vn) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&y_norm, max(1, num_vn) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&z_norm, max(1, num_vn) * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&point_1_idx, max_num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&point_2_idx, max_num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&point_3_idx, max_num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&x_tex, max(1, num_vt) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&y_tex, max(1, num_vt) * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&norm_1_idx, max_num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&norm_2_idx, max_num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&norm_3_idx, max_num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&point_1_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&point_2_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&point_3_idx, num_faces * sizeof(int)));
+
+  checkCudaErrors(cudaMallocManaged((void **)&norm_1_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&norm_2_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&norm_3_idx, num_faces * sizeof(int)));
+
+  checkCudaErrors(cudaMallocManaged((void **)&tex_1_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&tex_2_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged((void **)&tex_3_idx, num_faces * sizeof(int)));
 
   printf("Reading OBJ file...\n");
   extract_triangle_data(
@@ -192,8 +237,10 @@ int main(int argc, char **argv) {
     obj_filename,
     x, y, z,
     x_norm, y_norm, z_norm,
+    x_tex, y_tex,
     point_1_idx, point_2_idx, point_3_idx,
     norm_1_idx, norm_2_idx, norm_3_idx,
+    tex_1_idx, tex_2_idx, tex_3_idx,
     material_name,
     material_idx,
     num_triangles,
@@ -217,6 +264,23 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("Camera created at %s!\n\n", ctime(&my_time));
 
+  checkCudaErrors(cudaMallocManaged((void **)&texture, len_texture[0] * sizeof(vec3 *)));
+
+  printf("Creating the texture vector...\n");
+  dim3 blocks_texture(len_texture[0] / 1024 + 1);
+  dim3 threads_texture(1024);
+  create_texture_vector<<<blocks_texture, threads_texture>>>(
+    texture,
+    material_image_r,
+    material_image_g,
+    material_image_b,
+    len_texture
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  my_time = time(NULL);
+  printf("Texture vector created at %s!\n\n", ctime(&my_time));
+
   checkCudaErrors(cudaMallocManaged((void **)&my_material, max_num_materials * sizeof(Material *)));
 
   printf("Creating the materials...\n");
@@ -226,6 +290,10 @@ int main(int argc, char **argv) {
     kd_x, kd_y, kd_z,
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
+    material_image_height,
+    material_image_width,
+    material_image_offset,
+    texture,
     num_materials
   );
   checkCudaErrors(cudaGetLastError());
@@ -245,6 +313,9 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(ke_x));
   checkCudaErrors(cudaFree(ke_y));
   checkCudaErrors(cudaFree(ke_z));
+  checkCudaErrors(cudaFree(material_image_height));
+  checkCudaErrors(cudaFree(material_image_width));
+  checkCudaErrors(cudaFree(material_image_offset));
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
@@ -257,8 +328,10 @@ int main(int argc, char **argv) {
     my_geom, my_material,
     x, y, z,
     x_norm, y_norm, z_norm,
+    x_tex, y_tex,
     point_1_idx, point_2_idx, point_3_idx,
     norm_1_idx, norm_2_idx, norm_3_idx,
+    tex_1_idx, tex_2_idx, tex_3_idx,
     material_idx,
     num_triangles
   );
@@ -298,14 +371,11 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("Grid created at %s!\n\n", ctime(&my_time));
 
-
   checkCudaErrors(cudaMallocManaged((void **)&my_cell_geom, cell_geom_size));
-  checkCudaErrors(cudaMallocManaged(
-    (void **)&my_cell_bounding_box, cell_bounding_box_size));
   dim3 blocks2(n_cell_x[0] / tx2 + 1, n_cell_y[0] / ty2 + 1, n_cell_z[0] / tz2 + 1);
   dim3 threads2(tx2, ty2, tz2);
   printf("Building cell array...\n");
-  build_cell_array<<<blocks2, threads2>>>(my_grid, my_cell_geom, my_cell_bounding_box);
+  build_cell_array<<<blocks2, threads2>>>(my_grid, my_cell_geom);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   my_time = time(NULL);
@@ -356,6 +426,11 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("Image saved at %s!\n\n", ctime(&my_time));
 
+  // printf("Saving image 2...\n");
+  // save_image(texture, 500, 500, image_output_path);
+  // my_time = time(NULL);
+  // printf("Image saved at %s!\n\n", ctime(&my_time));
+
   stop = clock();
   double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;
   printf("\nThe rendering took %5.5f seconds.\n", timer_seconds);
@@ -374,6 +449,9 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(n_cell_y));
   checkCudaErrors(cudaFree(n_cell_z));
   checkCudaErrors(cudaFree(rand_state));
+  checkCudaErrors(cudaFree(material_image_r));
+  checkCudaErrors(cudaFree(material_image_g));
+  checkCudaErrors(cudaFree(material_image_b));
   checkCudaErrors(cudaFree(image_output));
   my_time = time(NULL);
   printf("Cleaning done at %s!\n\n", ctime(&my_time));

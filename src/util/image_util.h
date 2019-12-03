@@ -16,6 +16,7 @@ __host__ float clamp(const float &lo, const float &hi, const float &v)
 __host__ void save_image(
   vec3* image, int width, int height, std::string filename
 ) {
+  printf("Saving an image of width %d and height %d.\n", width, height);
   std::ofstream ofs;
   ofs.open(filename);
   ofs << "P6\n" << width << " " << height << "\n255\n";

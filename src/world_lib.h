@@ -23,8 +23,10 @@ __global__ void create_world(
   Material** material_array,
   float *x, float *y, float *z,
   float *x_norm, float *y_norm, float *z_norm,
+  float *x_tex, float *y_tex,
   int *point_1_idx, int *point_2_idx, int *point_3_idx,
   int *norm_1_idx, int *norm_2_idx, int *norm_3_idx,
+  int *tex_1_idx, int *tex_2_idx, int *tex_3_idx,
   int *material_idx,
   int* num_triangles
 );
@@ -35,6 +37,10 @@ __global__ void create_material(
   float *kd_x, float *kd_y, float *kd_z,
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
+  int *material_image_height,
+  int *material_image_width,
+  int *material_image_offset,
+  vec3 **texture,
   int *num_materials
 );
 
@@ -44,6 +50,38 @@ __global__ void create_camera(
   float up_x, float up_y, float up_z, float fovy,
   int image_width, int image_height
 );
+
+__global__ void create_texture_vector(
+  vec3 **texture,
+  float *material_image_r,
+  float *material_image_g,
+  float *material_image_b,
+  int *len_texture
+);
+
+__global__ void create_texture_vector(
+  vec3 **texture,
+  float *material_image_r,
+  float *material_image_g,
+  float *material_image_b,
+  int *len_texture
+) {
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+  // int j = threadIdx.y + blockIdx.y * blockDim.y;
+  // int idx = i + j * ceilf(powf(len_texture[0], .5));
+  int idx = i;
+
+  if (idx >= len_texture[0]) return;
+
+  *(texture + idx) = new vec3(
+    material_image_r[idx], material_image_g[idx], material_image_b[idx]
+  );
+
+  // if (compute_distance(**(texture + idx), vec3(0, 0, 0)) < SMALL_DOUBLE) {
+  //   printf("Error... at idx = %d\n", idx);
+  // }
+
+}
 
 __global__ void create_camera(
   Camera** camera, float eye_x, float eye_y, float eye_z,
@@ -65,6 +103,10 @@ __global__ void create_material(
   float *kd_x, float *kd_y, float *kd_z,
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
+  int *material_image_height,
+  int *material_image_width,
+  int *material_image_offset,
+  vec3 **texture,
   int *num_materials
 ) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -75,7 +117,10 @@ __global__ void create_material(
     vec3(ka_x[i], ka_y[i], ka_z[i]),
     vec3(kd_x[i], kd_y[i], kd_z[i]),
     vec3(ke_x[i], ke_y[i], ke_z[i]),
-    vec3(.49, .49, .49)
+    vec3(.49, .49, .49),
+    material_image_height[i],
+    material_image_width[i],
+    texture + material_image_offset[i]
   );
 
 }
@@ -85,8 +130,10 @@ __global__ void create_world(
   Material** material_array,
   float *x, float *y, float *z,
   float *x_norm, float *y_norm, float *z_norm,
+  float *x_tex, float *y_tex,
   int *point_1_idx, int *point_2_idx, int *point_3_idx,
   int *norm_1_idx, int *norm_2_idx, int *norm_3_idx,
+  int *tex_1_idx, int *tex_2_idx, int *tex_3_idx,
   int *material_idx,
   int* num_triangles
 ) {
@@ -99,10 +146,16 @@ __global__ void create_world(
     vec3(x[point_1_idx[idx]], y[point_1_idx[idx]], z[point_1_idx[idx]]),
     vec3(x[point_2_idx[idx]], y[point_2_idx[idx]], z[point_2_idx[idx]]),
     vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]),
+
     material_array[material_idx[idx]],
+
     vec3(x_norm[norm_1_idx[idx]], y_norm[norm_1_idx[idx]], z_norm[norm_1_idx[idx]]),
     vec3(x_norm[norm_2_idx[idx]], y_norm[norm_2_idx[idx]], z_norm[norm_2_idx[idx]]),
-    vec3(x_norm[norm_3_idx[idx]], y_norm[norm_3_idx[idx]], z_norm[norm_3_idx[idx]])
+    vec3(x_norm[norm_3_idx[idx]], y_norm[norm_3_idx[idx]], z_norm[norm_3_idx[idx]]),
+
+    vec3(x_tex[tex_1_idx[idx]], y_tex[tex_1_idx[idx]], 0),
+    vec3(x_tex[tex_2_idx[idx]], y_tex[tex_2_idx[idx]], 0),
+    vec3(x_tex[tex_3_idx[idx]], y_tex[tex_3_idx[idx]], 0)
   );
 
 }

@@ -1,8 +1,9 @@
 library(readtext)
 
-OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/dragon3.obj'
-#OBJ_FILE = '/home/aloysius/Downloads/7h15t5bvooe8-Aventador/Avent.obj'
+#OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/dragon3.obj'
+OBJ_FILE = '/home/aloysius/Downloads/dog.obj'
 #OBJ_FILE = '/home/aloysius/Desktop/car.obj'
+OBJ_FILE = '/home/aloysius/Documents/GitHub/obj_collection/collections/formula 1/Formula 1 mesh.obj'
 
 raw_text = readtext(OBJ_FILE)
 lines = strsplit(raw_text$text, "\n")
