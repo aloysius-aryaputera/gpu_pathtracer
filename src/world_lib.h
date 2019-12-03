@@ -66,13 +66,20 @@ __global__ void create_texture_vector(
   float *material_image_b,
   int *len_texture
 ) {
-  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+  // int j = threadIdx.y + blockIdx.y * blockDim.y;
+  // int idx = i + j * ceilf(powf(len_texture[0], .5));
+  int idx = i;
 
   if (idx >= len_texture[0]) return;
 
   *(texture + idx) = new vec3(
     material_image_r[idx], material_image_g[idx], material_image_b[idx]
   );
+
+  // if (compute_distance(**(texture + idx), vec3(0, 0, 0)) < SMALL_DOUBLE) {
+  //   printf("Error... at idx = %d\n", idx);
+  // }
 
 }
 

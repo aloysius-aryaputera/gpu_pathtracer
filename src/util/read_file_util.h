@@ -277,12 +277,12 @@ void _extract_single_material_data(
             *(material_image_height + idx), *(material_image_width + idx)
           );
           int local_offset = 0;
-          for ( std::size_t y = 0; y < *(material_image_height + idx); ++y )
+          for (int y = 0; y < *(material_image_height + idx); ++y )
           {
-            for ( std::size_t x = 0; x < *(material_image_width + idx); ++x ) {
-              float r = 1.0 * img.getLuminance(x, y, 0) / 255.0;
-              float g = 1.0 * img.getLuminance(x, y, 1) / 255.0;
-              float b = 1.0 * img.getLuminance(x, y, 2) / 255.0;
+            for (int x = 0; x < *(material_image_width + idx); ++x ) {
+              float r = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 0) / 255.0;
+              float g = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 1) / 255.0;
+              float b = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 2) / 255.0;
 
               *(material_image_r + (*(material_image_offset + idx)) + local_offset) = r;
               *(material_image_g + (*(material_image_offset + idx)) + local_offset) = g;

@@ -267,8 +267,8 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&texture, len_texture[0] * sizeof(vec3 *)));
 
   printf("Creating the texture vector...\n");
-  dim3 blocks_texture(len_texture[0] / 256 + 1);
-  dim3 threads_texture(256);
+  dim3 blocks_texture(len_texture[0] / 1024 + 1);
+  dim3 threads_texture(1024);
   create_texture_vector<<<blocks_texture, threads_texture>>>(
     texture,
     material_image_r,

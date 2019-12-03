@@ -275,10 +275,12 @@ std::vector<uint8_t> Image::getPixel( size_t x, size_t y ) const
 {
     if ( y >= m_bitmapData.size() )
     {
+        printf("y = %lu, m_bitmapData.size() = %lu\n", y, m_bitmapData.size());
         throw std::out_of_range( "Y value too large" );
     }
     if ( x >= m_bitmapData[0].size() / m_pixelSize )
     {
+        printf("x = %lu, m_bitmapData[0].size() / m_pixelSize = %lu\n", m_bitmapData[0].size() / m_pixelSize);
         throw std::out_of_range( "X value too large" );
     }
     std::vector<uint8_t> vec;

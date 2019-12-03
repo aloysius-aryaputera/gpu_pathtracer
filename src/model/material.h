@@ -36,16 +36,35 @@ __host__ __device__ Material::Material(
 
 __device__ vec3 Material::get_texture(vec3 uv_vector) {
   if (this -> texture_width * this -> texture_height > 0) {
-    int idx_u = floorf((uv_vector.u() - floorf(uv_vector.u())) * this -> texture_width);
-    int idx_v = floorf((uv_vector.v() - floorf(uv_vector.v())) * this -> texture_height);
+    int idx_u = floorf((uv_vector.u() - floorf(uv_vector.u())) * (this -> texture_width - 1));
+    int idx_v = floorf((uv_vector.v() - floorf(uv_vector.v())) * (this -> texture_height - 1));
 
-    int idx = idx_u + idx_v * this -> texture_width;
+    // int idx = idx_u + idx_v * (this -> texture_width - 1);
+    int idx = this -> texture_width * idx_v + idx_u;
 
     vec3 selected_texture = vec3(
       this -> texture[idx] -> r(),
       this -> texture[idx] -> g(),
       this -> texture[idx] -> b()
     );
+
+    // if (compute_distance(this -> texture[idx][0], vec3(0, 0, 0)) < SMALL_DOUBLE) {
+      // printf(
+      //   "u = %5.5f, v = %5.5f, idx_u = %d, idx_v = %d\n",
+      //   uv_vector.u(), uv_vector.v(), idx_u, idx_v
+      // );
+    // }
+
+    if (
+      isnan(this -> texture[idx] -> r()) |
+      isnan(this -> texture[idx] -> g()) |
+      isnan(this -> texture[idx] -> b())
+    ) {
+      printf(
+        "u = %5.5f, v = %5.5f, idx_u = %d, idx_v = %d\n",
+        uv_vector.u(), uv_vector.v(), idx_u, idx_v
+      );
+    }
 
     return selected_texture;
   } else {
