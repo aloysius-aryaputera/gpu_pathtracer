@@ -6,7 +6,6 @@
 
 #include "../model/camera.h"
 #include "../model/cartesian_system.h"
-#include "../model/data_structure/local_vector.h"
 #include "../model/geometry/triangle.h"
 #include "../model/ray.h"
 #include "../model/scene.h"
@@ -32,16 +31,28 @@ __device__ vec3 _compute_color(
   vec3 mask = vec3(1, 1, 1), light = vec3(0, 0, 0), v3_rand, v3_rand_world;
   float pdf = 1 / (2 * M_PI), cos_theta;
   Ray ray;
+  reflection_record ref;
+
+  ref = cur_rec.object -> get_material() -> get_reflection_ray(
+    cur_rec.point, cur_rec.normal, rand_state
+  );
+  ray = ref.ray;
+  cos_theta = ref.cos_theta;
 
   for (int i = 0; i < level; i++) {
-    CartesianSystem new_xyz_system = CartesianSystem(cur_rec.normal);
-    v3_rand = get_random_unit_vector_hemisphere(rand_state);
-    cos_theta = v3_rand.z();
-    v3_rand_world = new_xyz_system.to_world_system(v3_rand);
-    ray = Ray(cur_rec.point, v3_rand_world);
+    // CartesianSystem new_xyz_system = CartesianSystem(cur_rec.normal);
+    // v3_rand = get_random_unit_vector_hemisphere(rand_state);
+    // cos_theta = v3_rand.z();
+    // v3_rand_world = new_xyz_system.to_world_system(v3_rand);
+    // ray = Ray(cur_rec.point, v3_rand_world);
 
     hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
     if (hit) {
+      ref = cur_rec.object -> get_material() -> get_reflection_ray(
+        cur_rec.point, cur_rec.normal, rand_state
+      );
+      cos_theta = ref.cos_theta;
+      ray = ref.ray;
       light += cos_theta * cur_rec.object -> get_material() -> emission;
       if (light.x() > 0 || light.y() > 0 || light.z() > 0) {
         return mask * light;
@@ -51,7 +62,7 @@ __device__ vec3 _compute_color(
           cur_rec.object -> get_material() -> albedo;
       }
     } else {
-      light += cos_theta * (sky_emission * (v3_rand_world.y() + 1) / 2.0);
+      light += cos_theta * (sky_emission * (ray.dir.y() + 1) / 2.0);
       return mask * light;
     }
   }

@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
     sizeof(Primitive*);
 
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
-  float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z;
+  float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z, *n_s;
   float *material_image_r, *material_image_g, *material_image_b;
   int *num_materials, *material_image_height, *material_image_width, \
     *material_image_offset, *len_texture;
@@ -152,6 +152,8 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&ke_x, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&ke_y, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&ke_z, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged((void **)&n_s, max_num_materials * sizeof(float)));
 
   checkCudaErrors(cudaMallocManaged((void **)&material_image_r, 100000000 * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&material_image_g, 100000000 * sizeof(float)));
@@ -189,6 +191,7 @@ int main(int argc, char **argv) {
     kd_x, kd_y, kd_z,
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
+    n_s,
     material_image_r, material_image_g, material_image_b,
     material_image_height, material_image_width, material_image_offset,
     len_texture,
@@ -290,6 +293,7 @@ int main(int argc, char **argv) {
     kd_x, kd_y, kd_z,
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
+    n_s,
     material_image_height,
     material_image_width,
     material_image_offset,
@@ -313,6 +317,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(ke_x));
   checkCudaErrors(cudaFree(ke_y));
   checkCudaErrors(cudaFree(ke_z));
+  checkCudaErrors(cudaFree(n_s));
   checkCudaErrors(cudaFree(material_image_height));
   checkCudaErrors(cudaFree(material_image_width));
   checkCudaErrors(cudaFree(material_image_offset));
