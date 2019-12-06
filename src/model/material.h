@@ -9,6 +9,12 @@
 #include "ray.h"
 #include "vector_and_matrix/vec3.h"
 
+__device__ vec3 reflect(vec3 v, vec3 normal);
+
+__device__ vec3 reflect(vec3 v, vec3 normal) {
+  return v - 2 * dot(v, normal) * normal;
+}
+
 struct reflection_record
 {
   Ray ray;
@@ -28,7 +34,8 @@ class Material {
     );
     __device__ vec3 get_texture(vec3 uv_vector);
     __device__ reflection_record get_reflection_ray(
-      vec3 hit_point, vec3 normal, curandState *rand_state
+      Ray coming_ray, vec3 hit_point, vec3 normal,
+      curandState *rand_state
     );
 
     vec3 ambient, diffuse, specular, emission, albedo;
@@ -57,15 +64,34 @@ __host__ __device__ Material::Material(
 }
 
 __device__ reflection_record Material::get_reflection_ray(
-  vec3 hit_point, vec3 normal, curandState *rand_state
+  Ray coming_ray, vec3 hit_point, vec3 normal, curandState *rand_state
 ) {
-  CartesianSystem new_xyz_system = CartesianSystem(normal);
-  vec3 v3_rand = get_random_unit_vector_hemisphere(rand_state);
-  float cos_theta = v3_rand.z();
-  vec3 v3_rand_world = new_xyz_system.to_world_system(v3_rand);
+  CartesianSystem new_xyz_system;
+  vec3 v3_rand = get_random_unit_vector_hemisphere(rand_state), v3_rand_world;
+  vec3 reflected_ray_dir;
+  float cos_theta, random_number = curand_uniform(&rand_state[0]);
   reflection_record new_reflection_record;
-  new_reflection_record.ray = Ray(hit_point, v3_rand_world);
-  new_reflection_record.cos_theta = cos_theta;
+  float factor = \
+    this -> diffuse_mag / (this -> diffuse_mag + this -> specular_mag);
+
+  if (random_number <= factor) {
+    new_xyz_system = CartesianSystem(normal);
+    cos_theta = v3_rand.z();
+    v3_rand_world = new_xyz_system.to_world_system(v3_rand);
+    new_reflection_record.ray = Ray(hit_point, v3_rand_world);
+    new_reflection_record.cos_theta = cos_theta;
+  } else {
+    reflected_ray_dir = reflect(coming_ray.dir, normal);
+    new_xyz_system = CartesianSystem(reflected_ray_dir);
+    v3_rand_world = new_xyz_system.to_world_system(v3_rand);
+    reflected_ray_dir = unit_vector(
+      (1 - this -> n_s / 1000) * reflected_ray_dir +
+      (this -> n_s / 1000) * v3_rand_world
+    );
+    new_reflection_record.ray = Ray(hit_point, reflected_ray_dir);
+    new_reflection_record.cos_theta = dot(reflected_ray_dir, normal);
+  }
+
   return new_reflection_record;
 }
 
@@ -82,7 +108,7 @@ __device__ vec3 Material::get_texture(vec3 uv_vector) {
       this -> texture[idx] -> b()
     );
 
-    return selected_texture;
+    return selected_texture * this -> diffuse;
   } else {
     return this -> diffuse;
   }

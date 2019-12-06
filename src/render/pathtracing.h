@@ -34,7 +34,7 @@ __device__ vec3 _compute_color(
   reflection_record ref;
 
   ref = cur_rec.object -> get_material() -> get_reflection_ray(
-    cur_rec.point, cur_rec.normal, rand_state
+    cur_rec.coming_ray, cur_rec.point, cur_rec.normal, rand_state
   );
   ray = ref.ray;
   cos_theta = ref.cos_theta;
@@ -49,7 +49,7 @@ __device__ vec3 _compute_color(
     hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
     if (hit) {
       ref = cur_rec.object -> get_material() -> get_reflection_ray(
-        cur_rec.point, cur_rec.normal, rand_state
+        cur_rec.coming_ray, cur_rec.point, cur_rec.normal, rand_state
       );
       cos_theta = ref.cos_theta;
       ray = ref.ray;
@@ -90,28 +90,35 @@ void render(
   int pixel_index = i * (scene[0] -> camera -> width) + j;
   curandState local_rand_state = rand_state[pixel_index];
 
-  Ray camera_ray = scene[0] -> camera -> compute_ray(i + .5, j + .5);
+  Ray camera_ray = scene[0] -> camera -> compute_ray(i + .5, j + .5), ray;
   bool hit = scene[0] -> grid -> do_traversal(camera_ray, init_rec);
-  CartesianSystem new_xyz_system = CartesianSystem(init_rec.normal);
-  vec3 v3_rand, v3_rand_world;
+  // CartesianSystem new_xyz_system = CartesianSystem(init_rec.normal);
+  // vec3 v3_rand, v3_rand_world;
   float pdf = 1 / (2 * M_PI), cos_theta;
-  Ray ray;
+  // Ray ray;
+  reflection_record ref;
 
   if (hit) {
     for(int idx = 0; idx < sample_size; idx++) {
       cur_rec = init_rec;
 
-      v3_rand = get_random_unit_vector_hemisphere(&local_rand_state);
-      cos_theta = v3_rand.z();
-      v3_rand_world = new_xyz_system.to_world_system(v3_rand);
-      ray = Ray(cur_rec.point, v3_rand_world);
+      // v3_rand = get_random_unit_vector_hemisphere(&local_rand_state);
+      // cos_theta = v3_rand.z();
+      // v3_rand_world = new_xyz_system.to_world_system(v3_rand);
+      // ray = Ray(cur_rec.point, v3_rand_world);
+
+      ref = cur_rec.object -> get_material() -> get_reflection_ray(
+        cur_rec.coming_ray, cur_rec.point, cur_rec.normal, &local_rand_state
+      );
+      ray = ref.ray;
+      cos_theta = ref.cos_theta;
 
       hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
       if (hit) {
         color += cos_theta * _compute_color(
           cur_rec, level, scene, sky_emission, &local_rand_state);
       } else {
-        color += cos_theta * (sky_emission * (v3_rand_world.y() + 1) / 2.0);
+        color += cos_theta * (sky_emission * (ray.dir.y() + 1) / 2.0);
       }
 
     }
