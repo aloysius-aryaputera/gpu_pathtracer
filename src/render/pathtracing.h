@@ -34,7 +34,8 @@ __device__ vec3 _compute_color(
   reflection_record ref;
 
   ref = cur_rec.object -> get_material() -> get_reflection_ray(
-    cur_rec.coming_ray, cur_rec.point, cur_rec.normal, rand_state
+    cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
+    rand_state
   );
   ray = ref.ray;
   cos_theta = ref.cos_theta;
@@ -49,7 +50,8 @@ __device__ vec3 _compute_color(
     hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
     if (hit) {
       ref = cur_rec.object -> get_material() -> get_reflection_ray(
-        cur_rec.coming_ray, cur_rec.point, cur_rec.normal, rand_state
+        cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
+        rand_state
       );
       cos_theta = ref.cos_theta;
       ray = ref.ray;
@@ -58,8 +60,8 @@ __device__ vec3 _compute_color(
         return mask * light;
       } else {
         mask *= cos_theta * (1 / pdf) * (1 / M_PI) * \
-          cur_rec.object -> get_material() -> get_texture(cur_rec.uv_vector) * \
-          cur_rec.object -> get_material() -> albedo;
+          cur_rec.object -> get_material() -> albedo * ref.color;
+          // cur_rec.object -> get_material() -> get_texture(cur_rec.uv_vector) *
       }
     } else {
       light += cos_theta * (sky_emission * (ray.dir.y() + 1) / 2.0);
@@ -108,7 +110,8 @@ void render(
       // ray = Ray(cur_rec.point, v3_rand_world);
 
       ref = cur_rec.object -> get_material() -> get_reflection_ray(
-        cur_rec.coming_ray, cur_rec.point, cur_rec.normal, &local_rand_state
+        cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
+        &local_rand_state
       );
       ray = ref.ray;
       cos_theta = ref.cos_theta;
@@ -116,16 +119,19 @@ void render(
       hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
       if (hit) {
         color += cos_theta * _compute_color(
-          cur_rec, level, scene, sky_emission, &local_rand_state);
+          cur_rec, level, scene, sky_emission, &local_rand_state) * \
+          ref.color;
       } else {
-        color += cos_theta * (sky_emission * (ray.dir.y() + 1) / 2.0);
+        color += cos_theta * (sky_emission * (ray.dir.y() + 1) / 2.0) * \
+          ref.color;
       }
 
     }
     color = init_rec.object -> get_material() -> emission + \
       (1.0f / sample_size) * (1 / pdf) * (1 / M_PI) * color * \
-      init_rec.object -> get_material() -> get_texture(init_rec.uv_vector) * \
       init_rec.object -> get_material() -> albedo;
+      // init_rec.object -> get_material() -> get_texture(init_rec.uv_vector) * \
+
   } else {
     color = vec3(0, 0, 0);
   }

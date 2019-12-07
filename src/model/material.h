@@ -19,10 +19,13 @@ struct reflection_record
 {
   Ray ray;
   float cos_theta;
+  vec3 color;
 };
 
 class Material {
   private:
+    __device__ vec3 _get_texture(vec3 uv_vector);
+
     float diffuse_mag, specular_mag;
 
   public:
@@ -32,9 +35,8 @@ class Material {
       vec3 albedo_, float n_s_, int material_image_height,
       int material_image_width, vec3 **texture_
     );
-    __device__ vec3 get_texture(vec3 uv_vector);
     __device__ reflection_record get_reflection_ray(
-      Ray coming_ray, vec3 hit_point, vec3 normal,
+      Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
       curandState *rand_state
     );
 
@@ -64,7 +66,8 @@ __host__ __device__ Material::Material(
 }
 
 __device__ reflection_record Material::get_reflection_ray(
-  Ray coming_ray, vec3 hit_point, vec3 normal, curandState *rand_state
+  Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
+  curandState *rand_state
 ) {
   CartesianSystem new_xyz_system;
   vec3 v3_rand = get_random_unit_vector_hemisphere(rand_state), v3_rand_world;
@@ -80,22 +83,23 @@ __device__ reflection_record Material::get_reflection_ray(
     v3_rand_world = new_xyz_system.to_world_system(v3_rand);
     new_reflection_record.ray = Ray(hit_point, v3_rand_world);
     new_reflection_record.cos_theta = cos_theta;
+    new_reflection_record.color = this -> _get_texture(uv_vector);
   } else {
     reflected_ray_dir = reflect(coming_ray.dir, normal);
     new_xyz_system = CartesianSystem(reflected_ray_dir);
     v3_rand_world = new_xyz_system.to_world_system(v3_rand);
     reflected_ray_dir = unit_vector(
-      (1 - this -> n_s / 1000) * reflected_ray_dir +
-      (this -> n_s / 1000) * v3_rand_world
+      reflected_ray_dir + (1.0 - this -> n_s / 1000) * v3_rand_world
     );
     new_reflection_record.ray = Ray(hit_point, reflected_ray_dir);
     new_reflection_record.cos_theta = dot(reflected_ray_dir, normal);
+    new_reflection_record.color = this -> specular;
   }
 
   return new_reflection_record;
 }
 
-__device__ vec3 Material::get_texture(vec3 uv_vector) {
+__device__ vec3 Material::_get_texture(vec3 uv_vector) {
   if (this -> texture_width * this -> texture_height > 0) {
     int idx_u = floorf((uv_vector.u() - floorf(uv_vector.u())) * (this -> texture_width - 1));
     int idx_v = floorf((uv_vector.v() - floorf(uv_vector.v())) * (this -> texture_height - 1));

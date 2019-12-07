@@ -277,7 +277,7 @@ void _extract_single_material_data(
           *(ke_y + idx) = std::stof(chunks[2]);
           *(ke_z + idx) = std::stof(chunks[3]);
         } else if (chunks[0] == "Ns") {
-          *(n_s + idx) = std::stof(chunks[1]);
+          *(n_s + idx) = clamp(std::stof(chunks[1]), 0, 1000);
         } else if (chunks[0] == "map_Kd") {
           printf("Extracting image...\n");
           complete_image_filename = folder_path + chunks[1];
@@ -290,12 +290,16 @@ void _extract_single_material_data(
             *(material_image_height + idx), *(material_image_width + idx)
           );
           int local_offset = 0;
-          for (int y = 0; y < *(material_image_height + idx); ++y )
+          for (int y = (*(material_image_height + idx)) - 1; y >= 0; --y )
           {
             for (int x = 0; x < *(material_image_width + idx); ++x ) {
-              float r = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 0) / 255.0;
-              float g = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 1) / 255.0;
-              float b = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 2) / 255.0;
+              // float r = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 0) / 255.0;
+              // float g = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 1) / 255.0;
+              // float b = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 2) / 255.0;
+
+              float r = 1.0 * img.getLuminance(x, y, 0) / 255.0;
+              float g = 1.0 * img.getLuminance(x, y, 1) / 255.0;
+              float b = 1.0 * img.getLuminance(x, y, 2) / 255.0;
 
               *(material_image_r + (*(material_image_offset + idx)) + local_offset) = r;
               *(material_image_g + (*(material_image_offset + idx)) + local_offset) = g;

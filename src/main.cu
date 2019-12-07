@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
   float sky_emission_b = std::stof(argv[20]);
 
   int *n_cell_x, *n_cell_y, *n_cell_z;
-  int max_n_cell_x = 100, max_n_cell_y = 100, max_n_cell_z = 100;
+  int max_n_cell_x = 110, max_n_cell_y = 110, max_n_cell_z = 110;
   int tx = 8, ty = 8, tx2 = 8, ty2 = 8, tz2 = 8, max_num_objects_per_cell = 1000;
 
   Scene** my_scene;
