@@ -6,14 +6,7 @@
 
 ![](images/avent.jpg)
 
-![](images/image_1.jpg)
+## Credits
 
-![](images/image_2.jpg)
-
-![](images/image_3.jpg)
-
-![](images/image_4.jpg)
-
-![](images/image.jpg)
-
-![](images/image_7.jpg)
+* The F1 model was by Dil Afroze Ahmad.
+* The Lamborghini Aventador model was by [ysup12](https://free3d.com/user/ysup12).
