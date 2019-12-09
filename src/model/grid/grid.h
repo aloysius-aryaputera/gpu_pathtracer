@@ -45,10 +45,16 @@ class Grid {
 
 __global__ void build_cell_array(Grid** grid, Primitive** cell_object_array);
 __global__ void insert_objects(Grid** grid);
+__global__ void prepare_grid(
+  Camera** camera, Primitive** geom_array, int *num_objects,
+  int *n_cell_x, int *n_cell_y, int *n_cell_z,
+  int max_n_cell_x, int max_n_cell_y, int max_n_cell_z
+);
 __global__ void create_grid(
   Camera** camera, Grid** grid, Primitive** geom_array, int *num_objects,
-  Cell** cell_array, int *n_cell_x, int *n_cell_y, int *n_cell_z, int max_n_cell_x,
-  int max_n_cell_y, int max_n_cell_z, int max_num_objects_per_cell
+  Cell** cell_array, int *n_cell_x, int *n_cell_y, int *n_cell_z,
+  int max_n_cell_x, int max_n_cell_y, int max_n_cell_z,
+  int max_num_objects_per_cell
 );
 __device__ void _compute_scene_boundaries(
   float &x_min, float &x_max, float &y_min, float &y_max, float &z_min,
@@ -115,6 +121,33 @@ __device__ void _compute_scene_boundaries(
 
 }
 
+__global__ void prepare_grid(
+  Camera** camera, Primitive** geom_array, int *num_objects,
+  int *n_cell_x, int *n_cell_y, int *n_cell_z,
+  int max_n_cell_x, int max_n_cell_y, int max_n_cell_z
+) {
+  if (threadIdx.x == 0 && blockIdx.x == 0) {
+    float x_min, x_max, y_min, y_max, z_min, z_max, d_x, d_y, d_z, volume;
+
+    _compute_scene_boundaries(
+      x_min, x_max, y_min, y_max, z_min, z_max, geom_array, num_objects[0],
+      camera[0]
+    );
+
+    d_x = x_max - x_min;
+    d_y = y_max - y_min;
+    d_z = z_max - z_min;
+    volume = d_x * d_y * d_z;
+
+    n_cell_x[0] = min(
+      max_n_cell_x, int(d_x * powf(LAMBDA * num_objects[0] / volume, 1.0f / 3)));
+    n_cell_y[0] = min(
+      max_n_cell_y, int(d_y * powf(LAMBDA * num_objects[0] / volume, 1.0f / 3)));
+    n_cell_z[0] = min(
+      max_n_cell_z, int(d_z * powf(LAMBDA * num_objects[0] / volume, 1.0f / 3)));
+  }
+}
+
 __global__ void create_grid(
   Camera** camera, Grid** grid, Primitive** geom_array, int *num_objects,
   Cell** cell_array, int *n_cell_x, int *n_cell_y, int *n_cell_z,
@@ -143,7 +176,8 @@ __global__ void create_grid(
 
     *(grid) = new Grid(
       x_min, x_max, y_min, y_max, z_min, z_max, n_cell_x[0], n_cell_y[0],
-      n_cell_z[0], geom_array, num_objects[0], cell_array, max_num_objects_per_cell
+      n_cell_z[0], geom_array, num_objects[0], cell_array,
+      max_num_objects_per_cell
     );
 
     _print_grid_details(grid[0]);

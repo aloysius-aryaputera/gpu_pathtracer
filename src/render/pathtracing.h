@@ -40,6 +40,10 @@ __device__ vec3 _compute_color(
   ray = ref.ray;
   cos_theta = ref.cos_theta;
 
+  if (ref.material_type == 's' && cos_theta <= 0) {
+    return vec3(0, 0, 0);
+  }
+
   for (int i = 0; i < level; i++) {
     // CartesianSystem new_xyz_system = CartesianSystem(cur_rec.normal);
     // v3_rand = get_random_unit_vector_hemisphere(rand_state);
@@ -54,15 +58,23 @@ __device__ vec3 _compute_color(
         rand_state
       );
       cos_theta = ref.cos_theta;
+
+      if (ref.material_type == 's' && cos_theta <= 0) {
+        return vec3(0, 0, 0);
+      }
+
       ray = ref.ray;
       light += cos_theta * cur_rec.object -> get_material() -> emission;
+
       if (light.x() > 0 || light.y() > 0 || light.z() > 0) {
         return mask * light;
       } else {
-        mask *= cos_theta * (1 / pdf) * (1 / M_PI) * \
+        mask *= cos_theta * \ // (1 / pdf) *
+          (1 / M_PI) * \
           cur_rec.object -> get_material() -> albedo * ref.color;
           // cur_rec.object -> get_material() -> get_texture(cur_rec.uv_vector) *
       }
+
     } else {
       light += cos_theta * (sky_emission * (ray.dir.y() + 1) / 2.0);
       return mask * light;
@@ -116,19 +128,24 @@ void render(
       ray = ref.ray;
       cos_theta = ref.cos_theta;
 
-      hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
-      if (hit) {
-        color += cos_theta * _compute_color(
-          cur_rec, level, scene, sky_emission, &local_rand_state) * \
-          ref.color;
-      } else {
-        color += cos_theta * (sky_emission * (ray.dir.y() + 1) / 2.0) * \
-          ref.color;
+      if (ref.material_type != 's' || cos_theta > 0) {
+
+        hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
+        if (hit) {
+          color += cos_theta * _compute_color(
+            cur_rec, level, scene, sky_emission, &local_rand_state) * \
+            ref.color;
+        } else {
+          color += cos_theta * (sky_emission * (ray.dir.y() + 1) / 2.0) * \
+            ref.color;
+        }
+
       }
 
     }
     color = init_rec.object -> get_material() -> emission + \
-      (1.0f / sample_size) * (1 / pdf) * (1 / M_PI) * color * \
+      (1.0f / sample_size) * \ //(1 / pdf) *
+      (1 / M_PI) * color * \
       init_rec.object -> get_material() -> albedo;
       // init_rec.object -> get_material() -> get_texture(init_rec.uv_vector) * \
 

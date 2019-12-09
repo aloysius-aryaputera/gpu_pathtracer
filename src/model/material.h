@@ -20,6 +20,7 @@ struct reflection_record
   Ray ray;
   float cos_theta;
   vec3 color;
+  char material_type;
 };
 
 class Material {
@@ -70,7 +71,7 @@ __device__ reflection_record Material::get_reflection_ray(
   curandState *rand_state
 ) {
   CartesianSystem new_xyz_system;
-  vec3 v3_rand = get_random_unit_vector_hemisphere(rand_state), v3_rand_world;
+  vec3 v3_rand, v3_rand_world;
   vec3 reflected_ray_dir;
   float cos_theta, random_number = curand_uniform(&rand_state[0]);
   reflection_record new_reflection_record;
@@ -78,22 +79,33 @@ __device__ reflection_record Material::get_reflection_ray(
     this -> diffuse_mag / (this -> diffuse_mag + this -> specular_mag);
 
   if (random_number <= factor) {
+  // if (factor >= .5) {
+    v3_rand = get_random_unit_vector_hemisphere(rand_state);
     new_xyz_system = CartesianSystem(normal);
     cos_theta = v3_rand.z();
     v3_rand_world = new_xyz_system.to_world_system(v3_rand);
     new_reflection_record.ray = Ray(hit_point, v3_rand_world);
     new_reflection_record.cos_theta = cos_theta;
     new_reflection_record.color = this -> _get_texture(uv_vector);
+    new_reflection_record.material_type = 'd';
   } else {
-    reflected_ray_dir = reflect(coming_ray.dir, normal);
-    new_xyz_system = CartesianSystem(reflected_ray_dir);
-    v3_rand_world = new_xyz_system.to_world_system(v3_rand);
-    reflected_ray_dir = unit_vector(
-      reflected_ray_dir + (1.0 - this -> n_s / 1000) * v3_rand_world
-    );
+    // cos_theta = -1;
+    // while (cos_theta < 0) {
+      // v3_rand = get_random_unit_vector_hemisphere(rand_state);
+      reflected_ray_dir = reflect(coming_ray.dir, normal);
+      // new_xyz_system = CartesianSystem(reflected_ray_dir);
+      // v3_rand_world = new_xyz_system.to_world_system(v3_rand);
+      // reflected_ray_dir = unit_vector(
+      //   reflected_ray_dir +
+      //   ((1000.0 - this -> n_s) / 1000) * v3_rand_world
+      // );
+      cos_theta = dot(reflected_ray_dir, normal);
+      // printf("cos_theta = %5.5f\n", cos_theta);
+    // }
     new_reflection_record.ray = Ray(hit_point, reflected_ray_dir);
-    new_reflection_record.cos_theta = dot(reflected_ray_dir, normal);
+    new_reflection_record.cos_theta = cos_theta;
     new_reflection_record.color = this -> specular;
+    new_reflection_record.material_type = 's';
   }
 
   return new_reflection_record;
