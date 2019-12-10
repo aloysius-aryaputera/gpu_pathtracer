@@ -24,9 +24,9 @@ __host__ void save_image(
     for (int j = 0; j < width; j++) {
       size_t pixel_index = i * width + j;
 
-      float r = clamp(0, 1, image[pixel_index].r());
-      float g = clamp(0, 1, image[pixel_index].g());
-      float b = clamp(0, 1, image[pixel_index].b());
+      float r = clamp(0, 1, sqrt(image[pixel_index].r()));
+      float g = clamp(0, 1, sqrt(image[pixel_index].g()));
+      float b = clamp(0, 1, sqrt(image[pixel_index].b()));
 
       char ir = (char)(255 * r);
       char ig = (char)(255 * g);
