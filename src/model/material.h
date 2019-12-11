@@ -77,6 +77,13 @@ __device__ reflection_record Material::get_reflection_ray(
   reflection_record new_reflection_record;
   float factor = \
     this -> diffuse_mag / (this -> diffuse_mag + this -> specular_mag);
+  float fuziness;
+
+  if (this -> n_s == 0) {
+    fuziness = 1;
+  } else {
+    fuziness = 1 / this -> n_s;
+  }
 
   if (random_number <= factor) {
   // if (factor >= .5) {
@@ -89,19 +96,11 @@ __device__ reflection_record Material::get_reflection_ray(
     new_reflection_record.color = this -> _get_texture(uv_vector);
     new_reflection_record.material_type = 'd';
   } else {
-    // cos_theta = -1;
-    // while (cos_theta < 0) {
-      // v3_rand = get_random_unit_vector_hemisphere(rand_state);
-      reflected_ray_dir = reflect(coming_ray.dir, normal);
-      // new_xyz_system = CartesianSystem(reflected_ray_dir);
-      // v3_rand_world = new_xyz_system.to_world_system(v3_rand);
-      // reflected_ray_dir = unit_vector(
-      //   reflected_ray_dir +
-      //   ((1000.0 - this -> n_s) / 1000) * v3_rand_world
-      // );
-      cos_theta = dot(reflected_ray_dir, normal);
-      // printf("cos_theta = %5.5f\n", cos_theta);
-    // }
+    reflected_ray_dir = reflect(coming_ray.dir, normal);
+    reflected_ray_dir = unit_vector(
+      reflected_ray_dir + fuziness * v3_rand_world
+    );
+    cos_theta = dot(reflected_ray_dir, normal);
     new_reflection_record.ray = Ray(hit_point, reflected_ray_dir);
     new_reflection_record.cos_theta = cos_theta;
     new_reflection_record.color = this -> specular;
