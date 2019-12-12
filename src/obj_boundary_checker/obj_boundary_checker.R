@@ -2,7 +2,7 @@ library(readtext)
 
 #OBJ_FILE = '/home/aloysius/Documents/GitHub/gpu_pathtracer/src/obj/dragon3.obj'
 OBJ_FILE = '/home/aloysius/Downloads/dog.obj'
-OBJ_FILE = '/home/aloysius/Documents/GitHub/obj_collection/collections/testing_scene_4/untitled.obj'
+OBJ_FILE = '/home/aloysius/Documents/GitHub/obj_collection/collections/testing_scene_5/f1.obj'
 #OBJ_FILE = '/home/aloysius/Documents/GitHub/obj_collection/collections/formula 1/Formula 1 mesh.obj'
 
 raw_text = readtext(OBJ_FILE)
