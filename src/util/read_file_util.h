@@ -20,6 +20,7 @@ void _extract_single_material_data(
   float *kd_x, float *kd_y, float *kd_z,
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
+  float *n_s,
   int *len_texture,
   int *num_materials,
   std::vector <std::string> &material_name
@@ -40,11 +41,16 @@ void extract_triangle_data(
   int* num_materials
 );
 void extract_material_data(
-  std::string folder_path, std::string material_filename,
+  std::string folder_path,
+  std::vector <std::string> material_file_name_array,
   float *ka_x, float *ka_y, float *ka_z,
   float *kd_x, float *kd_y, float *kd_z,
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
+  float *n_s,
+  float *material_image_r, float *material_image_g, float *material_image_b,
+  int *material_image_height, int *material_image_width,
+  int *material_image_offset,
   int *len_texture,
   int *num_materials,
   std::vector <std::string> &material_name
@@ -172,6 +178,7 @@ void _extract_single_material_data(
   float *kd_x, float *kd_y, float *kd_z,
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
+  float *n_s,
   float *material_image_r, float *material_image_g, float *material_image_b,
   int *material_image_height, int *material_image_width,
   int *material_image_offset,
@@ -204,6 +211,8 @@ void _extract_single_material_data(
     *(ke_x + idx) = 0;
     *(ke_y + idx) = 0;
     *(ke_z + idx) = 0;
+
+    *(n_s + idx) = 0;
 
     *(material_image_height + idx) = 0;
     *(material_image_width + idx) = 0;
@@ -241,6 +250,8 @@ void _extract_single_material_data(
           *(ke_y + idx) = 0;
           *(ke_z + idx) = 0;
 
+          *(n_s + idx) = 0;
+
           *(material_image_height + idx) = 0;
           *(material_image_width + idx) = 0;
 
@@ -265,6 +276,8 @@ void _extract_single_material_data(
           *(ke_x + idx) = std::stof(chunks[1]);
           *(ke_y + idx) = std::stof(chunks[2]);
           *(ke_z + idx) = std::stof(chunks[3]);
+        } else if (chunks[0] == "Ns") {
+          *(n_s + idx) = clamp(std::stof(chunks[1]), 0, 1000);
         } else if (chunks[0] == "map_Kd") {
           printf("Extracting image...\n");
           complete_image_filename = folder_path + chunks[1];
@@ -277,12 +290,16 @@ void _extract_single_material_data(
             *(material_image_height + idx), *(material_image_width + idx)
           );
           int local_offset = 0;
-          for (int y = 0; y < *(material_image_height + idx); ++y )
+          for (int y = (*(material_image_height + idx)) - 1; y >= 0; --y )
           {
             for (int x = 0; x < *(material_image_width + idx); ++x ) {
-              float r = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 0) / 255.0;
-              float g = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 1) / 255.0;
-              float b = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 2) / 255.0;
+              // float r = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 0) / 255.0;
+              // float g = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 1) / 255.0;
+              // float b = 1.0 * img.getLuminance(x, (*(material_image_height + idx)) - 1 - y, 2) / 255.0;
+
+              float r = 1.0 * img.getLuminance(x, y, 0) / 255.0;
+              float g = 1.0 * img.getLuminance(x, y, 1) / 255.0;
+              float b = 1.0 * img.getLuminance(x, y, 2) / 255.0;
 
               *(material_image_r + (*(material_image_offset + idx)) + local_offset) = r;
               *(material_image_g + (*(material_image_offset + idx)) + local_offset) = g;
@@ -316,6 +333,7 @@ void extract_material_data(
   float *kd_x, float *kd_y, float *kd_z,
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
+  float *n_s,
   float *material_image_r, float *material_image_g, float *material_image_b,
   int *material_image_height, int *material_image_width,
   int *material_image_offset,
@@ -331,6 +349,7 @@ void extract_material_data(
       kd_x, kd_y, kd_z,
       ks_x, ks_y, ks_z,
       ke_x, ke_y, ke_z,
+      n_s,
       material_image_r, material_image_g, material_image_b,
       material_image_height, material_image_width, material_image_offset,
       len_texture,

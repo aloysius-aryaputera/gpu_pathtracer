@@ -149,6 +149,7 @@ __device__ bool Triangle::hit(Ray ray, float t_max, hit_record& rec) {
 
   rec.t = t;
   rec.object = this;
+  rec.coming_ray = ray;
   rec.point = ray.get_vector(t);
   rec.normal = unit_vector(
     alpha * this -> norm_1 + beta * this -> norm_2 + gamma * this -> norm_3);

@@ -67,7 +67,8 @@ __global__ void free_world(
 }
 
 int main(int argc, char **argv) {
-  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1028 * 1024 * 1024);
+  // cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1028 * 1024 * 1024);
+  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024ULL*1024ULL*1024ULL*4ULL);
 
   time_t my_time = time(NULL);
   clock_t start, stop;
@@ -94,7 +95,7 @@ int main(int argc, char **argv) {
   float sky_emission_b = std::stof(argv[20]);
 
   int *n_cell_x, *n_cell_y, *n_cell_z;
-  int max_n_cell_x = 100, max_n_cell_y = 100, max_n_cell_z = 100;
+  int max_n_cell_x = 120, max_n_cell_y = 120, max_n_cell_z = 120;
   int tx = 8, ty = 8, tx2 = 8, ty2 = 8, tz2 = 8, max_num_objects_per_cell = 1000;
 
   Scene** my_scene;
@@ -106,18 +107,14 @@ int main(int argc, char **argv) {
   vec3 *image_output, **texture;
 
   int num_pixels = im_width * im_height;
-  int max_grid_volume = max_n_cell_x * max_n_cell_y * max_n_cell_z;
   int max_num_materials = 100;
   int num_vertices, num_faces, num_vt, num_vn;
   size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state;
   size_t rand_state_size = num_pixels * sizeof(curandState);
-  size_t cell_size = max_grid_volume * sizeof(Cell*);
-  size_t cell_geom_size = max_num_objects_per_cell * max_grid_volume * \
-    sizeof(Primitive*);
 
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
-  float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z;
+  float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z, *n_s;
   float *material_image_r, *material_image_g, *material_image_b;
   int *num_materials, *material_image_height, *material_image_width, \
     *material_image_offset, *len_texture;
@@ -152,6 +149,8 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&ke_x, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&ke_y, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&ke_z, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged((void **)&n_s, max_num_materials * sizeof(float)));
 
   checkCudaErrors(cudaMallocManaged((void **)&material_image_r, 100000000 * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&material_image_g, 100000000 * sizeof(float)));
@@ -189,6 +188,7 @@ int main(int argc, char **argv) {
     kd_x, kd_y, kd_z,
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
+    n_s,
     material_image_r, material_image_g, material_image_b,
     material_image_height, material_image_width, material_image_offset,
     len_texture,
@@ -290,6 +290,7 @@ int main(int argc, char **argv) {
     kd_x, kd_y, kd_z,
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
+    n_s,
     material_image_height,
     material_image_width,
     material_image_offset,
@@ -313,6 +314,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(ke_x));
   checkCudaErrors(cudaFree(ke_y));
   checkCudaErrors(cudaFree(ke_z));
+  checkCudaErrors(cudaFree(n_s));
   checkCudaErrors(cudaFree(material_image_height));
   checkCudaErrors(cudaFree(material_image_width));
   checkCudaErrors(cudaFree(material_image_offset));
@@ -356,11 +358,25 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
 
   checkCudaErrors(cudaMallocManaged((void **)&my_grid, sizeof(Grid *)));
-  checkCudaErrors(cudaMallocManaged((void **)&my_cell, cell_size));
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_x, sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_y, sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_z, sizeof(int)));
 
+  printf("Preparing the grid...\n");
+  prepare_grid<<<1, 1>>>(
+    my_camera, my_geom, num_triangles,
+    n_cell_x, n_cell_y, n_cell_z,
+    max_n_cell_x, max_n_cell_y, max_n_cell_z
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  my_time = time(NULL);
+  printf("Grid preparation done at %s!\n\n", ctime(&my_time));
+
+  checkCudaErrors(
+    cudaMallocManaged(
+      (void **)&my_cell,
+      n_cell_x[0] * n_cell_y[0] * n_cell_z[0] * sizeof(Cell*)));
   printf("Creating the grid...\n");
   create_grid<<<1, 1>>>(
     my_camera, my_grid, my_geom, num_triangles, my_cell, n_cell_x, n_cell_y,
@@ -371,6 +387,8 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("Grid created at %s!\n\n", ctime(&my_time));
 
+  size_t cell_geom_size = max_num_objects_per_cell * \
+    n_cell_x[0] * n_cell_y[0] * n_cell_z[0] * sizeof(Primitive*);
   checkCudaErrors(cudaMallocManaged((void **)&my_cell_geom, cell_geom_size));
   dim3 blocks2(n_cell_x[0] / tx2 + 1, n_cell_y[0] / ty2 + 1, n_cell_z[0] / tz2 + 1);
   dim3 threads2(tx2, ty2, tz2);
@@ -425,11 +443,6 @@ int main(int argc, char **argv) {
   save_image(image_output, im_width, im_height, image_output_path);
   my_time = time(NULL);
   printf("Image saved at %s!\n\n", ctime(&my_time));
-
-  // printf("Saving image 2...\n");
-  // save_image(texture, 500, 500, image_output_path);
-  // my_time = time(NULL);
-  // printf("Image saved at %s!\n\n", ctime(&my_time));
 
   stop = clock();
   double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;

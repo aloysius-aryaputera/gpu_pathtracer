@@ -2,18 +2,15 @@
 
 ![](images/dragon.jpg)
 
-![](images/f1.jpg)
+![](images/avent_2.jpg)
 
 ![](images/avent.jpg)
 
-![](images/image_1.jpg)
+![](images/f1.jpg)
 
-![](images/image_2.jpg)
+![](images/f1_2.jpg)
 
-![](images/image_3.jpg)
+## Credits
 
-![](images/image_4.jpg)
-
-![](images/image.jpg)
-
-![](images/image_7.jpg)
+* The Lamborghini Aventador model was by [ysup12](https://free3d.com/user/ysup12).
+* The Ferrari SF70H model was by [Dil Afroze Ahmed](https://free3d.com/user/dil_afroze).

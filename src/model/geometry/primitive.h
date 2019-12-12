@@ -37,6 +37,7 @@ struct hit_record
     vec3 normal;
     vec3 uv_vector;
     Primitive* object;
+    Ray coming_ray;
 };
 
 #endif
