@@ -41,7 +41,10 @@ __global__ void create_material(
   int *material_image_height,
   int *material_image_width,
   int *material_image_offset,
-  vec3 **texture,
+  float *material_image_r,
+  float *material_image_g,
+  float *material_image_b,
+  // vec3 **texture,
   int *num_materials
 );
 
@@ -104,7 +107,10 @@ __global__ void create_material(
   int *material_image_height,
   int *material_image_width,
   int *material_image_offset,
-  vec3 **texture,
+  float *material_image_r,
+  float *material_image_g,
+  float *material_image_b,
+  // vec3 **texture,
   int *num_materials
 ) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -116,12 +122,13 @@ __global__ void create_material(
     vec3(kd_x[i], kd_y[i], kd_z[i]),
     vec3(ks_x[i], ks_y[i], ks_z[i]),
     vec3(ke_x[i], ke_y[i], ke_z[i]),
-    // vec3(.49, .49, .49),
-    vec3(1, 1, 1),
     n_s[i],
     material_image_height[i],
     material_image_width[i],
-    texture + material_image_offset[i]
+    // texture + material_image_offset[i],
+    material_image_r + material_image_offset[i],
+    material_image_g + material_image_offset[i],
+    material_image_b + material_image_offset[i]
   );
 
 }

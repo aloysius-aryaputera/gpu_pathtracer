@@ -33,34 +33,41 @@ class Material {
     __host__ __device__ Material() {};
     __host__ __device__ Material(
       vec3 ambient_, vec3 diffuse_, vec3 specular_, vec3 emission_,
-      vec3 albedo_, float n_s_, int material_image_height,
-      int material_image_width, vec3 **texture_
+      float n_s_, int material_image_height, int material_image_width,
+      // vec3 **texture_
+      float *material_texture_r_, float *material_texture_g_,
+      float *material_texture_b_
     );
     __device__ reflection_record get_reflection_ray(
       Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
       curandState *rand_state
     );
 
-    vec3 ambient, diffuse, specular, emission, albedo;
+    vec3 ambient, diffuse, specular, emission;
     vec3 **texture;
     int texture_width, texture_height;
     float n_s;
+    float *material_texture_r, *material_texture_g, *material_texture_b;
 };
 
 __host__ __device__ Material::Material(
-  vec3 ambient_, vec3 diffuse_, vec3 specular_, vec3 emission_, vec3 albedo_,
+  vec3 ambient_, vec3 diffuse_, vec3 specular_, vec3 emission_,
   float n_s_, int material_image_height, int material_image_width,
-  vec3 **texture_
+  // vec3 **texture_,
+  float *material_texture_r_, float *material_texture_g_,
+  float *material_texture_b_
 ) {
   this -> ambient = ambient_;
   this -> diffuse = diffuse_;
   this -> specular = specular_;
-  this -> albedo = albedo_;
   this -> emission = emission_;
   this -> n_s = n_s_;
   this -> texture_height = material_image_height;
   this -> texture_width = material_image_width;
-  this -> texture = texture_;
+  // this -> texture = texture_;
+  this -> material_texture_r = material_texture_r_;
+  this -> material_texture_g = material_texture_g_;
+  this -> material_texture_b = material_texture_b_;
 
   this -> diffuse_mag = diffuse_.length();
   this -> specular_mag = specular_.length();
@@ -86,7 +93,6 @@ __device__ reflection_record Material::get_reflection_ray(
   }
 
   if (random_number <= factor) {
-  // if (factor >= .5) {
     v3_rand = get_random_unit_vector_hemisphere(rand_state);
     new_xyz_system = CartesianSystem(normal);
     cos_theta = v3_rand.z();
@@ -118,9 +124,9 @@ __device__ vec3 Material::_get_texture(vec3 uv_vector) {
     int idx = this -> texture_width * idx_v + idx_u;
 
     vec3 selected_texture = vec3(
-      this -> texture[idx] -> r(),
-      this -> texture[idx] -> g(),
-      this -> texture[idx] -> b()
+      this -> material_texture_r[idx],
+      this -> material_texture_g[idx],
+      this -> material_texture_b[idx]
     );
 
     return selected_texture * this -> diffuse;
