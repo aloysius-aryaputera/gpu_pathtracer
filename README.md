@@ -14,3 +14,9 @@
 
 * The Lamborghini Aventador model was by [ysup12](https://free3d.com/user/ysup12).
 * The Ferrari SF70H model was by [Dil Afroze Ahmed](https://free3d.com/user/dil_afroze).
+
+## References
+
+* https://github.com/RayTracing/raytracing.github.io
+* https://github.com/rogerallen/raytracinginoneweekendincuda
+* https://www.scratchapixel.com/
