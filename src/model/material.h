@@ -34,7 +34,6 @@ class Material {
     __host__ __device__ Material(
       vec3 ambient_, vec3 diffuse_, vec3 specular_, vec3 emission_,
       float n_s_, int material_image_height, int material_image_width,
-      // vec3 **texture_
       float *material_texture_r_, float *material_texture_g_,
       float *material_texture_b_
     );
@@ -44,7 +43,6 @@ class Material {
     );
 
     vec3 ambient, diffuse, specular, emission;
-    vec3 **texture;
     int texture_width, texture_height;
     float n_s;
     float *material_texture_r, *material_texture_g, *material_texture_b;
@@ -53,7 +51,6 @@ class Material {
 __host__ __device__ Material::Material(
   vec3 ambient_, vec3 diffuse_, vec3 specular_, vec3 emission_,
   float n_s_, int material_image_height, int material_image_width,
-  // vec3 **texture_,
   float *material_texture_r_, float *material_texture_g_,
   float *material_texture_b_
 ) {
@@ -64,7 +61,6 @@ __host__ __device__ Material::Material(
   this -> n_s = n_s_;
   this -> texture_height = material_image_height;
   this -> texture_width = material_image_width;
-  // this -> texture = texture_;
   this -> material_texture_r = material_texture_r_;
   this -> material_texture_g = material_texture_g_;
   this -> material_texture_b = material_texture_b_;
