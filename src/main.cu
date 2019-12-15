@@ -116,8 +116,13 @@ int main(int argc, char **argv) {
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
   float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z, *n_s;
   float *material_image_r, *material_image_g, *material_image_b;
-  int *num_materials, *material_image_height, *material_image_width, \
-    *material_image_offset;
+  int *num_materials;
+  int *material_image_height_diffuse, *material_image_width_diffuse, \
+    *material_image_offset_diffuse;
+  int *material_image_height_specular, *material_image_width_specular, \
+    *material_image_offset_specular;
+  int *material_image_height_n_s, *material_image_width_n_s, \
+    *material_image_offset_n_s;
 
   /////////////////////////////////////////////////////////////////////////////
   // For offline testing
@@ -150,13 +155,6 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&ke_z, max_num_materials * sizeof(float)));
 
   checkCudaErrors(cudaMallocManaged((void **)&n_s, max_num_materials * sizeof(float)));
-
-  checkCudaErrors(cudaMallocManaged(
-    (void **)&material_image_height, max_num_materials * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged(
-    (void **)&material_image_width, max_num_materials * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged(
-    (void **)&material_image_offset, max_num_materials * sizeof(int)));
 
   printf("Extracting material file names...\n");
   extract_material_file_names(
@@ -208,6 +206,33 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("The number of the elements extracted at %s!\n\n", ctime(&my_time));
 
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_height_diffuse, max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_width_diffuse, max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_offset_diffuse, max_num_materials * sizeof(int)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_height_specular,
+    max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_width_specular,
+    max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_offset_specular,
+    max_num_materials * sizeof(int)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_height_n_s,
+    max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_width_n_s,
+    max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_offset_n_s,
+    max_num_materials * sizeof(int)));
+
   printf("Extracting material data...\n");
   extract_material_data(
     input_folder_path,
@@ -221,7 +246,12 @@ int main(int argc, char **argv) {
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
     n_s,
-    material_image_height, material_image_width, material_image_offset,
+    material_image_height_diffuse, material_image_width_diffuse,
+    material_image_offset_diffuse,
+    material_image_height_specular, material_image_width_specular,
+    material_image_offset_specular,
+    material_image_height_n_s, material_image_width_n_s,
+    material_image_offset_n_s,
     num_materials,
     material_name
   );
@@ -304,9 +334,15 @@ int main(int argc, char **argv) {
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
     n_s,
-    material_image_height,
-    material_image_width,
-    material_image_offset,
+    material_image_height_diffuse,
+    material_image_width_diffuse,
+    material_image_offset_diffuse,
+    material_image_height_specular,
+    material_image_width_specular,
+    material_image_offset_specular,
+    material_image_height_n_s,
+    material_image_width_n_s,
+    material_image_offset_n_s,
     material_image_r,
     material_image_g,
     material_image_b,
@@ -330,9 +366,9 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(ke_y));
   checkCudaErrors(cudaFree(ke_z));
   checkCudaErrors(cudaFree(n_s));
-  checkCudaErrors(cudaFree(material_image_height));
-  checkCudaErrors(cudaFree(material_image_width));
-  checkCudaErrors(cudaFree(material_image_offset));
+  checkCudaErrors(cudaFree(material_image_height_diffuse));
+  checkCudaErrors(cudaFree(material_image_width_diffuse));
+  checkCudaErrors(cudaFree(material_image_offset_diffuse));
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
