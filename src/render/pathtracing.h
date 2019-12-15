@@ -33,39 +33,42 @@ __device__ vec3 _compute_color(
   curandState *rand_state
 ) {
   hit_record cur_rec;
-  bool hit;
+  bool hit, reflected_or_refracted;
   vec3 mask = vec3(1, 1, 1), light = vec3(0, 0, 0), v3_rand, v3_rand_world;
-  float cos_theta;
+  float cos_theta = 0;
   Ray ray = ray_init;
   reflection_record ref;
 
   for (int i = 0; i < level; i++) {
     hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
     if (hit) {
-      ref = cur_rec.object -> get_material() -> get_reflection_ray(
+      reflected_or_refracted = cur_rec.object -> get_material(
+      ) -> is_reflected_or_refracted(
         cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
-        rand_state
+        ref, rand_state
       );
-      cos_theta = ref.cos_theta;
 
-      if (ref.material_type == 's' && cos_theta <= 0) {
-        return vec3(0, 0, 0);
-      }
+      if (reflected_or_refracted) {
 
-      ray = ref.ray;
-      light += cos_theta * cur_rec.object -> get_material() -> emission;
+        ray = ref.ray;
+        cos_theta = ref.cos_theta;
 
-      if (light.x() > 0 || light.y() > 0 || light.z() > 0) {
-        return mask * light;
+        if (light.x() > 0 || light.y() > 0 || light.z() > 0) {
+          light += cur_rec.object -> get_material() -> emission;
+          return mask * light;
+        } else {
+          mask *= cos_theta * (1 / M_PI) * ref.color;
+        }
+
       } else {
-        mask *= cos_theta * (1 / M_PI) * ref.color;
+        return vec3(0, 0, 0);
       }
 
     } else {
       if (i < 1){
         return vec3(0, 0, 0);
       } else {
-        light += cos_theta * _get_sky_color(sky_emission, ray.dir);
+        light += _get_sky_color(sky_emission, ray.dir);
         return mask * light;
       }
     }

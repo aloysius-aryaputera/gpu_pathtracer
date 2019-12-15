@@ -64,9 +64,9 @@ class Material {
       float *texture_g_n_s_,
       float *texture_b_n_s_
     );
-    __device__ reflection_record get_reflection_ray(
+    __device__ bool is_reflected_or_refracted(
       Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
-      curandState *rand_state
+      reflection_record &ref, curandState *rand_state
     );
 
     vec3 emission;
@@ -119,47 +119,50 @@ __host__ __device__ Material::Material(
   this -> specular_mag = specular_.length();
 }
 
-__device__ reflection_record Material::get_reflection_ray(
+__device__ bool Material::is_reflected_or_refracted(
   Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
-  curandState *rand_state
+  reflection_record &ref, curandState *rand_state
 ) {
-  CartesianSystem new_xyz_system;
-  vec3 v3_rand, v3_rand_world;
+  CartesianSystem new_xyz_system = CartesianSystem(normal);
+  vec3 v3_rand = get_random_unit_vector_hemisphere(rand_state);
+  vec3 v3_rand_world = new_xyz_system.to_world_system(v3_rand);
   vec3 reflected_ray_dir;
   float cos_theta, random_number = curand_uniform(&rand_state[0]);
-  reflection_record new_reflection_record;
   float factor = \
     this -> diffuse_mag / (this -> diffuse_mag + this -> specular_mag);
   float fuziness, local_n_s = this -> _get_texture_n_s(uv_vector);
 
   if (local_n_s == 0) {
-    fuziness = 1;
+    fuziness = 99999;
   } else {
     fuziness = 1 / local_n_s;
   }
 
   if (random_number <= factor) {
-    v3_rand = get_random_unit_vector_hemisphere(rand_state);
-    new_xyz_system = CartesianSystem(normal);
     cos_theta = v3_rand.z();
-    v3_rand_world = new_xyz_system.to_world_system(v3_rand);
-    new_reflection_record.ray = Ray(hit_point, v3_rand_world);
-    new_reflection_record.cos_theta = cos_theta;
-    new_reflection_record.color = this -> _get_texture_diffuse(uv_vector);
-    new_reflection_record.material_type = 'd';
+    ref.ray = Ray(hit_point, v3_rand_world);
+    ref.cos_theta = cos_theta;
+    ref.color = this -> _get_texture_diffuse(uv_vector);
+    ref.material_type = 'd';
+    return true;
   } else {
     reflected_ray_dir = reflect(coming_ray.dir, normal);
     reflected_ray_dir = unit_vector(
       reflected_ray_dir + fuziness * v3_rand_world
     );
     cos_theta = dot(reflected_ray_dir, normal);
-    new_reflection_record.ray = Ray(hit_point, reflected_ray_dir);
-    new_reflection_record.cos_theta = cos_theta;
-    new_reflection_record.color = this -> _get_texture_specular(uv_vector);
-    new_reflection_record.material_type = 's';
+    ref.ray = Ray(hit_point, reflected_ray_dir);
+    ref.cos_theta = cos_theta;
+    ref.color = this -> _get_texture_specular(uv_vector);
+    ref.material_type = 's';
+    if (cos_theta <= 0) {
+      return false;
+    } else {
+      return true;
+    }
   }
 
-  return new_reflection_record;
+  return false;
 }
 
 __device__ vec3 Material::_get_texture(
