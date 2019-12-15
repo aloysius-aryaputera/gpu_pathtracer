@@ -21,6 +21,7 @@
 #include "render/pathtracing.h"
 #include "util/image_util.h"
 #include "util/read_file_util.h"
+#include "util/read_image_util.h"
 #include "world_lib.h"
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
@@ -67,7 +68,6 @@ __global__ void free_world(
 }
 
 int main(int argc, char **argv) {
-  // cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1028 * 1024 * 1024);
   cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024ULL*1024ULL*1024ULL*4ULL);
 
   time_t my_time = time(NULL);
@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
   Primitive **my_geom, **my_cell_geom;
   Material **my_material;
   Camera **my_camera;
-  vec3 *image_output, **texture;
+  vec3 *image_output;
 
   int num_pixels = im_width * im_height;
   int max_num_materials = 100;
@@ -116,8 +116,13 @@ int main(int argc, char **argv) {
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
   float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z, *n_s;
   float *material_image_r, *material_image_g, *material_image_b;
-  int *num_materials, *material_image_height, *material_image_width, \
-    *material_image_offset, *len_texture;
+  int *num_materials;
+  int *material_image_height_diffuse, *material_image_width_diffuse, \
+    *material_image_offset_diffuse;
+  int *material_image_height_specular, *material_image_width_specular, \
+    *material_image_offset_specular;
+  int *material_image_height_n_s, *material_image_width_n_s, \
+    *material_image_offset_n_s;
 
   /////////////////////////////////////////////////////////////////////////////
   // For offline testing
@@ -132,7 +137,6 @@ int main(int argc, char **argv) {
   std::vector <std::string> material_file_name_array, material_name;
 
   checkCudaErrors(cudaMallocManaged((void **)&num_materials, sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&len_texture, sizeof(int)));
 
   checkCudaErrors(cudaMallocManaged((void **)&ka_x, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&ka_y, max_num_materials * sizeof(float)));
@@ -152,17 +156,6 @@ int main(int argc, char **argv) {
 
   checkCudaErrors(cudaMallocManaged((void **)&n_s, max_num_materials * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&material_image_r, 100000000 * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&material_image_g, 100000000 * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&material_image_b, 100000000 * sizeof(float)));
-
-  checkCudaErrors(cudaMallocManaged(
-    (void **)&material_image_height, max_num_materials * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged(
-    (void **)&material_image_width, max_num_materials * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged(
-    (void **)&material_image_offset, max_num_materials * sizeof(int)));
-
   printf("Extracting material file names...\n");
   extract_material_file_names(
     input_folder_path,
@@ -172,6 +165,39 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("Material file names extracted at %s!\n\n", ctime(&my_time));
 
+  std::vector <std::string> texture_file_name_array;
+  std::vector <int> texture_offset_array, texture_height_array, \
+    texture_width_array;
+  long int texture_length = 0;
+
+  printf("Extracting texture resource requirements...\n");
+  extract_image_resource_requirement(
+    input_folder_path,
+    material_file_name_array,
+    texture_file_name_array,
+    texture_offset_array,
+    texture_height_array,
+    texture_width_array,
+    texture_length
+  );
+  my_time = time(NULL);
+  printf("Texture resource requirements extracted at %s!\n\n", ctime(&my_time));
+
+  checkCudaErrors(cudaMallocManaged((void **)&material_image_r, texture_length * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&material_image_g, texture_length * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&material_image_b, texture_length * sizeof(float)));
+
+  printf("Extracting textures...\n");
+  extract_textures(
+    input_folder_path,
+    texture_file_name_array,
+    material_image_r,
+    material_image_g,
+    material_image_b
+  );
+  my_time = time(NULL);
+  printf("Textures extracted at %s!\n\n", ctime(&my_time));
+
   printf("Extracting the number of the elements...\n");
   extract_num_elements(
     input_folder_path, obj_filename,
@@ -180,18 +206,52 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("The number of the elements extracted at %s!\n\n", ctime(&my_time));
 
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_height_diffuse, max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_width_diffuse, max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_offset_diffuse, max_num_materials * sizeof(int)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_height_specular,
+    max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_width_specular,
+    max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_offset_specular,
+    max_num_materials * sizeof(int)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_height_n_s,
+    max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_width_n_s,
+    max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_offset_n_s,
+    max_num_materials * sizeof(int)));
+
   printf("Extracting material data...\n");
   extract_material_data(
     input_folder_path,
     material_file_name_array,
+    texture_file_name_array,
+    texture_offset_array,
+    texture_height_array,
+    texture_width_array,
     ka_x, ka_y, ka_z,
     kd_x, kd_y, kd_z,
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
     n_s,
-    material_image_r, material_image_g, material_image_b,
-    material_image_height, material_image_width, material_image_offset,
-    len_texture,
+    material_image_height_diffuse, material_image_width_diffuse,
+    material_image_offset_diffuse,
+    material_image_height_specular, material_image_width_specular,
+    material_image_offset_specular,
+    material_image_height_n_s, material_image_width_n_s,
+    material_image_offset_n_s,
     num_materials,
     material_name
   );
@@ -264,23 +324,6 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("Camera created at %s!\n\n", ctime(&my_time));
 
-  checkCudaErrors(cudaMallocManaged((void **)&texture, len_texture[0] * sizeof(vec3 *)));
-
-  printf("Creating the texture vector...\n");
-  dim3 blocks_texture(len_texture[0] / 1024 + 1);
-  dim3 threads_texture(1024);
-  create_texture_vector<<<blocks_texture, threads_texture>>>(
-    texture,
-    material_image_r,
-    material_image_g,
-    material_image_b,
-    len_texture
-  );
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  my_time = time(NULL);
-  printf("Texture vector created at %s!\n\n", ctime(&my_time));
-
   checkCudaErrors(cudaMallocManaged((void **)&my_material, max_num_materials * sizeof(Material *)));
 
   printf("Creating the materials...\n");
@@ -291,10 +334,18 @@ int main(int argc, char **argv) {
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
     n_s,
-    material_image_height,
-    material_image_width,
-    material_image_offset,
-    texture,
+    material_image_height_diffuse,
+    material_image_width_diffuse,
+    material_image_offset_diffuse,
+    material_image_height_specular,
+    material_image_width_specular,
+    material_image_offset_specular,
+    material_image_height_n_s,
+    material_image_width_n_s,
+    material_image_offset_n_s,
+    material_image_r,
+    material_image_g,
+    material_image_b,
     num_materials
   );
   checkCudaErrors(cudaGetLastError());
@@ -315,9 +366,9 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(ke_y));
   checkCudaErrors(cudaFree(ke_z));
   checkCudaErrors(cudaFree(n_s));
-  checkCudaErrors(cudaFree(material_image_height));
-  checkCudaErrors(cudaFree(material_image_width));
-  checkCudaErrors(cudaFree(material_image_offset));
+  checkCudaErrors(cudaFree(material_image_height_diffuse));
+  checkCudaErrors(cudaFree(material_image_width_diffuse));
+  checkCudaErrors(cudaFree(material_image_offset_diffuse));
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 

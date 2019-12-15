@@ -38,10 +38,18 @@ __global__ void create_material(
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
   float *n_s,
-  int *material_image_height,
-  int *material_image_width,
-  int *material_image_offset,
-  vec3 **texture,
+  int *material_image_height_diffuse,
+  int *material_image_width_diffuse,
+  int *material_image_offset_diffuse,
+  int *material_image_height_specular,
+  int *material_image_width_specular,
+  int *material_image_offset_specular,
+  int *material_image_height_n_s,
+  int *material_image_width_n_s,
+  int *material_image_offset_n_s,
+  float *material_image_r,
+  float *material_image_g,
+  float *material_image_b,
   int *num_materials
 );
 
@@ -51,34 +59,6 @@ __global__ void create_camera(
   float up_x, float up_y, float up_z, float fovy,
   int image_width, int image_height
 );
-
-__global__ void create_texture_vector(
-  vec3 **texture,
-  float *material_image_r,
-  float *material_image_g,
-  float *material_image_b,
-  int *len_texture
-);
-
-__global__ void create_texture_vector(
-  vec3 **texture,
-  float *material_image_r,
-  float *material_image_g,
-  float *material_image_b,
-  int *len_texture
-) {
-  int i = threadIdx.x + blockIdx.x * blockDim.x;
-  // int j = threadIdx.y + blockIdx.y * blockDim.y;
-  // int idx = i + j * ceilf(powf(len_texture[0], .5));
-  int idx = i;
-
-  if (idx >= len_texture[0]) return;
-
-  *(texture + idx) = new vec3(
-    material_image_r[idx], material_image_g[idx], material_image_b[idx]
-  );
-
-}
 
 __global__ void create_camera(
   Camera** camera, float eye_x, float eye_y, float eye_z,
@@ -101,10 +81,18 @@ __global__ void create_material(
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
   float *n_s,
-  int *material_image_height,
-  int *material_image_width,
-  int *material_image_offset,
-  vec3 **texture,
+  int *material_image_height_diffuse,
+  int *material_image_width_diffuse,
+  int *material_image_offset_diffuse,
+  int *material_image_height_specular,
+  int *material_image_width_specular,
+  int *material_image_offset_specular,
+  int *material_image_height_n_s,
+  int *material_image_width_n_s,
+  int *material_image_offset_n_s,
+  float *material_image_r,
+  float *material_image_g,
+  float *material_image_b,
   int *num_materials
 ) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -116,12 +104,22 @@ __global__ void create_material(
     vec3(kd_x[i], kd_y[i], kd_z[i]),
     vec3(ks_x[i], ks_y[i], ks_z[i]),
     vec3(ke_x[i], ke_y[i], ke_z[i]),
-    // vec3(.49, .49, .49),
-    vec3(1, 1, 1),
     n_s[i],
-    material_image_height[i],
-    material_image_width[i],
-    texture + material_image_offset[i]
+    material_image_height_diffuse[i],
+    material_image_width_diffuse[i],
+    material_image_r + material_image_offset_diffuse[i],
+    material_image_g + material_image_offset_diffuse[i],
+    material_image_b + material_image_offset_diffuse[i],
+    material_image_height_specular[i],
+    material_image_width_specular[i],
+    material_image_r + material_image_offset_specular[i],
+    material_image_g + material_image_offset_specular[i],
+    material_image_b + material_image_offset_specular[i],
+    material_image_height_n_s[i],
+    material_image_width_n_s[i],
+    material_image_r + material_image_offset_n_s[i],
+    material_image_g + material_image_offset_n_s[i],
+    material_image_b + material_image_offset_n_s[i]
   );
 
 }
