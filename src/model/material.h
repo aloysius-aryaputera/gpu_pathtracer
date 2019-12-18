@@ -34,11 +34,11 @@ class Material {
     __device__ float _get_texture_n_s(vec3 uv_vector);
 
     float diffuse_mag, specular_mag;
-    vec3 ambient, diffuse, specular;
+    vec3 ambient, diffuse, specular, transmission;
     int texture_width_diffuse, texture_height_diffuse;
     int texture_width_specular, texture_height_specular;
     int texture_width_n_s, texture_height_n_s;
-    float n_s;
+    float t_r, n_s, n_i;
     float *texture_r_diffuse, *texture_g_diffuse, *texture_b_diffuse;
     float *texture_r_specular, *texture_g_specular, *texture_b_specular;
     float *texture_r_n_s, *texture_g_n_s, *texture_b_n_s;
@@ -47,7 +47,8 @@ class Material {
     __host__ __device__ Material() {};
     __host__ __device__ Material(
       vec3 ambient_, vec3 diffuse_, vec3 specular_, vec3 emission_,
-      float n_s_,
+      vec3 transmission_,
+      float t_r_, float n_s_, float n_i_,
       int texture_height_diffuse_,
       int texture_width_diffuse_,
       float *texture_r_diffuse_,
@@ -74,7 +75,10 @@ class Material {
 
 __host__ __device__ Material::Material(
   vec3 ambient_, vec3 diffuse_, vec3 specular_, vec3 emission_,
+  vec3 transmission_,
+  float t_r_,
   float n_s_,
+  float n_i_,
   int texture_height_diffuse_,
   int texture_width_diffuse_,
   float *texture_r_diffuse_,
@@ -95,7 +99,10 @@ __host__ __device__ Material::Material(
   this -> diffuse = diffuse_;
   this -> specular = specular_;
   this -> emission = emission_;
+  this -> transmission = transmission_;
   this -> n_s = n_s_;
+  this -> n_i = n_i_;
+  this -> t_r = t_r_;
 
   this -> texture_height_diffuse = texture_height_diffuse_;
   this -> texture_width_diffuse = texture_width_diffuse_;

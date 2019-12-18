@@ -114,7 +114,8 @@ int main(int argc, char **argv) {
   size_t rand_state_size = num_pixels * sizeof(curandState);
 
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
-  float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z, *n_s;
+  float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z, *n_s, *n_i, *t_r;
+  float *tf_x, *tf_y, *tf_z;
   float *material_image_r, *material_image_g, *material_image_b;
   int *num_materials;
   int *material_image_height_diffuse, *material_image_width_diffuse, \
@@ -154,7 +155,13 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&ke_y, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&ke_z, max_num_materials * sizeof(float)));
 
+  checkCudaErrors(cudaMallocManaged((void **)&tf_x, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&tf_y, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&tf_z, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged((void **)&t_r, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged((void **)&n_s, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged((void **)&n_i, max_num_materials * sizeof(float)));
 
   printf("Extracting material file names...\n");
   extract_material_file_names(
@@ -245,7 +252,8 @@ int main(int argc, char **argv) {
     kd_x, kd_y, kd_z,
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
-    n_s,
+    tf_x, tf_y, tf_z,
+    t_r, n_s, n_i,
     material_image_height_diffuse, material_image_width_diffuse,
     material_image_offset_diffuse,
     material_image_height_specular, material_image_width_specular,
@@ -333,7 +341,8 @@ int main(int argc, char **argv) {
     kd_x, kd_y, kd_z,
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
-    n_s,
+    tf_x, tf_y, tf_z,
+    t_r, n_s, n_i,
     material_image_height_diffuse,
     material_image_width_diffuse,
     material_image_offset_diffuse,
@@ -365,6 +374,9 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(ke_x));
   checkCudaErrors(cudaFree(ke_y));
   checkCudaErrors(cudaFree(ke_z));
+  checkCudaErrors(cudaFree(tf_x));
+  checkCudaErrors(cudaFree(tf_y));
+  checkCudaErrors(cudaFree(tf_z));
   checkCudaErrors(cudaFree(n_s));
   checkCudaErrors(cudaFree(material_image_height_diffuse));
   checkCudaErrors(cudaFree(material_image_width_diffuse));

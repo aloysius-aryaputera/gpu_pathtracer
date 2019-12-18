@@ -133,16 +133,20 @@ void _extract_image_resource_requirement_single(
           chunks[0] == "map_Kd" || chunks[0] == "map_Ks" ||
           chunks[0] == "map_Ns"
         ) {
-          complete_image_filename = folder_path + chunks[1];
-          marengo::jpeg::Image img(complete_image_filename.c_str());
-          height = img.getHeight();
-          width = img.getWidth();
-          image_file_name.push_back(chunks[1]);
-          image_offset.push_back(next_offset);
-          image_height.push_back(height);
-          image_width.push_back(width);
-          next_offset += height * width;
-          texture_length = next_offset;
+          std::pair<bool, int> result = find_in_vector<std::string>(
+            image_file_name, chunks[1]);
+          if (!result.first) {
+            complete_image_filename = folder_path + chunks[1];
+            marengo::jpeg::Image img(complete_image_filename.c_str());
+            height = img.getHeight();
+            width = img.getWidth();
+            image_file_name.push_back(chunks[1]);
+            image_offset.push_back(next_offset);
+            image_height.push_back(height);
+            image_width.push_back(width);
+            next_offset += height * width;
+            texture_length = next_offset;
+          }
         }
       }
     }
