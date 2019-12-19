@@ -325,6 +325,10 @@ void _extract_single_material_data(
           *(ke_x + idx) = std::stof(chunks[1]);
           *(ke_y + idx) = std::stof(chunks[2]);
           *(ke_z + idx) = std::stof(chunks[3]);
+        } else if (chunks[0] == "Tf") {
+          *(tf_x + idx) = std::stof(chunks[1]);
+          *(tf_y + idx) = std::stof(chunks[2]);
+          *(tf_z + idx) = std::stof(chunks[3]);
         } else if (chunks[0] == "d") {
           *(t_r + idx) = 1.0 - clamp(std::stof(chunks[1]), 0, 1);
         } else if (chunks[0] == "Tr") {

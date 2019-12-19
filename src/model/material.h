@@ -9,19 +9,18 @@
 #include "ray.h"
 #include "vector_and_matrix/vec3.h"
 
-__device__ vec3 reflect(vec3 v, vec3 normal);
-
-__device__ vec3 reflect(vec3 v, vec3 normal) {
-  return v - 2 * dot(v, normal) * normal;
-}
-
 struct reflection_record
 {
   Ray ray;
   float cos_theta;
   vec3 color;
-  char material_type;
 };
+
+__device__ vec3 reflect(vec3 v, vec3 normal);
+
+__device__ vec3 reflect(vec3 v, vec3 normal) {
+  return v - 2 * dot(v, normal) * normal;
+}
 
 class Material {
   private:
@@ -32,6 +31,8 @@ class Material {
     __device__ vec3 _get_texture_diffuse(vec3 uv_vector);
     __device__ vec3 _get_texture_specular(vec3 uv_vector);
     __device__ float _get_texture_n_s(vec3 uv_vector);
+    __device__ reflection_record refract(
+      vec3 hit_point, vec3 v_in, vec3 normal);
 
     float diffuse_mag, specular_mag;
     vec3 ambient, diffuse, specular, transmission;
@@ -72,6 +73,57 @@ class Material {
 
     vec3 emission;
 };
+
+__device__ reflection_record Material::refract(
+  vec3 hit_point, vec3 v_in, vec3 normal
+) {
+  reflection_record ref;
+  if (dot(v_in, normal) <= 0) {
+    vec3 v_in_perpendicular = -dot(v_in, normal) * normal;
+    vec3 v_in_parallel = v_in - v_in_perpendicular;
+    float sin_theta_1 = powf(1 - powf(dot(v_in, normal), 2), .5);
+    float sin_theta_2 = 1.0 / this -> n_i * sin_theta_1;
+    float cos_theta_2 = powf(1 - powf(sin_theta_2, 2), .5);
+    float tan_theta_2 = sin_theta_2 / cos_theta_2;
+    vec3 v_out_perpendicular = \
+      - 1 / tan_theta_2 * v_in_parallel.length() * normal;
+    vec3 v_out = v_in_parallel + v_out_perpendicular;
+    v_out.make_unit_vector();
+    Ray ray_out = Ray(hit_point, v_out);
+    ref.ray = ray_out;
+    // ref.cos_theta = cos_theta_2;
+    ref.cos_theta = 1;
+    ref.color = this -> transmission * this -> t_r;
+  } else {
+    float sin_theta_1_max = 1.0 / this -> n_i;
+    float cos_theta_1 = dot(v_in, normal);
+    float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
+    if (sin_theta_1 >= sin_theta_1_max) {
+      vec3 v_out = reflect(v_in, -normal);
+      ref.ray = Ray(hit_point, v_out);
+      // ref.cos_theta = cos_theta_1;
+      ref.cos_theta = 1;
+      ref.color = this -> transmission * this -> t_r;
+    }else {
+      vec3 v_in_perpendicular = dot(v_in, normal) * normal;
+      vec3 v_in_parallel = v_in - v_in_perpendicular;
+      float sin_theta_1 = powf(1 - powf(dot(v_in, normal), 2), .5);
+      float sin_theta_2 = this -> n_i / 1.0 * sin_theta_1;
+      float cos_theta_2 = powf(1 - powf(sin_theta_2, 2), .5);
+      float tan_theta_2 = sin_theta_2 / cos_theta_2;
+      vec3 v_out_perpendicular = \
+        1 / tan_theta_2 * v_in_parallel.length() * normal;
+      vec3 v_out = v_in_parallel + v_out_perpendicular;
+      v_out.make_unit_vector();
+      Ray ray_out = Ray(hit_point, v_out);
+      ref.ray = ray_out;
+      ref.cos_theta = 1;
+      // ref.cos_theta = cos_theta_2;
+      ref.color = this -> transmission * this -> t_r;
+    }
+  }
+  return ref;
+}
 
 __host__ __device__ Material::Material(
   vec3 ambient_, vec3 diffuse_, vec3 specular_, vec3 emission_,
@@ -130,6 +182,12 @@ __device__ bool Material::is_reflected_or_refracted(
   Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
   reflection_record &ref, curandState *rand_state
 ) {
+
+  if (this -> t_r > 0) {
+    ref = this -> refract(hit_point, coming_ray.dir, normal);
+    return true;
+  }
+
   CartesianSystem new_xyz_system = CartesianSystem(normal);
   vec3 v3_rand = get_random_unit_vector_hemisphere(rand_state);
   vec3 v3_rand_world = new_xyz_system.to_world_system(v3_rand);
@@ -150,7 +208,7 @@ __device__ bool Material::is_reflected_or_refracted(
     ref.ray = Ray(hit_point, v3_rand_world);
     ref.cos_theta = cos_theta;
     ref.color = this -> _get_texture_diffuse(uv_vector);
-    ref.material_type = 'd';
+    // ref.material_type = 'd';
     return true;
   } else {
     reflected_ray_dir = reflect(coming_ray.dir, normal);
@@ -161,7 +219,7 @@ __device__ bool Material::is_reflected_or_refracted(
     ref.ray = Ray(hit_point, reflected_ray_dir);
     ref.cos_theta = cos_theta;
     ref.color = this -> _get_texture_specular(uv_vector);
-    ref.material_type = 's';
+    // ref.material_type = 's';
     if (cos_theta <= 0) {
       return false;
     } else {
