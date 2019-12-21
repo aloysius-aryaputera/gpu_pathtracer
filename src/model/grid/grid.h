@@ -413,18 +413,18 @@ __device__ bool Grid::do_traversal(Ray ray, hit_record &rec) {
           t_z += d_t_z;
           k += inc_k;
         } else {
-          printf(
-            "count = %d, i = %d, j = %d, k = %d, \
-            t_x_prev = %5.5f, t_y_prev = %5.5f, t_z_prev = %5.5f, \
-            t_x = %5.5f, t_y = %5.5f, t_z = %5.5f, \
-            d_t_x = %5.5f, d_t_y = %5.5f, d_t_z = %5.5f, \
-            ray_dir_x = %5.5f, ray_dir_y = %5.5f, ray_dir_z = %5.5f\n",
-            count, i, j, k,
-            t_x_prev, t_y_prev, t_z_prev,
-            t_x, t_y, t_z,
-            d_t_x, d_t_y, d_t_z,
-            ray.dir.x(), ray.dir.y(), ray.dir.z()
-          );
+          // printf(
+          //   "count = %d, i = %d, j = %d, k = %d, \
+          //   t_x_prev = %5.5f, t_y_prev = %5.5f, t_z_prev = %5.5f, \
+          //   t_x = %5.5f, t_y = %5.5f, t_z = %5.5f, \
+          //   d_t_x = %5.5f, d_t_y = %5.5f, d_t_z = %5.5f, \
+          //   ray_dir_x = %5.5f, ray_dir_y = %5.5f, ray_dir_z = %5.5f\n",
+          //   count, i, j, k,
+          //   t_x_prev, t_y_prev, t_z_prev,
+          //   t_x, t_y, t_z,
+          //   d_t_x, d_t_y, d_t_z,
+          //   ray.dir.x(), ray.dir.y(), ray.dir.z()
+          // );
           return false;
         }
       }
