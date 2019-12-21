@@ -1,10 +1,10 @@
 # GPU Pathtracer
 
-![](images/20191217_dragon.jpg)
+![](images/20191221_dragon.jpg)
 
-![](images/20191219_avent_2.jpg)
+![](images/20191221_avent_2.jpg)
 
-![](images/20191219_avent.jpg)
+![](images/20191221_avent.jpg)
 
 ![](images/20191215_f1.jpg)
 

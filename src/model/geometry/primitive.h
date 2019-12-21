@@ -28,6 +28,8 @@ class Primitive {
     __device__ virtual BoundingBox* get_bounding_box() {
       return this -> bounding_box;
     }
+
+    float tolerance;
 };
 
 struct hit_record

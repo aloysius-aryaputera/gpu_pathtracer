@@ -16,7 +16,7 @@ class Triangle: public Primitive {
     __host__ __device__ float _compute_tolerance();
     __device__ void _compute_bounding_box();
 
-    float area, tolerance, inv_tolerance;
+    float area, inv_tolerance;
     vec3 point_1, point_2, point_3, norm_1, norm_2, norm_3, normal;
     vec3 tex_1, tex_2, tex_3;
     Material *material;
@@ -33,6 +33,7 @@ class Triangle: public Primitive {
     __device__ Material* get_material();
     __device__ BoundingBox* get_bounding_box();
 
+    float tolerance;
 };
 
 __host__ __device__ float _compute_triangle_area(
@@ -142,6 +143,7 @@ __device__ bool Triangle::hit(Ray ray, float t_max, hit_record& rec) {
   float gamma = m_gamma / m;
   float alpha = 1 - beta - gamma;
 
+  if (fabs(m) < this -> tolerance) return false;
   if (t > t_max) return false;
   if (t < this -> tolerance || t > this -> inv_tolerance) return false;
   if (beta < 0 || beta > 1) return false;

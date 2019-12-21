@@ -32,7 +32,7 @@ class Material {
     __device__ vec3 _get_texture_specular(vec3 uv_vector);
     __device__ float _get_texture_n_s(vec3 uv_vector);
     __device__ reflection_record refract(
-      vec3 hit_point, vec3 v_in, vec3 normal);
+      vec3 hit_point, vec3 v_in, vec3 normal, float epsilon);
 
     float diffuse_mag, specular_mag;
     vec3 ambient, diffuse, specular, transmission;
@@ -68,20 +68,21 @@ class Material {
     );
     __device__ bool is_reflected_or_refracted(
       Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
-      reflection_record &ref, curandState *rand_state
+      float epsilon, reflection_record &ref, curandState *rand_state
     );
 
     vec3 emission;
 };
 
 __device__ reflection_record Material::refract(
-  vec3 hit_point, vec3 v_in, vec3 normal
+  vec3 hit_point, vec3 v_in, vec3 normal, float epsilon
 ) {
   reflection_record ref;
   if (dot(v_in, normal) <= 0) {
-    vec3 v_in_perpendicular = -dot(v_in, normal) * normal;
+    float cos_theta_1 = dot(v_in, -normal);
+    float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
+    vec3 v_in_perpendicular = - cos_theta_1 * normal;
     vec3 v_in_parallel = v_in - v_in_perpendicular;
-    float sin_theta_1 = powf(1 - powf(dot(v_in, normal), 2), .5);
     float sin_theta_2 = 1.0 / this -> n_i * sin_theta_1;
     float cos_theta_2 = powf(1 - powf(sin_theta_2, 2), .5);
     float tan_theta_2 = sin_theta_2 / cos_theta_2;
@@ -89,7 +90,7 @@ __device__ reflection_record Material::refract(
       - 1 / tan_theta_2 * v_in_parallel.length() * normal;
     vec3 v_out = v_in_parallel + v_out_perpendicular;
     v_out.make_unit_vector();
-    Ray ray_out = Ray(hit_point, v_out);
+    Ray ray_out = Ray(hit_point - epsilon * normal, v_out);
     ref.ray = ray_out;
     // ref.cos_theta = cos_theta_2;
     ref.cos_theta = 1;
@@ -105,9 +106,9 @@ __device__ reflection_record Material::refract(
       ref.cos_theta = 1;
       ref.color = this -> transmission * this -> t_r;
     }else {
-      vec3 v_in_perpendicular = dot(v_in, normal) * normal;
+      float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
+      vec3 v_in_perpendicular = cos_theta_1 * normal;
       vec3 v_in_parallel = v_in - v_in_perpendicular;
-      float sin_theta_1 = powf(1 - powf(dot(v_in, normal), 2), .5);
       float sin_theta_2 = this -> n_i / 1.0 * sin_theta_1;
       float cos_theta_2 = powf(1 - powf(sin_theta_2, 2), .5);
       float tan_theta_2 = sin_theta_2 / cos_theta_2;
@@ -115,7 +116,7 @@ __device__ reflection_record Material::refract(
         1 / tan_theta_2 * v_in_parallel.length() * normal;
       vec3 v_out = v_in_parallel + v_out_perpendicular;
       v_out.make_unit_vector();
-      Ray ray_out = Ray(hit_point, v_out);
+      Ray ray_out = Ray(hit_point + epsilon * normal, v_out);
       ref.ray = ray_out;
       ref.cos_theta = 1;
       // ref.cos_theta = cos_theta_2;
@@ -180,11 +181,11 @@ __host__ __device__ Material::Material(
 
 __device__ bool Material::is_reflected_or_refracted(
   Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
-  reflection_record &ref, curandState *rand_state
+  float epsilon, reflection_record &ref, curandState *rand_state
 ) {
 
   if (this -> t_r > 0) {
-    ref = this -> refract(hit_point, coming_ray.dir, normal);
+    ref = this -> refract(hit_point, coming_ray.dir, normal, epsilon);
     return true;
   }
 
