@@ -34,7 +34,8 @@ __device__ vec3 _compute_color(
 ) {
   hit_record cur_rec;
   bool hit, reflected_or_refracted;
-  vec3 mask = vec3(1, 1, 1), light = vec3(0, 0, 0), v3_rand, v3_rand_world;
+  vec3 mask = vec3(1, 1, 1), light = vec3(0, 0, 0), light_tmp = vec3(0, 0, 0);
+  vec3  v3_rand, v3_rand_world;
   float cos_theta = 0, epsilon;
   Ray ray = ray_init;
   reflection_record ref;
@@ -46,19 +47,20 @@ __device__ vec3 _compute_color(
       reflected_or_refracted = cur_rec.object -> get_material(
       ) -> is_reflected_or_refracted(
         cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
-        epsilon, ref, rand_state
+        0, ref, rand_state
       );
 
       if (reflected_or_refracted) {
 
         ray = ref.ray;
-        cos_theta = ref.cos_theta;
+        // cos_theta = ref.cos_theta;
+        light_tmp = cur_rec.object -> get_material() -> emission;
 
-        if (light.x() > 0 || light.y() > 0 || light.z() > 0) {
-          light += cur_rec.object -> get_material() -> emission;
+        if (light_tmp.x() > 0 || light_tmp.y() > 0 || light_tmp.z() > 0) {
+          light += light_tmp;
           return mask * light;
         } else {
-          mask *= cos_theta * (1 / M_PI) * ref.color;
+          mask *= (1 / M_PI) * ref.filter;
         }
 
       } else {

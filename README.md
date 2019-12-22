@@ -8,7 +8,7 @@
 
 ![](images/20191215_f1.jpg)
 
-![](images/20191215_merlion.jpg)
+![](images/20191222_merlion.jpg)
 
 ## Credits
 

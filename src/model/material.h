@@ -12,14 +12,22 @@
 struct reflection_record
 {
   Ray ray;
-  float cos_theta;
-  vec3 color;
+  vec3 filter;
 };
 
 __device__ vec3 reflect(vec3 v, vec3 normal);
 
+__device__ float _compute_schlick_specular(float cos_theta);
+
 __device__ vec3 reflect(vec3 v, vec3 normal) {
   return v - 2 * dot(v, normal) * normal;
+}
+
+__device__ float _compute_schlick_specular(
+  float cos_theta, float n_1, float n_2
+) {
+  float r_0 = powf((n_1 - n_2) / (n_1 + n_2), 2);
+  return r_0 + (1 - r_0) * powf(1 - cos_theta, 5);
 }
 
 class Material {
@@ -31,8 +39,8 @@ class Material {
     __device__ vec3 _get_texture_diffuse(vec3 uv_vector);
     __device__ vec3 _get_texture_specular(vec3 uv_vector);
     __device__ float _get_texture_n_s(vec3 uv_vector);
-    __device__ reflection_record refract(
-      vec3 hit_point, vec3 v_in, vec3 normal, float epsilon);
+    __device__ reflection_record _refract(
+      vec3 hit_point, vec3 v_in, vec3 normal, curandState *rand_state);
 
     float diffuse_mag, specular_mag;
     vec3 ambient, diffuse, specular, transmission;
@@ -74,39 +82,49 @@ class Material {
     vec3 emission;
 };
 
-__device__ reflection_record Material::refract(
-  vec3 hit_point, vec3 v_in, vec3 normal, float epsilon
+__device__ reflection_record Material::_refract(
+  vec3 hit_point, vec3 v_in, vec3 normal, curandState *rand_state
 ) {
   reflection_record ref;
+  float random_number = curand_uniform(&rand_state[0]);
+
   if (dot(v_in, normal) <= 0) {
     float cos_theta_1 = dot(v_in, -normal);
-    float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
-    vec3 v_in_perpendicular = - cos_theta_1 * normal;
-    vec3 v_in_parallel = v_in - v_in_perpendicular;
-    float sin_theta_2 = 1.0 / this -> n_i * sin_theta_1;
-    float cos_theta_2 = powf(1 - powf(sin_theta_2, 2), .5);
-    float tan_theta_2 = sin_theta_2 / cos_theta_2;
-    vec3 v_out_perpendicular = \
-      - 1 / tan_theta_2 * v_in_parallel.length() * normal;
-    vec3 v_out = v_in_parallel + v_out_perpendicular;
-    v_out.make_unit_vector();
-    Ray ray_out = Ray(hit_point - epsilon * normal, v_out);
-    ref.ray = ray_out;
-    // ref.cos_theta = cos_theta_2;
-    ref.cos_theta = 1;
-    ref.color = this -> transmission * this -> t_r;
+    float reflection_probability = _compute_schlick_specular(
+      cos_theta_1, 1.0, this -> n_i
+    );
+    if (random_number >= reflection_probability) {
+      float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
+      vec3 v_in_perpendicular = - cos_theta_1 * normal;
+      vec3 v_in_parallel = v_in - v_in_perpendicular;
+      float sin_theta_2 = 1.0 / this -> n_i * sin_theta_1;
+      float cos_theta_2 = powf(1 - powf(sin_theta_2, 2), .5);
+      float tan_theta_2 = sin_theta_2 / cos_theta_2;
+      vec3 v_out_perpendicular = \
+        - 1 / tan_theta_2 * v_in_parallel.length() * normal;
+      vec3 v_out = v_in_parallel + v_out_perpendicular;
+      v_out.make_unit_vector();
+      Ray ray_out = Ray(hit_point, v_out);
+      ref.ray = ray_out;
+      ref.filter = this -> transmission * this -> t_r;
+    } else {
+      vec3 v_out = reflect(v_in, normal);
+      ref.ray = Ray(hit_point, v_out);
+      ref.filter = this -> transmission * this -> t_r;
+    }
   } else {
     float sin_theta_1_max = 1.0 / this -> n_i;
     float cos_theta_1 = dot(v_in, normal);
     float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
-    if (sin_theta_1 >= sin_theta_1_max) {
+    float reflection_probability = _compute_schlick_specular(
+      cos_theta_1, this -> n_i, 1.0);
+    if (
+      sin_theta_1 >= sin_theta_1_max | random_number <= reflection_probability
+    ) {
       vec3 v_out = reflect(v_in, -normal);
       ref.ray = Ray(hit_point, v_out);
-      // ref.cos_theta = cos_theta_1;
-      ref.cos_theta = 1;
-      ref.color = this -> transmission * this -> t_r;
+      ref.filter = this -> transmission * this -> t_r;
     }else {
-      float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
       vec3 v_in_perpendicular = cos_theta_1 * normal;
       vec3 v_in_parallel = v_in - v_in_perpendicular;
       float sin_theta_2 = this -> n_i / 1.0 * sin_theta_1;
@@ -116,11 +134,9 @@ __device__ reflection_record Material::refract(
         1 / tan_theta_2 * v_in_parallel.length() * normal;
       vec3 v_out = v_in_parallel + v_out_perpendicular;
       v_out.make_unit_vector();
-      Ray ray_out = Ray(hit_point + epsilon * normal, v_out);
+      Ray ray_out = Ray(hit_point, v_out);
       ref.ray = ray_out;
-      ref.cos_theta = 1;
-      // ref.cos_theta = cos_theta_2;
-      ref.color = this -> transmission * this -> t_r;
+      ref.filter = this -> transmission * this -> t_r;
     }
   }
   return ref;
@@ -185,7 +201,7 @@ __device__ bool Material::is_reflected_or_refracted(
 ) {
 
   if (this -> t_r > 0) {
-    ref = this -> refract(hit_point, coming_ray.dir, normal, epsilon);
+    ref = this -> _refract(hit_point, coming_ray.dir, normal, rand_state);
     return true;
   }
 
@@ -207,8 +223,8 @@ __device__ bool Material::is_reflected_or_refracted(
   if (random_number <= factor) {
     cos_theta = v3_rand.z();
     ref.ray = Ray(hit_point, v3_rand_world);
-    ref.cos_theta = cos_theta;
-    ref.color = this -> _get_texture_diffuse(uv_vector);
+    // ref.cos_theta = cos_theta;
+    ref.filter = this -> _get_texture_diffuse(uv_vector) * cos_theta;
     // ref.material_type = 'd';
     return true;
   } else {
@@ -218,8 +234,8 @@ __device__ bool Material::is_reflected_or_refracted(
     );
     cos_theta = dot(reflected_ray_dir, normal);
     ref.ray = Ray(hit_point, reflected_ray_dir);
-    ref.cos_theta = cos_theta;
-    ref.color = this -> _get_texture_specular(uv_vector);
+    // ref.cos_theta = cos_theta;
+    ref.filter = this -> _get_texture_specular(uv_vector) * cos_theta;
     // ref.material_type = 's';
     if (cos_theta <= 0) {
       return false;
