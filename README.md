@@ -1,6 +1,6 @@
 # GPU Pathtracer
 
-![](images/20191221_dragon.jpg)
+![](images/20191224_dragon.jpg)
 
 ![](images/20191221_avent_2.jpg)
 
