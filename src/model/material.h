@@ -76,7 +76,7 @@ class Material {
     );
     __device__ bool is_reflected_or_refracted(
       Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
-      float epsilon, reflection_record &ref, curandState *rand_state
+      reflection_record &ref, curandState *rand_state
     );
 
     vec3 emission;
@@ -197,7 +197,7 @@ __host__ __device__ Material::Material(
 
 __device__ bool Material::is_reflected_or_refracted(
   Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
-  float epsilon, reflection_record &ref, curandState *rand_state
+  reflection_record &ref, curandState *rand_state
 ) {
 
   if (this -> t_r > 0) {
