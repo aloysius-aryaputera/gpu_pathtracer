@@ -127,6 +127,7 @@ __device__ BoundingBox* Triangle::get_bounding_box() {
 }
 
 __device__ bool Triangle::hit(Ray ray, float t_max, hit_record& rec) {
+
   vec3 o_point_1 = ray.p0 - this -> point_1;
   vec3 point_2_point_1 = this -> point_2 - this -> point_1;
   vec3 point_3_point_1 = this -> point_3 - this -> point_1;

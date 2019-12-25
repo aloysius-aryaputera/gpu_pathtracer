@@ -14,22 +14,45 @@
 __global__
 void render(
   vec3 *fb, Scene **scene, curandState *rand_state, int sample_size, int level,
-  vec3 sky_emission
+  vec3 sky_emission, int bg_height, int bg_width,
+  float *bg_r, float *bg_g, float *bg_b
 );
 
 __device__ vec3 _compute_color(
   hit_record rec, int level, Scene **scene, vec3 sky_emission,
+  int bg_height, int bg_width,
+  float *bg_r, float *bg_g, float *bg_b,
   curandState *rand_state
 );
 
-__device__ vec3 _get_sky_color(vec3 sky_emission, vec3 look_dir);
+__device__ vec3 _get_sky_color(
+  vec3 sky_emission, vec3 look_dir, int bg_height, int bg_width,
+  float *bg_r, float *bg_g, float *bg_b
+);
 
-__device__ vec3 _get_sky_color(vec3 sky_emission, vec3 look_dir) {
-  return sky_emission * (look_dir.y() + 1) / 2.0;
+__device__ vec3 _get_sky_color(
+  vec3 sky_emission, vec3 look_dir, int bg_height, int bg_width,
+  float *bg_r, float *bg_g, float *bg_b
+) {
+  // return sky_emission * (look_dir.y() + 1) / 2.0;
+  float u = .5 + atan2(look_dir.z(), look_dir.x()) / (2 * M_PI);
+  float v = .5 - asin(look_dir.y()) / M_PI;
+
+  int idx_u = floorf((u - floorf(u)) * (bg_width - 1));
+  int idx_v = floorf((v - floorf(v)) * (bg_height - 1));
+
+  int idx = bg_width * idx_v + idx_u;
+
+  // int u_idx = floorf(u * bg_width);
+  // int v_idx = floorf(v * bg_height);
+  // int idx = v_idx * bg_width + u_idx;
+  return sky_emission * vec3(bg_r[idx], bg_g[idx], bg_b[idx]);
 }
 
 __device__ vec3 _compute_color(
   Ray ray_init, int level, Scene **scene, vec3 sky_emission,
+  int bg_height, int bg_width,
+  float *bg_r, float *bg_g, float *bg_b,
   curandState *rand_state
 ) {
   hit_record cur_rec;
@@ -38,6 +61,8 @@ __device__ vec3 _compute_color(
   vec3 v3_rand, v3_rand_world;
   Ray ray = ray_init;
   reflection_record ref;
+
+  cur_rec.object = nullptr;
 
   for (int i = 0; i < level; i++) {
     hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
@@ -66,9 +91,11 @@ __device__ vec3 _compute_color(
 
     } else {
       if (i < 1){
-        return vec3(0, 0, 0);
+        return _get_sky_color(
+          vec3(1, 1, 1), ray.dir, bg_height, bg_width, bg_r, bg_g, bg_b);
       } else {
-        light += _get_sky_color(sky_emission, ray.dir);
+        light += _get_sky_color(
+          sky_emission, ray.dir, bg_height, bg_width, bg_r, bg_g, bg_b);
         return mask * light;
       }
     }
@@ -80,7 +107,8 @@ __device__ vec3 _compute_color(
 __global__
 void render(
   vec3 *fb, Scene **scene, curandState *rand_state, int sample_size, int level,
-  vec3 sky_emission
+  vec3 sky_emission, int bg_height, int bg_width,
+  float *bg_r, float *bg_g, float *bg_b
 ) {
 
   hit_record init_rec, cur_rec;
@@ -100,7 +128,8 @@ void render(
 
   for(int idx = 0; idx < sample_size; idx++) {
     color += _compute_color(
-      camera_ray, level, scene, sky_emission, &local_rand_state);
+      camera_ray, level, scene, sky_emission, bg_height, bg_width, bg_r, bg_g,
+      bg_b, &local_rand_state);
 
   }
   color *= (1.0 / sample_size);
