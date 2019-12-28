@@ -35,7 +35,7 @@ __device__ vec3 _get_sky_color(
   float *bg_r, float *bg_g, float *bg_b
 ) {
   // return sky_emission * (look_dir.y() + 1) / 2.0;
-  float u = .5 + atan2(look_dir.z(), look_dir.x()) / (2 * M_PI);
+  float u = .5 + atan2(look_dir.z(), look_dir.x()) / (2.0 * M_PI);
   float v = .5 - asin(look_dir.y()) / M_PI;
 
   int idx_u = floorf((u - floorf(u)) * (bg_width - 1));
@@ -82,7 +82,7 @@ __device__ vec3 _compute_color(
           light += light_tmp;
           return mask * light;
         } else {
-          mask *= (1 / M_PI) * ref.filter;
+          mask *= (1.0) * ref.filter;
         }
 
       } else {
@@ -124,7 +124,8 @@ void render(
 
   int pixel_index = i * (scene[0] -> camera -> width) + j;
   curandState local_rand_state = rand_state[pixel_index];
-  Ray camera_ray = scene[0] -> camera -> compute_ray(i + .5, j + .5), ray;
+  Ray camera_ray = scene[0] -> camera -> compute_ray(
+    i + .5, j + .5, &local_rand_state), ray;
 
   for(int idx = 0; idx < sample_size; idx++) {
     color += _compute_color(

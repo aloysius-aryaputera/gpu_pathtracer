@@ -28,10 +28,6 @@ __host__ void save_image(
       float g = clamp(0, 1, sqrt(image[pixel_index].g()));
       float b = clamp(0, 1, sqrt(image[pixel_index].b()));
 
-      // float r = clamp(0, 1, image[pixel_index].r());
-      // float g = clamp(0, 1, image[pixel_index].g());
-      // float b = clamp(0, 1, image[pixel_index].b());
-
       char ir = (char)(255 * r);
       char ig = (char)(255 * g);
       char ib = (char)(255 * b);

@@ -90,10 +90,12 @@ int main(int argc, char **argv) {
   float up_x = std::stof(argv[15]), up_y = std::stof(argv[16]), \
     up_z = std::stof(argv[17]);
   float fovy = std::stof(argv[18]);
+  float aperture = std::stof(argv[19]);
+  float focus_dist = std::stof(argv[20]);
 
-  float sky_emission_r = std::stof(argv[19]);
-  float sky_emission_g = std::stof(argv[20]);
-  float sky_emission_b = std::stof(argv[21]);
+  float sky_emission_r = std::stof(argv[21]);
+  float sky_emission_g = std::stof(argv[22]);
+  float sky_emission_b = std::stof(argv[23]);
 
   int *n_cell_x, *n_cell_y, *n_cell_z;
   int max_n_cell_x = 120, max_n_cell_y = 120, max_n_cell_z = 120;
@@ -127,7 +129,7 @@ int main(int argc, char **argv) {
     *material_image_offset_n_s;
 
   float *bg_texture_r, *bg_texture_g, *bg_texture_b;
-  int *bg_height, *bg_width;
+  int bg_height, bg_width;
 
   /////////////////////////////////////////////////////////////////////////////
   // For offline testing
@@ -139,19 +141,16 @@ int main(int argc, char **argv) {
   // int len_texture[1];
   /////////////////////////////////////////////////////////////////////////////
 
-  checkCudaErrors(cudaMallocManaged((void **)&bg_height, sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&bg_width, sizeof(int)));
-
   extract_single_image_requirement(
-    input_folder_path, texture_bg_path, bg_height[0], bg_width[0]
+    input_folder_path, texture_bg_path, bg_height, bg_width
   );
 
   checkCudaErrors(cudaMallocManaged(
-    (void **)&bg_texture_r, bg_height[0] * bg_width[0] * sizeof(float)));
+    (void **)&bg_texture_r, bg_height * bg_width * sizeof(float)));
   checkCudaErrors(cudaMallocManaged(
-    (void **)&bg_texture_g, bg_height[0] * bg_width[0] * sizeof(float)));
+    (void **)&bg_texture_g, bg_height * bg_width * sizeof(float)));
   checkCudaErrors(cudaMallocManaged(
-    (void **)&bg_texture_b, bg_height[0] * bg_width[0] * sizeof(float)));
+    (void **)&bg_texture_b, bg_height * bg_width * sizeof(float)));
 
   int next_idx = 0;
   extract_single_image(
@@ -349,7 +348,8 @@ int main(int argc, char **argv) {
     eye_x, eye_y, eye_z,
     center_x, center_y, center_z,
     up_x, up_y, up_z, fovy,
-    im_width, im_height
+    im_width, im_height,
+    aperture, focus_dist
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -519,7 +519,7 @@ int main(int argc, char **argv) {
   printf("Rendering started...\n");
   render<<<blocks, threads>>>(
     image_output, my_scene, rand_state, pathtracing_sample_size,
-    pathtracing_level, sky_emission, bg_height[0], bg_width[0],
+    pathtracing_level, sky_emission, bg_height, bg_width,
     bg_texture_r, bg_texture_g, bg_texture_b
   );
   checkCudaErrors(cudaGetLastError());
@@ -556,8 +556,6 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(bg_texture_r));
   checkCudaErrors(cudaFree(bg_texture_g));
   checkCudaErrors(cudaFree(bg_texture_b));
-  checkCudaErrors(cudaFree(bg_height));
-  checkCudaErrors(cudaFree(bg_width));
   checkCudaErrors(cudaFree(image_output));
   my_time = time(NULL);
   printf("Cleaning done at %s!\n\n", ctime(&my_time));
