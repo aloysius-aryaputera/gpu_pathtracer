@@ -77,22 +77,25 @@ int main(int argc, char **argv) {
 
   std::string input_folder_path = argv[1];
   std::string obj_filename = argv[2];
-  std::string image_output_path = argv[3];
+  std::string texture_bg_path = argv[3];
+  std::string image_output_path = argv[4];
 
-  int im_width = std::stoi(argv[4]), im_height = std::stoi(argv[5]);
-  int pathtracing_sample_size = std::stoi(argv[6]);
-  int pathtracing_level = std::stoi(argv[7]);
-  float eye_x = std::stof(argv[8]), eye_y = std::stof(argv[9]), \
-    eye_z = std::stof(argv[10]);
-  float center_x = std::stof(argv[11]), center_y = std::stof(argv[12]), \
-    center_z = std::stof(argv[13]);
-  float up_x = std::stof(argv[14]), up_y = std::stof(argv[15]), \
-    up_z = std::stof(argv[16]);
-  float fovy = std::stof(argv[17]);
+  int im_width = std::stoi(argv[5]), im_height = std::stoi(argv[6]);
+  int pathtracing_sample_size = std::stoi(argv[7]);
+  int pathtracing_level = std::stoi(argv[8]);
+  float eye_x = std::stof(argv[9]), eye_y = std::stof(argv[10]), \
+    eye_z = std::stof(argv[11]);
+  float center_x = std::stof(argv[12]), center_y = std::stof(argv[13]), \
+    center_z = std::stof(argv[14]);
+  float up_x = std::stof(argv[15]), up_y = std::stof(argv[16]), \
+    up_z = std::stof(argv[17]);
+  float fovy = std::stof(argv[18]);
+  float aperture = std::stof(argv[19]);
+  float focus_dist = std::stof(argv[20]);
 
-  float sky_emission_r = std::stof(argv[18]);
-  float sky_emission_g = std::stof(argv[19]);
-  float sky_emission_b = std::stof(argv[20]);
+  float sky_emission_r = std::stof(argv[21]);
+  float sky_emission_g = std::stof(argv[22]);
+  float sky_emission_b = std::stof(argv[23]);
 
   int *n_cell_x, *n_cell_y, *n_cell_z;
   int max_n_cell_x = 120, max_n_cell_y = 120, max_n_cell_z = 120;
@@ -125,6 +128,9 @@ int main(int argc, char **argv) {
   int *material_image_height_n_s, *material_image_width_n_s, \
     *material_image_offset_n_s;
 
+  float *bg_texture_r, *bg_texture_g, *bg_texture_b;
+  int bg_height, bg_width;
+
   /////////////////////////////////////////////////////////////////////////////
   // For offline testing
   /////////////////////////////////////////////////////////////////////////////
@@ -134,6 +140,23 @@ int main(int argc, char **argv) {
   // int num_materials[1], material_image_height[100], material_image_width[100], material_image_offset[100];
   // int len_texture[1];
   /////////////////////////////////////////////////////////////////////////////
+
+  extract_single_image_requirement(
+    input_folder_path, texture_bg_path, bg_height, bg_width
+  );
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&bg_texture_r, bg_height * bg_width * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&bg_texture_g, bg_height * bg_width * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&bg_texture_b, bg_height * bg_width * sizeof(float)));
+
+  int next_idx = 0;
+  extract_single_image(
+    input_folder_path, texture_bg_path, bg_texture_r, bg_texture_g,
+    bg_texture_b, next_idx
+  );
 
   std::vector <std::string> material_file_name_array, material_name;
 
@@ -325,7 +348,8 @@ int main(int argc, char **argv) {
     eye_x, eye_y, eye_z,
     center_x, center_y, center_z,
     up_x, up_y, up_z, fovy,
-    im_width, im_height
+    im_width, im_height,
+    aperture, focus_dist
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -495,7 +519,8 @@ int main(int argc, char **argv) {
   printf("Rendering started...\n");
   render<<<blocks, threads>>>(
     image_output, my_scene, rand_state, pathtracing_sample_size,
-    pathtracing_level, sky_emission
+    pathtracing_level, sky_emission, bg_height, bg_width,
+    bg_texture_r, bg_texture_g, bg_texture_b
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -528,6 +553,9 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(material_image_r));
   checkCudaErrors(cudaFree(material_image_g));
   checkCudaErrors(cudaFree(material_image_b));
+  checkCudaErrors(cudaFree(bg_texture_r));
+  checkCudaErrors(cudaFree(bg_texture_g));
+  checkCudaErrors(cudaFree(bg_texture_b));
   checkCudaErrors(cudaFree(image_output));
   my_time = time(NULL);
   printf("Cleaning done at %s!\n\n", ctime(&my_time));

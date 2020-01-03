@@ -58,19 +58,22 @@ __global__ void create_camera(
   Camera** camera, float eye_x, float eye_y, float eye_z,
   float center_x, float center_y, float center_z,
   float up_x, float up_y, float up_z, float fovy,
-  int image_width, int image_height
+  int image_width, int image_height,
+  float aperture, float focus_dist
 );
 
 __global__ void create_camera(
   Camera** camera, float eye_x, float eye_y, float eye_z,
   float center_x, float center_y, float center_z,
   float up_x, float up_y, float up_z, float fovy,
-  int image_width, int image_height
+  int image_width, int image_height,
+  float aperture, float focus_dist
 ) {
   if (threadIdx.x == 0 && blockIdx.x == 0) {
     *(camera) = new Camera(
       vec3(eye_x, eye_y, eye_z), vec3(center_x, center_y, center_z),
-      vec3(up_x, up_y, up_z), fovy, image_width, image_height
+      vec3(up_x, up_y, up_z), fovy, image_width, image_height,
+      aperture, focus_dist
     );
   }
 }

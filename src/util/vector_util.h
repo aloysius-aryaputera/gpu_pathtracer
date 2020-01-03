@@ -8,6 +8,8 @@
 
 __device__ vec3 get_random_unit_vector_hemisphere(curandState *rand_state);
 
+__device__ vec3 get_random_unit_vector_disk(curandState *rand_state);
+
 __device__ vec3 get_random_unit_vector_hemisphere(curandState *rand_state) {
   float sin_theta = curand_uniform(&rand_state[0]);
   float cos_theta = sqrt(1 - sin_theta * sin_theta);
@@ -22,6 +24,18 @@ __device__ vec3 get_random_unit_vector_hemisphere(curandState *rand_state) {
     );
   }
 
+  return output_vector;
+}
+
+__device__ vec3 get_random_unit_vector_disk(curandState *rand_state) {
+  float sin_theta = 2 * curand_uniform(&rand_state[0]) - 1;
+  float cos_theta = sqrt(1 - sin_theta * sin_theta);
+  float random_number = curand_uniform(&rand_state[0]);
+  if (random_number <= .5) {
+    cos_theta *= -1.0;
+  }
+  vec3 output_vector  = vec3(cos_theta, sin_theta, 0);
+  output_vector.make_unit_vector();
   return output_vector;
 }
 

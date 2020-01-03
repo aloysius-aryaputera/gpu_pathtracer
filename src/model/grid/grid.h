@@ -395,7 +395,7 @@ __device__ bool Grid::do_traversal(Ray ray, hit_record &rec) {
     count++;
 
     current_cell = cell_array[convert_3d_to_1d_cell_address(i, j, k)];
-    hit = _grid_hit(
+    hit = this -> _grid_hit(
       ray, current_cell -> object_array, current_cell -> num_objects, rec);
 
     if (t_x <= t_y && t_x <= t_z && fabsf(ray.dir.x()) > 0) {

@@ -216,8 +216,6 @@ void _extract_single_material_data(
   std::string texture_file_name;
   int idx = material_name.size() - 1;
 
-  // complete_material_filename = clean_string_end(complete_material_filename);
-
   if (material_name.size() == 0) {
     idx = 0;
     material_name.push_back("Default_123");

@@ -1,6 +1,6 @@
 # GPU Pathtracer
 
-![](images/20191221_dragon.jpg)
+![](images/20191224_dragon.jpg)
 
 ![](images/20191221_avent_2.jpg)
 
@@ -8,7 +8,9 @@
 
 ![](images/20191215_f1.jpg)
 
-![](images/20191215_merlion.jpg)
+![](images/20200102_merlion.jpg)
+
+![](images/20200103_merlion.jpg)
 
 ## Credits
 
