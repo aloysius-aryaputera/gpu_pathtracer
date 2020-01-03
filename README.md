@@ -10,6 +10,8 @@
 
 ![](images/20200102_merlion.jpg)
 
+![](images/20200103_merlion.jpg)
+
 ## Credits
 
 * The Lamborghini Aventador and Bumble Bee models were by [ysup12](https://free3d.com/user/ysup12).
