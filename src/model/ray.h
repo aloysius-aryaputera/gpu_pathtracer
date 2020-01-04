@@ -16,17 +16,17 @@ class Ray {
 };
 
 __host__ __device__ Ray::Ray() {
-  p0 = vec3(0, 0, 0);
-  dir = vec3(1, 0, 0);
+  this -> p0 = vec3(0, 0, 0);
+  this -> dir = vec3(1, 0, 0);
 }
 
 __host__ __device__ Ray::Ray(vec3 p0_, vec3 dir_) {
-  p0 = p0_;
-  dir = unit_vector(dir_);
+  this -> p0 = p0_;
+  this -> dir = unit_vector(dir_);
 }
 
 __host__ __device__ vec3 Ray::get_vector(float t) {
-  return p0 + t * dir;
+  return this -> p0 + t * this -> dir;
 }
 
 #endif

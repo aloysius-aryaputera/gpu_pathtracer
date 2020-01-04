@@ -10,9 +10,12 @@
 
 class BoundingBox {
   private:
-    __device__ void _compute_t_x_range(Ray ray, float *t_range);
-    __device__ void _compute_t_y_range(Ray ray, float *t_range);
-    __device__ void _compute_t_z_range(Ray ray, float *t_range);
+    __device__ void _compute_t_x_range(
+      Ray ray, float &t_min, float &t_max);
+    __device__ void _compute_t_y_range(
+      Ray ray, float &t_min, float &t_max);
+    __device__ void _compute_t_z_range(
+      Ray ray, float &t_min, float &t_max);
 
     float tolerance_x, tolerance_y, tolerance_z;
 
@@ -22,19 +25,19 @@ class BoundingBox {
       float x_min_, float x_max_, float y_min_, float y_max_, float z_min_,
       float z_max_
     );
-    __device__ bool is_intersection(Ray ray);
+    __device__ bool is_intersection(Ray ray, float &t);
     __device__ bool is_inside(vec3 position);
 
     float x_min, x_max, y_min, y_max, z_min, z_max;
 };
 
-__device__ bool _are_intersecting(float *t_range_1, float *t_range_2);
+__device__ bool _are_intersecting(
+  float t_1_min, float t_1_max, float t_2_min, float t_2_max
+);
 
-__device__ bool _are_intersecting(float *t_range_1, float *t_range_2) {
-  float t_1_min = t_range_1[0];
-  float t_1_max = t_range_1[1];
-  float t_2_min = t_range_2[0];
-  float t_2_max = t_range_2[1];
+__device__ bool _are_intersecting(
+  float t_1_min, float t_1_max, float t_2_min, float t_2_max
+) {
   return t_1_min <= t_2_max && t_2_min <= t_1_max;
 }
 
@@ -54,61 +57,61 @@ __device__ BoundingBox::BoundingBox(
   tolerance_z = max((z_max - z_min) / 100, SMALL_DOUBLE);
 }
 
-__device__ void BoundingBox::_compute_t_x_range(Ray ray, float *t_range) {
-  float t1, t2, t_x_min, t_x_max;
-  t1 = (x_min - ray.p0.x()) /  ray.dir.x();
-  t2 = (x_max - ray.p0.x()) /  ray.dir.x();
-  if (t1 > t2) {
-    t_x_min = t1;
-    t_x_max = t2;
+__device__ void BoundingBox::_compute_t_x_range(
+  Ray ray, float &t_min, float &t_max
+) {
+  float t1, t2, inv_dir_x = 1.0 / ray.dir.x();
+  t1 = (x_min - ray.p0.x()) * inv_dir_x;
+  t2 = (x_max - ray.p0.x()) * inv_dir_x;
+  if (t1 < t2) {
+    t_min = t1;
+    t_max = t2;
   } else {
-    t_x_min = t2;
-    t_x_max = t1;
+    t_min = t2;
+    t_max = t1;
   }
-  t_range[0] = t_x_min;
-  t_range[1] = t_x_max;
 }
 
-__device__ void BoundingBox::_compute_t_y_range(Ray ray, float *t_range) {
-  float t1, t2, t_y_min, t_y_max;
-  t1 = (y_min - ray.p0.y()) /  ray.dir.y();
-  t2 = (y_max - ray.p0.y()) /  ray.dir.y();
-  if (t1 > t2) {
-    t_y_min = t1;
-    t_y_max = t2;
+__device__ void BoundingBox::_compute_t_y_range(
+  Ray ray, float &t_min, float &t_max
+) {
+  float t1, t2, inv_dir_y = 1.0 / ray.dir.y();
+  t1 = (y_min - ray.p0.y()) * inv_dir_y;
+  t2 = (y_max - ray.p0.y()) * inv_dir_y;
+  if (t1 < t2) {
+    t_min = t1;
+    t_max = t2;
   } else {
-    t_y_min = t2;
-    t_y_max = t1;
+    t_min = t2;
+    t_max = t1;
   }
-  t_range[0] = t_y_min;
-  t_range[1] = t_y_max;
 }
 
-__device__ void BoundingBox::_compute_t_z_range(Ray ray, float *t_range) {
-  float t1, t2, t_z_min, t_z_max;
-  t1 = (z_min - ray.p0.z()) /  ray.dir.z();
-  t2 = (z_max - ray.p0.z()) /  ray.dir.z();
-  if (t1 > t2) {
-    t_z_min = t1;
-    t_z_max = t2;
+__device__ void BoundingBox::_compute_t_z_range(
+  Ray ray, float &t_min, float &t_max
+) {
+  float t1, t2, inv_dir_z = 1.0 / ray.dir.z();
+  t1 = (z_min - ray.p0.z()) * inv_dir_z;
+  t2 = (z_max - ray.p0.z()) * inv_dir_z;
+  if (t1 < t2) {
+    t_min = t1;
+    t_max = t2;
   } else {
-    t_z_min = t2;
-    t_z_max = t1;
+    t_min = t2;
+    t_max = t1;
   }
-  t_range[0] = t_z_min;
-  t_range[1] = t_z_max;
 }
 
-__device__ bool BoundingBox::is_intersection(Ray ray) {
-  float t_range_x[2], t_range_y[2], t_range_z[2];
-  _compute_t_x_range(ray, t_range_x);
-  _compute_t_y_range(ray, t_range_y);
-  _compute_t_z_range(ray, t_range_z);
-  if (_are_intersecting(t_range_x, t_range_y)) {
-    float t_range_xy[2];
-    t_range_xy[0] = max(t_range_x[0], t_range_y[0]);
-    t_range_xy[1] = min(t_range_x[1], t_range_y[1]);
-    if (_are_intersecting(t_range_xy, t_range_z)) {
+__device__ bool BoundingBox::is_intersection(Ray ray, float &t) {
+  float t_x_min, t_x_max, t_y_min, t_y_max, t_z_min, t_z_max;
+  _compute_t_x_range(ray, t_x_min, t_x_max);
+  _compute_t_y_range(ray, t_y_min, t_y_max);
+  _compute_t_z_range(ray, t_z_min, t_z_max);
+  if (_are_intersecting(t_x_min, t_x_max, t_y_min, t_y_max)) {
+    float t_xy_min = max(t_x_min, t_y_min);
+    float t_xy_max = min(t_x_max, t_y_max);
+    if (_are_intersecting(t_xy_min, t_xy_max, t_z_min, t_z_max)) {
+      t = max(t_xy_min, t_z_min);
       return true;
     }
   }

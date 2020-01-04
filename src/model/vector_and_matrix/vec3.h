@@ -153,6 +153,14 @@ __device__ inline bool vec3::vector_is_nan() {
   return isnan(e[0]) || isnan(e[1]) || isnan(e[2]);
 }
 
+__device__ inline vec3 de_nan(const vec3& c) {
+    vec3 temp = c;
+    if (!(temp[0] == temp[0])) temp[0] = 0;
+    if (!(temp[1] == temp[1])) temp[1] = 0;
+    if (!(temp[2] == temp[2])) temp[2] = 0;
+    return temp;
+}
+
 __host__ __device__ inline vec3 unit_vector(vec3 v) {
     return v / v.length();
 }
