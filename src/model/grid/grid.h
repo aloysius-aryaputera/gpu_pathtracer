@@ -347,7 +347,12 @@ __device__ bool Grid::do_traversal(Ray ray, hit_record &rec) {
     float t;
     bool ray_intersect = this -> world_bounding_box -> is_intersection(ray, t);
     if (ray_intersect && t >= 0) {
-      ray = Ray(ray.get_vector(t + SMALL_DOUBLE), ray.dir);
+      vec3 start_vec = ray.get_vector(t + SMALL_DOUBLE);
+      float start_vec_x = min(max(this -> x_min, start_vec.x()), this -> x_max);
+      float start_vec_y = min(max(this -> y_min, start_vec.y()), this -> y_max);
+      float start_vec_z = min(max(this -> z_min, start_vec.z()), this -> z_max);
+      start_vec = vec3(start_vec_x, start_vec_y, start_vec_z);
+      ray = Ray(start_vec, ray.dir);
     } else {
       return false;
     }

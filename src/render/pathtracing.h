@@ -80,6 +80,9 @@ __device__ vec3 _compute_color(
           return mask * light;
         } else {
           mask *= (1.0) * ref.filter;
+          if (mask.r() < 0.005 && mask.g() < 0.005 && mask.b() < 0.005) {
+            return vec3(0, 0, 0);
+          }
         }
 
       } else {
