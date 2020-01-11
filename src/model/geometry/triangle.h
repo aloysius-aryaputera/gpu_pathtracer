@@ -128,34 +128,68 @@ __device__ BoundingBox* Triangle::get_bounding_box() {
 
 __device__ bool Triangle::hit(Ray ray, float t_max, hit_record& rec) {
 
-  vec3 o_point_1 = ray.p0 - this -> point_1;
-  vec3 point_2_point_1 = this -> point_2 - this -> point_1;
-  vec3 point_3_point_1 = this -> point_3 - this -> point_1;
+  vec3 p1t = this -> point_1 - ray.p0;
+  vec3 p2t = this -> point_2 - ray.p0;
+  vec3 p3t = this -> point_3 - ray.p0;
 
-  float m_t = dot(cross(point_3_point_1, o_point_1), point_2_point_1);
-  float m_beta = dot(cross(point_3_point_1, -ray.dir), o_point_1);
-  float m_gamma = dot(cross(o_point_1, -ray.dir), point_2_point_1);
-  float m = dot(cross(point_3_point_1, -ray.dir), point_2_point_1);
+  int kz = max_dimension(abs(ray.dir));
+  int kx = kz + 1; if (kx == 3) kx = 0;
+  int ky = kx + 1; if (ky == 3) ky = 0;
 
-  float t = m_t / m;
-  float beta = m_beta / m;
-  float gamma = m_gamma / m;
-  float alpha = 1 - beta - gamma;
+  vec3 d = permute(ray.dir, kx, ky, kz);
+  p1t = permute(p1t, kx, ky, kz);
+  p2t = permute(p2t, kx, ky, kz);
+  p3t = permute(p3t, kx, ky, kz);
 
-  if (fabs(m) < this -> tolerance) return false;
-  if (t > t_max) return false;
-  if (t < this -> tolerance || t > this -> inv_tolerance) return false;
-  if (beta < 0 || beta > 1) return false;
-  if (gamma < 0 || gamma + beta > 1) return false;
+  float sx = -d.x() / d.z();
+  float sy = -d.y() / d.z();
+  float sz = 1.0 / d.z();
+  p1t = vec3(p1t.x() + sx * p1t.z(), p1t.y() + sy * p1t.z(), p1t.z());
+  p2t = vec3(p2t.x() + sx * p2t.z(), p2t.y() + sy * p2t.z(), p2t.z());
+  p3t = vec3(p3t.x() + sx * p3t.z(), p3t.y() + sy * p3t.z(), p3t.z());
+
+  float e1 = p2t.x() * p3t.y() - p2t.y() * p3t.x();
+  float e2 = p3t.x() * p1t.y() - p3t.y() * p1t.x();
+  float e3 = p1t.x() * p2t.y() - p1t.y() * p2t.x();
+
+  if (e1 == 0 || e2 == 0 || e3 == 0) {
+    double p1t_x_double = (double)p1t.x();
+    double p1t_y_double = (double)p1t.y();
+    double p2t_x_double = (double)p2t.x();
+    double p2t_y_double = (double)p2t.y();
+    double p3t_x_double = (double)p3t.x();
+    double p3t_y_double = (double)p3t.y();
+    e1 = (float)(p2t_x_double * p3t_y_double - p2t_y_double * p3t_x_double);
+    e2 = (float)(p3t_x_double * p1t_y_double - p3t_y_double * p1t_x_double);
+    e3 = (float)(p1t_x_double * p2t_y_double - p1t_y_double * p2t_x_double);
+  }
+
+  if ((e1 < 0 || e2 < 0 || e3 < 0) && (e1 > 0 || e2 > 0 || e3 > 0))
+    return false;
+  float det = e1 + e2 + e3;
+  if (det == 0)
+    return false;
+
+  p1t = vec3(p1t.x(), p1t.y(), p1t.z() * sz);
+  p2t = vec3(p2t.x(), p2t.y(), p2t.z() * sz);
+  p3t = vec3(p3t.x(), p3t.y(), p3t.z() * sz);
+  float t_scaled = e1 * p1t.z() + e2 * p2t.z() + e3 * p3t.z();
+
+  float inv_det = 1.0 / det;
+  float b1 = e1 * inv_det, b2 = e2 * inv_det, b3 = e3 * inv_det;
+  float t = t_scaled * inv_det;
+
+  if (t > t_max || t < this -> tolerance)
+    return false;
 
   rec.t = t;
   rec.object = this;
   rec.coming_ray = ray;
-  rec.point = ray.get_vector(t);
+  rec.point = b1 * this -> point_1 + b2 * this -> point_2 + \
+    b3 * this -> point_3;
   rec.normal = unit_vector(
-    alpha * this -> norm_1 + beta * this -> norm_2 + gamma * this -> norm_3);
-  rec.uv_vector = alpha * this -> tex_1 + beta * this -> tex_2 + \
-    gamma * this -> tex_3;
+    b1 * this -> norm_1 + b2 * this -> norm_2 + b3 * this -> norm_3);
+  rec.uv_vector = b1 * this -> tex_1 + b2 * this -> tex_2 + b3 * this -> tex_3;
 
   return true;
 }

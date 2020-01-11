@@ -43,9 +43,6 @@ __device__ vec3 _get_sky_color(
 
   int idx = bg_width * idx_v + idx_u;
 
-  // int u_idx = floorf(u * bg_width);
-  // int v_idx = floorf(v * bg_height);
-  // int idx = v_idx * bg_width + u_idx;
   return sky_emission * vec3(bg_r[idx], bg_g[idx], bg_b[idx]);
 }
 
@@ -83,6 +80,9 @@ __device__ vec3 _compute_color(
           return mask * light;
         } else {
           mask *= (1.0) * ref.filter;
+          if (mask.r() < 0.005 && mask.g() < 0.005 && mask.b() < 0.005) {
+            return vec3(0, 0, 0);
+          }
         }
 
       } else {
@@ -112,7 +112,7 @@ void render(
 ) {
 
   hit_record init_rec, cur_rec;
-  vec3 color = vec3(0, 0, 0);
+  vec3 color = vec3(0, 0, 0), color_tmp;
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
 
@@ -128,10 +128,11 @@ void render(
     i + .5, j + .5, &local_rand_state), ray;
 
   for(int idx = 0; idx < sample_size; idx++) {
-    color += _compute_color(
+    color_tmp = _compute_color(
       camera_ray, level, scene, sky_emission, bg_height, bg_width, bg_r, bg_g,
       bg_b, &local_rand_state);
-
+    color_tmp = de_nan(color_tmp);
+    color += color_tmp;
   }
   color *= (1.0 / sample_size);
 

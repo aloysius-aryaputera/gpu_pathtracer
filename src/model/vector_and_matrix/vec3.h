@@ -43,8 +43,6 @@ class vec3  {
     float e[3];
 };
 
-
-
 inline std::istream& operator>>(std::istream &is, vec3 &t) {
   is >> t.e[0] >> t.e[1] >> t.e[2];
   return is;
@@ -149,8 +147,34 @@ __host__ __device__ inline vec3& vec3::operator/=(const float t) {
   return *this;
 }
 
+__host__ __device__ inline vec3 permute(vec3 v, int kx, int ky, int kz) {
+  return vec3(v.e[kx], v.e[ky], v.e[kz]);
+}
+
 __device__ inline bool vec3::vector_is_nan() {
   return isnan(e[0]) || isnan(e[1]) || isnan(e[2]);
+}
+
+__device__ inline vec3 abs(vec3 v) {
+  return vec3(abs(v.x()), abs(v.y()), abs(v.z()));
+}
+
+__device__ inline int max_dimension(vec3 v) {
+  if (v.x() > v.y() && v.x() > v.z()) {
+    return 0;
+  }
+  if (v.y() > v.x() && v.y() > v.z()) {
+    return 1;
+  }
+  return 2;
+}
+
+__device__ inline vec3 de_nan(const vec3& c) {
+    vec3 temp = c;
+    if (!(temp[0] == temp[0])) temp[0] = 0;
+    if (!(temp[1] == temp[1])) temp[1] = 0;
+    if (!(temp[2] == temp[2])) temp[2] = 0;
+    return temp;
 }
 
 __host__ __device__ inline vec3 unit_vector(vec3 v) {

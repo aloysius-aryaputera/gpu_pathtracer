@@ -95,12 +95,13 @@ __device__ void _compute_scene_boundaries(
   float &x_min, float &x_max, float &y_min, float &y_max, float &z_min,
   float &z_max, Primitive **geom_array, int num_objects, Camera *camera
 ) {
-  x_min = camera -> eye.x();
-  x_max = camera -> eye.x();
-  y_min = camera -> eye.y();
-  y_max = camera -> eye.y();
-  z_min = camera -> eye.z();
-  z_max = camera -> eye.z();
+
+  x_min = INFINITY;
+  x_max = -INFINITY;
+  y_min = INFINITY;
+  y_max = -INFINITY;
+  z_min = INFINITY;
+  z_max = -INFINITY;
 
   printf("num_objects = %d\n", num_objects);
   for (int i = 0; i < num_objects; i++) {
@@ -112,12 +113,12 @@ __device__ void _compute_scene_boundaries(
     z_max = max(z_max, geom_array[i] -> get_bounding_box() -> z_max);
   }
 
-  x_min -= 1;
-  x_max += 1;
-  y_min -= 1;
-  y_max += 1;
-  z_min -= 1;
-  z_max += 1;
+  x_min -= SMALL_DOUBLE;
+  x_max += SMALL_DOUBLE;
+  y_min -= SMALL_DOUBLE;
+  y_max += SMALL_DOUBLE;
+  z_min -= SMALL_DOUBLE;
+  z_max += SMALL_DOUBLE;
 
 }
 
@@ -257,14 +258,14 @@ __global__ void build_cell_array(Grid** grid, Primitive** cell_object_array) {
 }
 
 __device__ int Grid::convert_3d_to_1d_cell_address(int i, int j, int k) {
-  return k + j * n_cell_z + i * n_cell_z * n_cell_y;
+  return k + j * this -> n_cell_z + i * this -> n_cell_z * this -> n_cell_y;
 }
 
 __device__ int Grid::convert_3d_to_1d_cell_address(vec3 address_3d) {
-  int k = floorf(fminf(address_3d.z(), n_cell_z - 1));
-  int j = floorf(fminf(address_3d.y(), n_cell_y - 1));
-  int i = floorf(fminf(address_3d.x(), n_cell_x - 1));
-  return k + j * n_cell_z + i * n_cell_z * n_cell_y;
+  int k = floorf(fminf(address_3d.z(), this -> n_cell_z - 1));
+  int j = floorf(fminf(address_3d.y(), this -> n_cell_y - 1));
+  int i = floorf(fminf(address_3d.x(), this -> n_cell_x - 1));
+  return k + j * this -> n_cell_z + i * this -> n_cell_z * this -> n_cell_y;
 }
 
 __device__ Grid::Grid(
@@ -273,40 +274,45 @@ __device__ Grid::Grid(
   Primitive** object_array_, int num_objects_, Cell** cell_array_,
   int max_num_objects_per_cell_
 ) {
-  x_min = x_min_;
-  x_max = x_max_;
-  y_min = y_min_;
-  y_max = y_max_;
-  z_min = z_min_;
-  z_max = z_max_;
-  object_array = object_array_;
-  num_objects = num_objects_;
-  cell_array = cell_array_;
-  max_num_objects_per_cell = max_num_objects_per_cell_;
+  this -> x_min = x_min_;
+  this -> x_max = x_max_;
+  this -> y_min = y_min_;
+  this -> y_max = y_max_;
+  this -> z_min = z_min_;
+  this -> z_max = z_max_;
+  this -> object_array = object_array_;
+  this -> num_objects = num_objects_;
+  this -> cell_array = cell_array_;
+  this -> max_num_objects_per_cell = max_num_objects_per_cell_;
 
-  n_cell_x = n_cell_x_;
-  n_cell_y = n_cell_y_;
-  n_cell_z = n_cell_z_;
+  this -> n_cell_x = n_cell_x_;
+  this -> n_cell_y = n_cell_y_;
+  this -> n_cell_z = n_cell_z_;
 
-  cell_size_x = (x_max - x_min) / n_cell_x;
-  cell_size_y = (y_max - y_min) / n_cell_y;
-  cell_size_z = (z_max - z_min) / n_cell_z;
+  this -> cell_size_x = (this -> x_max - this -> x_min) / this -> n_cell_x;
+  this -> cell_size_y = (this -> y_max - this -> y_min) / this -> n_cell_y;
+  this -> cell_size_z = (this -> z_max - this -> z_min) / this -> n_cell_z;
 
-  world_bounding_box = new BoundingBox(x_min, x_max, y_min, y_max, z_min, z_max);
+  this -> world_bounding_box = new BoundingBox(
+    this -> x_min, this -> x_max, this -> y_min, this -> y_max,
+    this -> z_min, this -> z_max);
 }
 
 __device__ bool Grid::_is_inside(vec3 position) {
-  return world_bounding_box -> is_inside(position);
+  return this -> world_bounding_box -> is_inside(position);
 }
 
 __device__ vec3 Grid::find_cell_address(vec3 position) {
   int cell_address_i, cell_address_j, cell_address_k;
-  if (!_is_inside(position)) {
+  if (!(this -> _is_inside(position))) {
     printf("The position is not inside the grid!");
   }
-  cell_address_i = floorf((position.x() - x_min) / cell_size_x);
-  cell_address_j = floorf((position.y() - y_min) / cell_size_y);
-  cell_address_k = floorf((position.z() - z_min) / cell_size_z);
+  cell_address_i = floorf(
+    (position.x() - this -> x_min) / this -> cell_size_x);
+  cell_address_j = floorf(
+    (position.y() - this -> y_min) / this -> cell_size_y);
+  cell_address_k = floorf(
+    (position.z() - this -> z_min) / this -> cell_size_z);
   return vec3(cell_address_i, cell_address_j, cell_address_k);
 }
 
@@ -331,18 +337,22 @@ __device__ bool Grid::_grid_hit(
 
 __device__ bool Grid::do_traversal(Ray ray, hit_record &rec) {
 
-  vec3 initial_address = find_cell_address(ray.p0);
-
-  if (
-    ray.p0.x() <= x_min || ray.p0.x() >= x_max || ray.p0.y() <= y_min ||
-    ray.p0.y() >= y_max || ray.p0.z() <= z_min || ray.p0.z() >= z_max
-  ) {
-    print_vec3(ray.p0);
-    print_vec3(initial_address);
-    printf("threadIdx.x = %d, threadIdx.y = %d, blockIdx.x = %d, blockIdx.y = %d\n",
-           threadIdx.x, threadIdx.y, blockIdx.x, blockIdx.y);
+  if (!(this -> _is_inside(ray.p0))) {
+    float t;
+    bool ray_intersect = this -> world_bounding_box -> is_intersection(ray, t);
+    if (ray_intersect && t >= 0) {
+      vec3 start_vec = ray.get_vector(t + SMALL_DOUBLE);
+      float start_vec_x = min(max(this -> x_min, start_vec.x()), this -> x_max);
+      float start_vec_y = min(max(this -> y_min, start_vec.y()), this -> y_max);
+      float start_vec_z = min(max(this -> z_min, start_vec.z()), this -> z_max);
+      start_vec = vec3(start_vec_x, start_vec_y, start_vec_z);
+      ray = Ray(start_vec, ray.dir);
+    } else {
+      return false;
+    }
   }
 
+  vec3 initial_address = find_cell_address(ray.p0);
   Cell* initial_cell = cell_array[convert_3d_to_1d_cell_address(initial_address)];
   Cell* current_cell;
   float o_x, o_y, o_z, t_x_0, t_y_0, t_z_0, d_t_x, d_t_y, d_t_z, t_x, t_y, t_z;
