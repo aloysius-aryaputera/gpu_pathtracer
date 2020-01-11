@@ -30,7 +30,6 @@ class Triangle: public Primitive {
       vec3 tex_3_
     );
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
-    __device__ bool hit2(Ray ray, float t_max, hit_record& rec);
     __device__ Material* get_material();
     __device__ BoundingBox* get_bounding_box();
 };
@@ -127,40 +126,6 @@ __device__ BoundingBox* Triangle::get_bounding_box() {
   return bounding_box;
 }
 
-__device__ bool Triangle::hit2(Ray ray, float t_max, hit_record& rec) {
-
-  vec3 o_point_1 = ray.p0 - this -> point_1;
-  vec3 point_2_point_1 = this -> point_2 - this -> point_1;
-  vec3 point_3_point_1 = this -> point_3 - this -> point_1;
-
-  float m_t = dot(cross(point_3_point_1, o_point_1), point_2_point_1);
-  float m_beta = dot(cross(point_3_point_1, -ray.dir), o_point_1);
-  float m_gamma = dot(cross(o_point_1, -ray.dir), point_2_point_1);
-  float m = dot(cross(point_3_point_1, -ray.dir), point_2_point_1);
-
-  float t = m_t / m;
-  float beta = m_beta / m;
-  float gamma = m_gamma / m;
-  float alpha = 1 - beta - gamma;
-
-  if (fabs(m) < this -> tolerance) return false;
-  if (t > t_max) return false;
-  if (t < this -> tolerance || t > this -> inv_tolerance) return false;
-  if (beta < 0 || beta > 1) return false;
-  if (gamma < 0 || gamma + beta > 1) return false;
-
-  rec.t = t;
-  rec.object = this;
-  rec.coming_ray = ray;
-  rec.point = alpha * this -> point_1 + beta * this -> point_2 + gamma * this -> point_3;
-  rec.normal = unit_vector(
-    alpha * this -> norm_1 + beta * this -> norm_2 + gamma * this -> norm_3);
-  rec.uv_vector = alpha * this -> tex_1 + beta * this -> tex_2 + \
-    gamma * this -> tex_3;
-
-  return true;
-}
-
 __device__ bool Triangle::hit(Ray ray, float t_max, hit_record& rec) {
 
   vec3 p1t = this -> point_1 - ray.p0;
@@ -170,11 +135,7 @@ __device__ bool Triangle::hit(Ray ray, float t_max, hit_record& rec) {
   int kz = max_dimension(abs(ray.dir));
   int kx = kz + 1; if (kx == 3) kx = 0;
   int ky = kx + 1; if (ky == 3) ky = 0;
-  // if (ray.dir.e[kz] < 0) {
-  //   float tmp = kx;
-  //   kx = ky;
-  //   ky = tmp;
-  // }
+
   vec3 d = permute(ray.dir, kx, ky, kz);
   p1t = permute(p1t, kx, ky, kz);
   p2t = permute(p2t, kx, ky, kz);

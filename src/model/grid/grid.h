@@ -95,12 +95,6 @@ __device__ void _compute_scene_boundaries(
   float &x_min, float &x_max, float &y_min, float &y_max, float &z_min,
   float &z_max, Primitive **geom_array, int num_objects, Camera *camera
 ) {
-  // x_min = camera -> eye.x();
-  // x_max = camera -> eye.x();
-  // y_min = camera -> eye.y();
-  // y_max = camera -> eye.y();
-  // z_min = camera -> eye.z();
-  // z_max = camera -> eye.z();
 
   x_min = INFINITY;
   x_max = -INFINITY;
