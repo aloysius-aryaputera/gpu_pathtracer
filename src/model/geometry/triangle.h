@@ -34,6 +34,8 @@ class Triangle: public Primitive {
     __device__ BoundingBox* get_bounding_box();
 };
 
+
+
 __host__ __device__ float _compute_triangle_area(
   vec3 point_1, vec3 point_2, vec3 point_3);
 

@@ -17,4 +17,5 @@
 * https://github.com/rogerallen/raytracinginoneweekendincuda
 * https://www.scratchapixel.com/
 * https://www.pbrt.org/
-* S. Woop, C. Benthin, and I. Wald, "Watertight Ray/Triangle Intersection", *Journal of Computer Graphics Techniques*, vol. 2, no. 1, 2013.
+* S. Woop, C. Benthin, and I. Wald, "Watertight Ray/Triangle Intersection," *Journal of Computer Graphics Techniques*, vol. 2, no. 1, 2013.
+* T. Karras, "Maximizing Parallelism in the Construction of BVHs, Octrees, and *k*-d Trees," *High Performance Graphics*, 2012.

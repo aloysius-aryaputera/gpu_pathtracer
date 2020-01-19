@@ -27,9 +27,31 @@ class BoundingBox {
     );
     __device__ bool is_intersection(Ray ray, float &t);
     __device__ bool is_inside(vec3 position);
+    __device__ void compute_normalized_center(
+      float world_x_min, float world_x_max, float world_y_min,
+      float world_y_max, float world_z_min, float world_z_max
+    );
 
     float x_min, x_max, y_min, y_max, z_min, z_max;
+    float norm_x_center, norm_y_center, norm_z_center;
 };
+
+__device__ void BoundingBox::compute_normalized_center(
+  float world_x_min, float world_x_max, float world_y_min, float world_y_max,
+  float world_z_min, float world_z_max
+) {
+  float x_center = 0.5 * (this -> x_min + this -> x_max);
+  float y_center = 0.5 * (this -> y_min + this -> y_max);
+  float z_center = 0.5 * (this -> z_min + this -> z_max);
+
+  float world_length_x = world_x_max - world_x_min;
+  float world_length_y = world_y_max - world_y_min;
+  float world_length_z = world_z_max - world_z_min;
+
+  this -> norm_x_center = (x_center - world_x_min) / world_length_x;
+  this -> norm_y_center = (y_center - world_y_min) / world_length_y;
+  this -> norm_z_center = (z_center - world_z_min) / world_length_z;
+}
 
 __device__ bool _are_intersecting(
   float t_1_min, float t_1_max, float t_2_min, float t_2_max
