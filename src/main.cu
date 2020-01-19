@@ -480,14 +480,14 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("Grid created at %s!\n\n", ctime(&my_time));
 
-  // printf("Computing the center of every bounding box...\n");
-  // compute_normalized_center<<<blocks_world, threads_world>>>(
-  //   my_geom, my_grid, num_triangles[0]
-  // );
-  // checkCudaErrors(cudaGetLastError());
-  // checkCudaErrors(cudaDeviceSynchronize());
-  // my_time = time(NULL);
-  // printf("All bounding box centres computed at %s!\n\n", ctime(&my_time));
+  printf("Computing the center of every bounding box...\n");
+  compute_normalized_center<<<blocks_world, threads_world>>>(
+    my_geom, my_grid, num_triangles[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  my_time = time(NULL);
+  printf("All bounding box centres computed at %s!\n\n", ctime(&my_time));
 
   size_t cell_geom_size = max_num_objects_per_cell * \
     n_cell_x[0] * n_cell_y[0] * n_cell_z[0] * sizeof(Primitive*);
