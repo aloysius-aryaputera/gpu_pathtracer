@@ -7,6 +7,7 @@
 
 #include "external/libjpeg_cpp/jpeg.h"
 
+#include "model/bvh/bvh_build.h"
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
 #include "model/geometry/sphere.h"
@@ -73,22 +74,28 @@ int main(int argc, char **argv) {
   time_t my_time = time(NULL);
   clock_t start, stop;
   start = clock();
+  printf("================================================================\n");
   printf("Started at %s\n\n", ctime(&my_time));
+  printf("================================================================\n");
 
   std::string input_folder_path = argv[1];
   std::string obj_filename = argv[2];
   std::string texture_bg_path = argv[3];
   std::string image_output_path = argv[4];
 
-  int im_width = std::stoi(argv[5]), im_height = std::stoi(argv[6]);
+  int im_width = std::stoi(argv[5]);
+  int im_height = std::stoi(argv[6]);
   int pathtracing_sample_size = std::stoi(argv[7]);
   int pathtracing_level = std::stoi(argv[8]);
-  float eye_x = std::stof(argv[9]), eye_y = std::stof(argv[10]), \
-    eye_z = std::stof(argv[11]);
-  float center_x = std::stof(argv[12]), center_y = std::stof(argv[13]), \
-    center_z = std::stof(argv[14]);
-  float up_x = std::stof(argv[15]), up_y = std::stof(argv[16]), \
-    up_z = std::stof(argv[17]);
+  float eye_x = std::stof(argv[9]);
+  float eye_y = std::stof(argv[10]);
+  float eye_z = std::stof(argv[11]);
+  float center_x = std::stof(argv[12]);
+  float center_y = std::stof(argv[13]);
+  float center_z = std::stof(argv[14]);
+  float up_x = std::stof(argv[15]);
+  float up_y = std::stof(argv[16]);
+  float up_z = std::stof(argv[17]);
   float fovy = std::stof(argv[18]);
   float aperture = std::stof(argv[19]);
   float focus_dist = std::stof(argv[20]);
@@ -144,7 +151,6 @@ int main(int argc, char **argv) {
   extract_single_image_requirement(
     input_folder_path, texture_bg_path, bg_height, bg_width
   );
-
   checkCudaErrors(cudaMallocManaged(
     (void **)&bg_texture_r, bg_height * bg_width * sizeof(float)));
   checkCudaErrors(cudaMallocManaged(
@@ -473,6 +479,15 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   my_time = time(NULL);
   printf("Grid created at %s!\n\n", ctime(&my_time));
+
+  // printf("Computing the center of every bounding box...\n");
+  // compute_normalized_center<<<blocks_world, threads_world>>>(
+  //   my_geom, my_grid, num_triangles[0]
+  // );
+  // checkCudaErrors(cudaGetLastError());
+  // checkCudaErrors(cudaDeviceSynchronize());
+  // my_time = time(NULL);
+  // printf("All bounding box centres computed at %s!\n\n", ctime(&my_time));
 
   size_t cell_geom_size = max_num_objects_per_cell * \
     n_cell_x[0] * n_cell_y[0] * n_cell_z[0] * sizeof(Primitive*);

@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include "../../param.h"
+#include "../camera.h"
 #include "../geometry/primitive.h"
 #include "../ray.h"
 #include "../vector_and_matrix/vec3.h"
@@ -19,8 +20,6 @@ class Grid {
     __device__ bool _grid_hit(
       Ray ray, Primitive **object_array_, int num_objects_, hit_record &rec
     );
-
-    BoundingBox *world_bounding_box;
 
   public:
     __host__ __device__ Grid() {}
@@ -40,6 +39,7 @@ class Grid {
     int n_cell_x, n_cell_y, n_cell_z, num_objects, max_num_objects_per_cell;
     Cell** cell_array;
     Primitive** object_array;
+    BoundingBox *world_bounding_box;
 
 };
 
