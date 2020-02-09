@@ -20,7 +20,6 @@ class Triangle: public Primitive {
     vec3 point_1, point_2, point_3, norm_1, norm_2, norm_3, normal;
     vec3 tex_1, tex_2, tex_3;
     Material *material;
-    BoundingBox *bounding_box;
 
   public:
     __host__ __device__ Triangle() {};
@@ -32,6 +31,8 @@ class Triangle: public Primitive {
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
     __device__ Material* get_material();
     __device__ BoundingBox* get_bounding_box();
+    
+    BoundingBox *bounding_box;
 };
 
 

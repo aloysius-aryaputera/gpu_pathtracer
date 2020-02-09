@@ -5,6 +5,7 @@
 #include <math.h>
 
 #include "../../param.h"
+#include "../../util/bvh_util.h"
 #include "../ray.h"
 #include "../vector_and_matrix/vec3.h"
 
@@ -28,11 +29,13 @@ class BoundingBox {
     __device__ bool is_intersection(Ray ray, float &t);
     __device__ bool is_inside(vec3 position);
     __device__ void compute_normalized_center(BoundingBox *world_bounding_box);
+    __device__ void compute_bb_morton_3d();
 
     float x_min, x_max, y_min, y_max, z_min, z_max;
     float x_center, y_center, z_center;
     float length_x, length_y, length_z;
     float norm_x_center, norm_y_center, norm_z_center;
+    unsigned int morton_code;
 };
 
 __device__ bool _are_intersecting(
@@ -43,6 +46,12 @@ __device__ bool _are_intersecting(
   float t_1_min, float t_1_max, float t_2_min, float t_2_max
 ) {
   return t_1_min <= t_2_max && t_2_min <= t_1_max;
+}
+
+__device__ void BoundingBox::compute_bb_morton_3d() {
+  this -> morton_code = compute_morton_3d(
+    this -> norm_x_center, this -> norm_y_center, this -> norm_z_center
+  );
 }
 
 __device__ void BoundingBox::compute_normalized_center(

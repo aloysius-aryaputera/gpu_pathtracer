@@ -5,6 +5,8 @@
 #include <string>
 #include <time.h>
 
+#include <thrust/sort.h>
+
 #include "external/libjpeg_cpp/jpeg.h"
 
 #include "model/bvh/bvh_build.h"
@@ -66,6 +68,20 @@ __global__ void free_world(
     delete *camera;
     delete *grid;
     delete *scene;
+}
+
+__global__ void test(Primitive **object_array, int n) {
+  printf("%u\n", object_array[0] -> get_bounding_box() -> morton_code);
+  printf("%d\n", object_array[0] -> get_bounding_box() -> morton_code < object_array[1] -> get_bounding_box() -> morton_code);
+  printf("%u\n", object_array[1] -> get_bounding_box() -> morton_code);
+  printf("%d\n", object_array[1] -> get_bounding_box() -> morton_code < object_array[2] -> get_bounding_box() -> morton_code);
+  printf("%u\n", object_array[2] -> get_bounding_box() -> morton_code);
+  printf("%u\n", object_array[n / 2] -> get_bounding_box() -> morton_code);
+  printf("%u\n", object_array[n - 5] -> get_bounding_box() -> morton_code);
+  printf("%d\n", object_array[n - 5] -> get_bounding_box() -> morton_code < object_array[n - 3] -> get_bounding_box() -> morton_code);
+  printf("%u\n", object_array[n - 3] -> get_bounding_box() -> morton_code);
+  printf("%d\n", object_array[n - 3] -> get_bounding_box() -> morton_code < object_array[n - 1] -> get_bounding_box() -> morton_code);
+  printf("%u\n", object_array[n - 1] -> get_bounding_box() -> morton_code);
 }
 
 int main(int argc, char **argv) {
@@ -480,14 +496,31 @@ int main(int argc, char **argv) {
   my_time = time(NULL);
   printf("Grid created at %s!\n\n", ctime(&my_time));
 
-  printf("Computing the center of every bounding box...\n");
-  compute_normalized_center<<<blocks_world, threads_world>>>(
+  printf("Computing the morton code of every bounding box...\n");
+  compute_morton_code_batch<<<blocks_world, threads_world>>>(
     my_geom, my_grid, num_triangles[0]
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   my_time = time(NULL);
-  printf("All bounding box centres computed at %s!\n\n", ctime(&my_time));
+  printf("All bounding box morton codes computed at %s!\n\n", ctime(&my_time));
+
+  test<<<1, 1>>>(my_geom, num_triangles[0]);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+
+  auto ff = []  __device__ (Primitive* obj_1, Primitive* obj_2) { return obj_1 -> get_bounding_box() -> morton_code < obj_2 -> get_bounding_box() -> morton_code; };
+
+  printf("Sorting the objects based on morton code...\n");
+  thrust::stable_sort(thrust::device, my_geom, my_geom + num_triangles[0], ff);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  my_time = time(NULL);
+  printf("Objects sorted at %s!\n\n", ctime(&my_time));
+
+  test<<<1, 1>>>(my_geom, num_triangles[0]);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
 
   size_t cell_geom_size = max_num_objects_per_cell * \
     n_cell_x[0] * n_cell_y[0] * n_cell_z[0] * sizeof(Primitive*);
