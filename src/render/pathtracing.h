@@ -75,14 +75,20 @@ __device__ vec3 _compute_color(
         ray = ref.ray;
         light_tmp = cur_rec.object -> get_material() -> emission;
 
-        if (light_tmp.x() > 0 || light_tmp.y() > 0 || light_tmp.z() > 0) {
-          light += light_tmp;
-          return mask * light;
-        } else {
-          mask *= (1.0) * ref.filter;
-          if (mask.r() < 0.005 && mask.g() < 0.005 && mask.b() < 0.005) {
-            return vec3(0, 0, 0);
-          }
+        // if (light_tmp.x() > 0 || light_tmp.y() > 0 || light_tmp.z() > 0) {
+        //   light += light_tmp;
+        //   return mask * light;
+        // } else {
+        //   mask *= (1.0) * ref.filter;
+        //   if (mask.r() < 0.005 && mask.g() < 0.005 && mask.b() < 0.005) {
+        //     return vec3(0, 0, 0);
+        //   }
+        // }
+
+        light += light_tmp;
+        mask *= (1.0) * ref.filter;
+        if (mask.r() < 0.005 && mask.g() < 0.005 && mask.b() < 0.005) {
+          return vec3(0, 0, 0);
         }
 
       } else {
