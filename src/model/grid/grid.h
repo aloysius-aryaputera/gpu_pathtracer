@@ -68,26 +68,13 @@ __device__ void _print_grid_details(Grid* grid) {
   float d_y = grid -> y_max - grid -> y_min;
   float d_z = grid -> z_max - grid -> z_min;
 
-  printf("================================================================\n");
-  printf("Boundaries\n");
-  printf("================================================================\n");
-  printf("x_min = %5.5f; x_max = %5.5f, d_x = %5.5f\n",
-    grid -> x_min, grid -> x_max, d_x);
-  printf("y_min = %5.5f; y_max = %5.5f, d_y = %5.5f\n",
-    grid -> y_min, grid -> y_max, d_y);
-  printf("z_min = %5.5f; z_max = %5.5f, d_z = %5.5f\n",
-    grid -> z_min, grid -> z_max, d_z);
-  printf("\n");
-  printf("================================================================\n");
-  printf("Elements\n");
-  printf("================================================================\n");
-  printf("Number of objects = %d\n", grid -> num_objects);
-  printf("\n");
-  printf("================================================================\n");
-  printf("Grid\n");
-  printf("================================================================\n");
-  printf("x resolution = %d, y resolution = %d, z resolution = %d\n",
-         grid -> n_cell_x, grid -> n_cell_y, grid -> n_cell_z);
+  printf("The grid details are:\n");
+  printf("x min = %5.5f; x max = %5.5f, d x = %5.5f, number of cells = %d\n",
+    grid -> x_min, grid -> x_max, d_x, grid -> n_cell_x);
+  printf("y min = %5.5f; y max = %5.5f, d y = %5.5f, number of cells = %d\n",
+    grid -> y_min, grid -> y_max, d_y, grid -> n_cell_y);
+  printf("z min = %5.5f; z max = %5.5f, d z = %5.5f, number of cells = %d\n",
+    grid -> z_min, grid -> z_max, d_z, grid -> n_cell_z);
   printf("\n");
 }
 
@@ -103,7 +90,6 @@ __device__ void _compute_scene_boundaries(
   z_min = INFINITY;
   z_max = -INFINITY;
 
-  printf("num_objects = %d\n", num_objects);
   for (int i = 0; i < num_objects; i++) {
     x_min = min(x_min, geom_array[i] -> get_bounding_box() -> x_min);
     x_max = max(x_max, geom_array[i] -> get_bounding_box() -> x_max);
