@@ -132,6 +132,7 @@ int main(int argc, char **argv) {
   Material **my_material;
   Camera **my_camera;
   vec3 *image_output;
+  int *num_completed_pixels;
 
   int num_pixels = im_width * im_height;
   int max_num_materials = 100;
@@ -465,8 +466,6 @@ int main(int argc, char **argv) {
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-  // my_time = time(NULL);
-  // printf("World created at %s!\n\n", ctime(&my_time));
   print_end_process(process, start);
 
   checkCudaErrors(cudaFree(x));
@@ -489,7 +488,6 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_y, sizeof(int)));
   checkCudaErrors(cudaMallocManaged((void **)&n_cell_z, sizeof(int)));
 
-  // printf("Preparing the grid...\n");
   start = clock();
   process = "Preparing the grid";
   print_start_process(process, start);
@@ -500,8 +498,6 @@ int main(int argc, char **argv) {
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-  // my_time = time(NULL);
-  // printf("Grid preparation done at %s!\n\n", ctime(&my_time));
   print_end_process(process, start);
 
   checkCudaErrors(
@@ -509,7 +505,6 @@ int main(int argc, char **argv) {
       (void **)&my_cell,
       n_cell_x[0] * n_cell_y[0] * n_cell_z[0] * sizeof(Cell*)));
 
-  // printf("Creating the grid...\n");
   start = clock();
   process = "Creating the grid";
   print_start_process(process, start);
@@ -519,11 +514,8 @@ int main(int argc, char **argv) {
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-  // my_time = time(NULL);
-  // printf("Grid created at %s!\n\n", ctime(&my_time));
   print_end_process(process, start);
 
-  // printf("Computing the morton code of every bounding box...\n");
   start = clock();
   process = "Computing the morton code of every bounding box";
   print_start_process(process, start);
@@ -532,25 +524,23 @@ int main(int argc, char **argv) {
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-  // my_time = time(NULL);
-  // printf("All bounding box morton codes computed at %s!\n\n", ctime(&my_time));
   print_end_process(process, start);
 
   // test<<<1, 1>>>(my_geom, num_triangles[0]);
   // checkCudaErrors(cudaGetLastError());
   // checkCudaErrors(cudaDeviceSynchronize());
 
-  auto ff = []  __device__ (Primitive* obj_1, Primitive* obj_2) { return obj_1 -> get_bounding_box() -> morton_code < obj_2 -> get_bounding_box() -> morton_code; };
+  auto ff = []  __device__ (Primitive* obj_1, Primitive* obj_2) {
+    return obj_1 -> get_bounding_box() -> morton_code < \
+      obj_2 -> get_bounding_box() -> morton_code;
+  };
 
-  // printf("Sorting the objects based on morton code...\n");
   start = clock();
   process = "Sorting the objects based on morton code";
   print_start_process(process, start);
   thrust::stable_sort(thrust::device, my_geom, my_geom + num_triangles[0], ff);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-  // my_time = time(NULL);
-  // printf("Objects sorted at %s!\n\n", ctime(&my_time));
   print_end_process(process, start);
 
   // test<<<1, 1>>>(my_geom, num_triangles[0]);
@@ -563,89 +553,70 @@ int main(int argc, char **argv) {
   dim3 blocks2(n_cell_x[0] / tx2 + 1, n_cell_y[0] / ty2 + 1, n_cell_z[0] / tz2 + 1);
   dim3 threads2(tx2, ty2, tz2);
 
-  // printf("Building cell array...\n");
   start = clock();
   process = "Building cell array";
   print_start_process(process, start);
   build_cell_array<<<blocks2, threads2>>>(my_grid, my_cell_geom);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-  // my_time = time(NULL);
-  // printf("Cell array built at %s!\n\n", ctime(&my_time));
   print_end_process(process, start);
 
-  // printf("Inserting objects into the grid...\n");
   start = clock();
   process = "Inserting objects into the grid";
   print_start_process(process, start);
   insert_objects<<<blocks2, threads2>>>(my_grid);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-  // my_time = time(NULL);
-  // printf("Objects inserted into the grid at %s!\n\n", ctime(&my_time));
   print_end_process(process, start);
 
   checkCudaErrors(cudaMallocManaged((void **)&my_scene, sizeof(Scene *)));
 
-  // printf("Creating scene...\n");
   start = clock();
   process = "Creating the scene";
   print_start_process(process, start);
   create_scene<<<1, 1>>>(my_scene, my_camera, my_grid, num_triangles);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-  // my_time = time(NULL);
-  // printf("Scene created at %s!\n\n", ctime(&my_time));
   print_end_process(process, start);
 
   dim3 blocks(im_width / tx + 1, im_height / ty + 1);
   dim3 threads(tx, ty);
   checkCudaErrors(cudaMallocManaged((void **)&rand_state, rand_state_size));
 
-  // printf("Preparing the rendering process...\n");
   start = clock();
   process = "Preparing the rendering process";
   print_start_process(process, start);
   render_init<<<blocks, threads>>>(im_width, im_height, rand_state);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-  // my_time = time(NULL);
-  // printf("Rendering process is ready to start at %s!\n\n", ctime(&my_time));
   print_end_process(process, start);
 
   vec3 sky_emission = vec3(sky_emission_r, sky_emission_g, sky_emission_b);
   checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
+  checkCudaErrors(cudaMallocManaged((void **)&num_completed_pixels, sizeof(int)));
 
-  // printf("Rendering started...\n");
   start = clock();
   process = "Rendering";
   print_start_process(process, start);
+  num_completed_pixels[0] = 0;
   render<<<blocks, threads>>>(
     image_output, my_scene, rand_state, pathtracing_sample_size,
     pathtracing_level, sky_emission, bg_height, bg_width,
-    bg_texture_r, bg_texture_g, bg_texture_b
+    bg_texture_r, bg_texture_g, bg_texture_b, num_completed_pixels
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
-  // my_time = time(NULL);
-  // printf("Rendering done at %s!\n\n", ctime(&my_time));
   print_end_process(process, start);
 
-  // printf("Saving image...\n");
+  printf("num_completed_pixels[0] = %d\n", num_completed_pixels[0]);
+
   start = clock();
   process = "Saving image";
   print_start_process(process, start);
   save_image(image_output, im_width, im_height, image_output_path);
-  // my_time = time(NULL);
-  // printf("Image saved at %s!\n\n", ctime(&my_time));
   print_end_process(process, start);
-
-  // stop = clock();
-  // double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;
-  // printf("\nThe rendering took %5.5f seconds.\n", timer_seconds);
-
   checkCudaErrors(cudaDeviceSynchronize());
-  // printf("Do cleaning...\n");
+
   start = clock();
   process = "Cleaning";
   print_start_process(process, start);
@@ -668,8 +639,6 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(bg_texture_g));
   checkCudaErrors(cudaFree(bg_texture_b));
   checkCudaErrors(cudaFree(image_output));
-  // my_time = time(NULL);
-  // printf("Cleaning done at %s!\n\n", ctime(&my_time));
   print_end_process(process, start);
 
   print_end_process("Rendering project", first_start);

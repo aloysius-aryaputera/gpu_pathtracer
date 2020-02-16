@@ -9,13 +9,14 @@
 #include "../model/geometry/triangle.h"
 #include "../model/ray.h"
 #include "../model/scene.h"
+#include "../param.h"
 #include "../util/vector_util.h"
 
 __global__
 void render(
   vec3 *fb, Scene **scene, curandState *rand_state, int sample_size, int level,
   vec3 sky_emission, int bg_height, int bg_width,
-  float *bg_r, float *bg_g, float *bg_b
+  float *bg_r, float *bg_g, float *bg_b, int *num_completed_pixels
 );
 
 __device__ vec3 _compute_color(
@@ -109,13 +110,15 @@ __global__
 void render(
   vec3 *fb, Scene **scene, curandState *rand_state, int sample_size, int level,
   vec3 sky_emission, int bg_height, int bg_width,
-  float *bg_r, float *bg_g, float *bg_b
+  float *bg_r, float *bg_g, float *bg_b, int *num_completed_pixels
 ) {
 
   hit_record init_rec, cur_rec;
   vec3 color = vec3(0, 0, 0), color_tmp;
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
+  // float factor = 1.0 * scene[0] -> camera -> height / \
+  //   scene[0] -> camera -> width;
 
   if(
     (j >= scene[0] -> camera -> width) || (i >= scene[0] -> camera -> height)
@@ -139,6 +142,15 @@ void render(
 
   rand_state[pixel_index] = local_rand_state;
   fb[pixel_index] = color;
+  // (num_completed_pixels[0])++;
+
+  if (j == 0 && (i % (scene[0] -> camera -> height / 100) == 0)) {
+    printf(
+      "Progress = %5.5f %% at %s\n",
+      100.0 * i * scene[0] -> camera -> width / (
+        scene[0] -> camera -> height * scene[0] -> camera -> width)
+    );
+  }
 
 }
 
