@@ -129,6 +129,7 @@ int main(int argc, char **argv) {
   Grid** my_grid;
   Cell** my_cell;
   Primitive **my_geom, **my_cell_geom;
+  unsigned int *morton_code_list;
   Material **my_material;
   Camera **my_camera;
   vec3 *image_output;
@@ -445,7 +446,10 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
-  checkCudaErrors(cudaMallocManaged((void **)&my_geom, num_triangles[0] * sizeof(Primitive *)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&my_geom, num_triangles[0] * sizeof(Primitive *)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&morton_code_list, num_triangles[0] * sizeof(unsigned int)));
 
   start = clock();
   process = "Creating the world";
@@ -558,6 +562,26 @@ int main(int argc, char **argv) {
   print_start_process(process, start);
   build_leaf_list<<<blocks_world, threads_world>>>(
     leaf_list, my_geom, num_triangles[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Extracting morton codes";
+  print_start_process(process, start);
+  extract_morton_code_list<<<blocks_world, threads_world>>>(
+    my_geom, morton_code_list, num_triangles[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Building nodes";
+  print_start_process(process, start);
+  build_node_list<<<blocks_world, threads_world>>>(
+    node_list, leaf_list, morton_code_list, num_triangles[0]
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());

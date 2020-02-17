@@ -18,4 +18,15 @@ __device__ unsigned int compute_morton_3d(float x, float y, float z) {
   return xx * 4 + yy * 2 + zz;
 }
 
+__device__ int length_longest_common_prefix(
+  unsigned int* morton_code_list, int i, int j, int array_length
+) {
+  if (i < 0 || j < 0 || i >= array_length || j >= array_length) return -1;
+  int additional_length = 0;
+  if (morton_code_list[i] == morton_code_list[j]) {
+    additional_length = __clz(i ^ j);
+  }
+  return __clz(morton_code_list[i] ^ morton_code_list[j]) + additional_length;
+}
+
 #endif
