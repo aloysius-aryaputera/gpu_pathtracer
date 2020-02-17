@@ -6,11 +6,37 @@
 #include "../grid/bounding_box.h"
 #include "../grid/grid.h"
 
+class Node {
+  public:
+    __host__ __device__ Node() {}
+    __device__ Node(Node* left_, Node* right_);
+
+    Node *left, *right;
+};
+
+class Leaf: public Node {
+  public:
+    __device__ Leaf(Primitive* object_) {
+      this -> object = object_;
+    }
+
+    Primitive* object;
+};
+
+__global__ void build_leaf_list(
+  Leaf** leaf_list, Primitive **object_list, int num_objects
+);
+
 __global__ void compute_morton_code_batch(
   Primitive **object_array, Grid **grid, int num_triangles
 );
 
 __device__ bool morton_code_smaller(Primitive* obj_1, Primitive* obj_2);
+
+__device__ Node::Node(Node* left_, Node* right_) {
+  this -> left = left_;
+  this -> right = right_;
+}
 
 __global__ void compute_morton_code_batch(
   Primitive **object_array, Grid **grid, int num_triangles
@@ -30,6 +56,16 @@ __device__ bool morton_code_smaller(Primitive* obj_1, Primitive* obj_2) {
     obj_1 -> get_bounding_box() -> morton_code <
       obj_2 -> get_bounding_box() -> morton_code
   );
+}
+
+__global__ void build_leaf_list(
+  Leaf** leaf_list, Primitive **object_list, int num_triangles
+) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (idx >= num_triangles) return;
+
+  leaf_list[idx] = new Leaf(object_list[idx]);
 }
 
 #endif

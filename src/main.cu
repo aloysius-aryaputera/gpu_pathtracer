@@ -132,7 +132,6 @@ int main(int argc, char **argv) {
   Material **my_material;
   Camera **my_camera;
   vec3 *image_output;
-  int *num_completed_pixels;
 
   int num_pixels = im_width * im_height;
   int max_num_materials = 100;
@@ -547,6 +546,23 @@ int main(int argc, char **argv) {
   // checkCudaErrors(cudaGetLastError());
   // checkCudaErrors(cudaDeviceSynchronize());
 
+  Node** node_list;
+  Leaf** leaf_list;
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&node_list, (num_triangles[0] - 1) * sizeof(Node *)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&leaf_list, num_triangles[0] * sizeof(Leaf *)));
+
+  start = clock();
+  process = "Building leaves";
+  print_start_process(process, start);
+  build_leaf_list<<<blocks_world, threads_world>>>(
+    leaf_list, my_geom, num_triangles[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
   size_t cell_geom_size = max_num_objects_per_cell * \
     n_cell_x[0] * n_cell_y[0] * n_cell_z[0] * sizeof(Primitive*);
   checkCudaErrors(cudaMallocManaged((void **)&my_cell_geom, cell_geom_size));
@@ -593,22 +609,18 @@ int main(int argc, char **argv) {
 
   vec3 sky_emission = vec3(sky_emission_r, sky_emission_g, sky_emission_b);
   checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
-  checkCudaErrors(cudaMallocManaged((void **)&num_completed_pixels, sizeof(int)));
 
   start = clock();
   process = "Rendering";
   print_start_process(process, start);
-  num_completed_pixels[0] = 0;
   render<<<blocks, threads>>>(
     image_output, my_scene, rand_state, pathtracing_sample_size,
     pathtracing_level, sky_emission, bg_height, bg_width,
-    bg_texture_r, bg_texture_g, bg_texture_b, num_completed_pixels
+    bg_texture_r, bg_texture_g, bg_texture_b
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
-
-  printf("num_completed_pixels[0] = %d\n", num_completed_pixels[0]);
 
   start = clock();
   process = "Saving image";
