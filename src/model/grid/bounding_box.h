@@ -165,4 +165,16 @@ __device__ bool BoundingBox::is_inside(vec3 position) {
   }
 }
 
+__device__ void compute_bb_union(
+  BoundingBox *bb_1, BoundingBox *bb_2, float &x_min, float &x_max,
+  float &y_min, float &y_max, float &z_min, float &z_max
+) {
+  x_min = min(bb_1 -> x_min, bb_2 -> x_min);
+  x_max = max(bb_1 -> x_max, bb_2 -> x_max);
+  y_min = min(bb_1 -> y_min, bb_2 -> y_min);
+  y_max = max(bb_1 -> y_max, bb_2 -> y_max);
+  z_min = min(bb_1 -> z_min, bb_2 -> z_min);
+  z_max = max(bb_1 -> z_max, bb_2 -> z_max);
+}
+
 #endif

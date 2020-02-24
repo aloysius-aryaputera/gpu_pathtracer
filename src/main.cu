@@ -568,6 +568,16 @@ int main(int argc, char **argv) {
   print_end_process(process, start);
 
   start = clock();
+  process = "Building nodes";
+  print_start_process(process, start);
+  build_node_list<<<blocks_world, threads_world>>>(
+    node_list, num_triangles[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
   process = "Extracting morton codes";
   print_start_process(process, start);
   extract_morton_code_list<<<blocks_world, threads_world>>>(
@@ -578,10 +588,20 @@ int main(int argc, char **argv) {
   print_end_process(process, start);
 
   start = clock();
-  process = "Building nodes";
+  process = "Set node relationship";
   print_start_process(process, start);
-  build_node_list<<<blocks_world, threads_world>>>(
+  set_node_relationship<<<blocks_world, threads_world>>>(
     node_list, leaf_list, morton_code_list, num_triangles[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Compute node bounding boxes";
+  print_start_process(process, start);
+  compute_node_bounding_boxes<<<blocks_world, threads_world>>>(
+    leaf_list, node_list, num_triangles[0]
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());

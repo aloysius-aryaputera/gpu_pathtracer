@@ -24,7 +24,7 @@ __device__ int length_longest_common_prefix(
   if (i < 0 || j < 0 || i >= array_length || j >= array_length) return -1;
   int additional_length = 0;
   if (morton_code_list[i] == morton_code_list[j]) {
-    additional_length = __clz(i ^ j);
+    additional_length = __clz((unsigned int)i ^ (unsigned int)j);
   }
   return __clz(morton_code_list[i] ^ morton_code_list[j]) + additional_length;
 }
