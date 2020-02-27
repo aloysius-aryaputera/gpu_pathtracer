@@ -43,6 +43,11 @@ __global__ void set_node_relationship(
   int num_objects
 );
 
+__global__ void build_node_hierarchy(
+  Node** node_list, Leaf** leaf_list, unsigned int* morton_code_list,
+  int num_objects
+);
+
 __global__ void build_leaf_list(
   Leaf** leaf_list, Primitive **object_list, int num_objects
 );
@@ -111,6 +116,16 @@ __global__ void extract_morton_code_list(
   morton_code_list[idx] = \
     object_list[idx] -> get_bounding_box() -> morton_code;
 }
+
+// __global__ void build_node_hierarchy(
+//   Node** node_list, Leaf** leaf_list, unsigned int* morton_code_list,
+//   int num_objects
+// ) {
+//   int idx = threadIdx.x + blockIdx.x * blockDim.x;
+//   if (idx >= (num_objects - 1)) return;
+//
+//   int2
+// }
 
 __global__ void set_node_relationship(
   Node** node_list, Leaf** leaf_list, unsigned int* morton_code_list,
@@ -217,8 +232,22 @@ __global__ void compute_node_bounding_boxes(
     return;
   }
 
-  while(current_node -> parent -> visited && current_node != node_list[0]) {
+  // __syncthreads();
+  // long long int my_time = clock64();
+  // printf("my_time = %lu\n", my_time);
+
+  // while(current_node -> parent -> visited && current_node != node_list[0]) {
+  while(current_node != node_list[0]) {
+    __syncthreads();
+    printf("Inside\n");
     current_node = current_node -> parent;
+
+    if (
+      current_node -> left -> bounding_box == NULL ||
+      current_node -> right -> bounding_box == NULL
+    )
+      return;
+
     compute_bb_union(
       current_node -> left -> bounding_box,
       current_node -> right -> bounding_box,
@@ -227,6 +256,12 @@ __global__ void compute_node_bounding_boxes(
     current_node -> bounding_box = new BoundingBox(
       bb_x_min, bb_x_max, bb_y_min, bb_y_max, bb_z_min, bb_z_max
     );
+
+    if (current_node == node_list[0]) {
+      printf("Here!\n");
+      current_node -> bounding_box -> print_bounding_box();
+    }
+
   }
 
   current_node -> parent -> mark_visited();

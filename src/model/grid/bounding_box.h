@@ -30,6 +30,7 @@ class BoundingBox {
     __device__ bool is_inside(vec3 position);
     __device__ void compute_normalized_center(BoundingBox *world_bounding_box);
     __device__ void compute_bb_morton_3d();
+    __device__ void print_bounding_box();
 
     float x_min, x_max, y_min, y_max, z_min, z_max;
     float x_center, y_center, z_center;
@@ -46,6 +47,14 @@ __device__ bool _are_intersecting(
   float t_1_min, float t_1_max, float t_2_min, float t_2_max
 ) {
   return t_1_min <= t_2_max && t_2_min <= t_1_max;
+}
+
+__device__ void BoundingBox::print_bounding_box() {
+  printf("================================================================\n");
+  printf("x_min = %5.5f, x_max = %5.5f\n", this -> x_min, this -> x_max);
+  printf("y_min = %5.5f, y_max = %5.5f\n", this -> y_min, this -> y_max);
+  printf("z_min = %5.5f, z_max = %5.5f\n", this -> z_min, this -> z_max);
+  printf("================================================================\n");
 }
 
 __device__ void BoundingBox::compute_bb_morton_3d() {

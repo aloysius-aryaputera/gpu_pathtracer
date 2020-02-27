@@ -85,6 +85,13 @@ __global__ void test(Primitive **object_array, int n) {
   printf("%u\n", object_array[n - 1] -> get_bounding_box() -> morton_code);
 }
 
+__global__ void my_clz(unsigned int x) {
+  int result = __clz(x);
+  printf("clz = %d\n", result);
+  printf("clz_2 = %d\n", __clz(41));
+  printf("******************************************\n");
+}
+
 int main(int argc, char **argv) {
   cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024ULL*1024ULL*1024ULL*4ULL);
 
@@ -156,15 +163,25 @@ int main(int argc, char **argv) {
   float *bg_texture_r, *bg_texture_g, *bg_texture_b;
   int bg_height, bg_width;
 
-  /////////////////////////////////////////////////////////////////////////////
+  // int a1 = std::stoi(argv[24]);
+  // int a2 = std::stoi(argv[25]);
+  // printf("a1 = %d\n", a1);
+  // printf("a2 = %d\n", a2);
+  // my_clz<<<1, 1>>>((unsigned int)(a1) ^ (unsigned int)(a2));
+  // checkCudaErrors(cudaGetLastError());
+  // checkCudaErrors(cudaDeviceSynchronize());
+
+  // printf("================================================================\n");
+
+  ///////////////////////////////////////////////////////////////////////////
   // For offline testing
-  /////////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////
   // float ka_x[100], ka_y[100], ka_z[100], kd_x[100], kd_y[100], kd_z[100];
   // float ks_x[100], ks_y[100], ks_z[100], ke_x[100], ke_y[100], ke_z[100];
   // float material_image_r[1000], material_image_g[1000], material_image_b[1000];
   // int num_materials[1], material_image_height[100], material_image_width[100], material_image_offset[100];
   // int len_texture[1];
-  /////////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////
 
   start = clock();
   process = "Extracting background texture";
@@ -529,10 +546,6 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  // test<<<1, 1>>>(my_geom, num_triangles[0]);
-  // checkCudaErrors(cudaGetLastError());
-  // checkCudaErrors(cudaDeviceSynchronize());
-
   auto ff = []  __device__ (Primitive* obj_1, Primitive* obj_2) {
     return obj_1 -> get_bounding_box() -> morton_code < \
       obj_2 -> get_bounding_box() -> morton_code;
@@ -545,10 +558,6 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
-
-  // test<<<1, 1>>>(my_geom, num_triangles[0]);
-  // checkCudaErrors(cudaGetLastError());
-  // checkCudaErrors(cudaDeviceSynchronize());
 
   Node** node_list;
   Leaf** leaf_list;
@@ -587,25 +596,25 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  start = clock();
-  process = "Set node relationship";
-  print_start_process(process, start);
-  set_node_relationship<<<blocks_world, threads_world>>>(
-    node_list, leaf_list, morton_code_list, num_triangles[0]
-  );
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  print_end_process(process, start);
-
-  start = clock();
-  process = "Compute node bounding boxes";
-  print_start_process(process, start);
-  compute_node_bounding_boxes<<<blocks_world, threads_world>>>(
-    leaf_list, node_list, num_triangles[0]
-  );
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  print_end_process(process, start);
+  // start = clock();
+  // process = "Set node relationship";
+  // print_start_process(process, start);
+  // set_node_relationship<<<blocks_world, threads_world>>>(
+  //   node_list, leaf_list, morton_code_list, num_triangles[0]
+  // );
+  // checkCudaErrors(cudaGetLastError());
+  // checkCudaErrors(cudaDeviceSynchronize());
+  // print_end_process(process, start);
+  //
+  // start = clock();
+  // process = "Compute node bounding boxes";
+  // print_start_process(process, start);
+  // compute_node_bounding_boxes<<<blocks_world, threads_world>>>(
+  //   leaf_list, node_list, num_triangles[0]
+  // );
+  // checkCudaErrors(cudaGetLastError());
+  // checkCudaErrors(cudaDeviceSynchronize());
+  // print_end_process(process, start);
 
   size_t cell_geom_size = max_num_objects_per_cell * \
     n_cell_x[0] * n_cell_y[0] * n_cell_z[0] * sizeof(Primitive*);
