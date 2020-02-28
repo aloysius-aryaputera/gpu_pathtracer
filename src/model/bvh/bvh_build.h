@@ -26,7 +26,16 @@ class Leaf: public Node {
   public:
     __device__ Leaf(Primitive* object_) {
       this -> object = object_;
-      this -> bounding_box = object_ -> bounding_box;
+
+      if (object_ -> get_bounding_box() == NULL) {
+        printf("object has no bounding_box!\n");
+      }
+
+      this -> bounding_box = object_ -> get_bounding_box();
+
+      if (this -> bounding_box == NULL) {
+        printf("leaf has no bounding_box!\n");
+      }
     }
 
     Primitive* object;
@@ -43,11 +52,6 @@ __global__ void set_node_relationship(
   int num_objects
 );
 
-__global__ void build_node_hierarchy(
-  Node** node_list, Leaf** leaf_list, unsigned int* morton_code_list,
-  int num_objects
-);
-
 __global__ void build_leaf_list(
   Leaf** leaf_list, Primitive **object_list, int num_objects
 );
@@ -55,8 +59,6 @@ __global__ void build_leaf_list(
 __global__ void compute_morton_code_batch(
   Primitive **object_array, Grid **grid, int num_triangles
 );
-
-__device__ bool morton_code_smaller(Primitive* obj_1, Primitive* obj_2);
 
 __device__ void Node::mark_visited() {
   this -> visited = true;
@@ -87,13 +89,6 @@ __global__ void compute_morton_code_batch(
   object_array[idx] -> get_bounding_box() -> compute_bb_morton_3d();
 }
 
-__device__ bool morton_code_smaller(Primitive* obj_1, Primitive* obj_2) {
-  return (
-    obj_1 -> get_bounding_box() -> morton_code <
-      obj_2 -> get_bounding_box() -> morton_code
-  );
-}
-
 __global__ void build_leaf_list(
   Leaf** leaf_list, Primitive **object_list, int num_triangles
 ) {
@@ -117,16 +112,6 @@ __global__ void extract_morton_code_list(
     object_list[idx] -> get_bounding_box() -> morton_code;
 }
 
-// __global__ void build_node_hierarchy(
-//   Node** node_list, Leaf** leaf_list, unsigned int* morton_code_list,
-//   int num_objects
-// ) {
-//   int idx = threadIdx.x + blockIdx.x * blockDim.x;
-//   if (idx >= (num_objects - 1)) return;
-//
-//   int2
-// }
-
 __global__ void set_node_relationship(
   Node** node_list, Leaf** leaf_list, unsigned int* morton_code_list,
   int num_objects
@@ -148,66 +133,74 @@ __global__ void set_node_relationship(
     d = 1;
   }
 
-  // Compute upper bound for the length of range
-  int d_min = length_longest_common_prefix(
+  int start = idx;
+
+  // Determine end
+  int end = start + d;
+  int min_delta = length_longest_common_prefix(
     morton_code_list, idx, idx - d, num_objects
   );
-
-  int l_max = 2;
-  while (
-    length_longest_common_prefix(
-      morton_code_list, idx, idx + l_max * d, num_objects
-    ) > d_min
-  ) {
-    l_max *= 2;
-  }
-
-  // Find the other end using binary search
-  int l = 0;
-  int divider = 2;
-  int t = l_max / divider;
-  while (t >= 1) {
-    if (
-      length_longest_common_prefix(
-        morton_code_list, idx, idx + (l + t) * d, num_objects
-      ) > d_min
-    ) {
-      l += t;
+  int current_delta;
+  bool flag = TRUE;
+  while (end >= 0 && end <= num_objects - 1 && flag) {
+    current_delta = length_longest_common_prefix(
+      morton_code_list, start, end, num_objects
+    );
+    if (current_delta > min_delta) {
+      end += d;
+    } else {
+      end -= d;
+      flag = FALSE;
     }
-    divider *= 2;
-    t = l_max / divider;
   }
-  int j = idx + l * d;
+  if (end < 0) end = 0;
+  if (end > num_objects - 1) end = num_objects - 1;
 
-  // Find the split position using binary search
-  int d_node = length_longest_common_prefix(
-    morton_code_list, idx, j, num_objects
+  // Determine split
+  int split = start + d;
+  int idx_1 = start, idx_2 = start + d;
+  int min_delta_2 = length_longest_common_prefix(
+    morton_code_list, idx_1, idx_2, num_objects
   );
-  int s = 0;
-  divider = 2;
-  t = ceilf(l / divider);
-  while (t >= 1) {
-    if (length_longest_common_prefix(
-      morton_code_list, idx, idx + (s + t) * d, num_objects
-    ) > d_node) {
-      s += t;
+  while((d > 0 && idx_2 <= end) || (d < 0 && idx_2 >= end)) {
+    current_delta = length_longest_common_prefix(
+      morton_code_list, idx_1, idx_2, num_objects
+    );
+    if (current_delta < min_delta_2) {
+      split = idx_2;
+      min_delta_2 = current_delta;
     }
-    divider *= 2;
-    t = ceilf(l / divider);
+    idx_1 += d;
+    idx_2 += d;
   }
-  int gamma = idx + s * d + min(d, 0);
+
+  if (
+    start < 0 || end < 0 || start >= num_objects || end >= num_objects ||
+    split < 0 || split >= num_objects
+  ) {
+    printf("start = %d; split = %d; end = %d; d = %d\n", start, split, end, d);
+  }
+
+  // Determine children
   Node *left, *right;
-
-  if (min(idx, j) == gamma) {
-    left = leaf_list[gamma];
+  if (d > 0) {
+    if (split - start > 1)
+      left = node_list[split - 1];
+    else
+      left = leaf_list[start];
+    if (end - split > 0)
+      right = node_list[split];
+    else
+      right = leaf_list[end];
   } else {
-    left = node_list[gamma];
-  }
-
-  if (max(idx, j) == gamma + 1) {
-    right = leaf_list[gamma + 1];
-  } else {
-    right = node_list[gamma + 1];
+    if (start - split > 1)
+      right = node_list[split + 1];
+    else
+      right = leaf_list[start];
+    if (split - end > 0)
+      left = node_list[split];
+    else
+      left = leaf_list[end];
   }
 
   node_list[idx] -> set_left_child(left);
@@ -232,14 +225,7 @@ __global__ void compute_node_bounding_boxes(
     return;
   }
 
-  // __syncthreads();
-  // long long int my_time = clock64();
-  // printf("my_time = %lu\n", my_time);
-
-  // while(current_node -> parent -> visited && current_node != node_list[0]) {
   while(current_node != node_list[0]) {
-    __syncthreads();
-    printf("Inside\n");
     current_node = current_node -> parent;
 
     if (
@@ -258,13 +244,10 @@ __global__ void compute_node_bounding_boxes(
     );
 
     if (current_node == node_list[0]) {
-      printf("Here!\n");
+      printf("We have reached the root!\n");
       current_node -> bounding_box -> print_bounding_box();
     }
-
   }
-
-  current_node -> parent -> mark_visited();
 }
 
 #endif

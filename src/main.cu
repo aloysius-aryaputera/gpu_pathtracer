@@ -596,25 +596,25 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  // start = clock();
-  // process = "Set node relationship";
-  // print_start_process(process, start);
-  // set_node_relationship<<<blocks_world, threads_world>>>(
-  //   node_list, leaf_list, morton_code_list, num_triangles[0]
-  // );
-  // checkCudaErrors(cudaGetLastError());
-  // checkCudaErrors(cudaDeviceSynchronize());
-  // print_end_process(process, start);
-  //
-  // start = clock();
-  // process = "Compute node bounding boxes";
-  // print_start_process(process, start);
-  // compute_node_bounding_boxes<<<blocks_world, threads_world>>>(
-  //   leaf_list, node_list, num_triangles[0]
-  // );
-  // checkCudaErrors(cudaGetLastError());
-  // checkCudaErrors(cudaDeviceSynchronize());
-  // print_end_process(process, start);
+  start = clock();
+  process = "Set node relationship";
+  print_start_process(process, start);
+  set_node_relationship<<<blocks_world, threads_world>>>(
+    node_list, leaf_list, morton_code_list, num_triangles[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Compute node bounding boxes";
+  print_start_process(process, start);
+  compute_node_bounding_boxes<<<blocks_world, threads_world>>>(
+    leaf_list, node_list, num_triangles[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
 
   size_t cell_geom_size = max_num_objects_per_cell * \
     n_cell_x[0] * n_cell_y[0] * n_cell_z[0] * sizeof(Primitive*);
