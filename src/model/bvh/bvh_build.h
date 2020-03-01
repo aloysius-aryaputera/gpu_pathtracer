@@ -165,7 +165,7 @@ __device__ bool traverse_bvh(Node* bvh_root, Ray ray, hit_record &rec) {
         node = child_l;
       else {
         if (traverse_r)
-          node = child_r;  
+          node = child_r;
       }
 
       if (traverse_l && traverse_r && !(child_r -> is_leaf)) {
@@ -424,9 +424,9 @@ __global__ void compute_node_bounding_boxes(
     );
     if (current_node -> bounding_box == nullptr) {
       current_node -> bounding_box = new BoundingBox(
-        bb_x_min - SMALL_DOUBLE, bb_x_max + SMALL_DOUBLE,
-        bb_y_min - SMALL_DOUBLE, bb_y_max + SMALL_DOUBLE,
-        bb_z_min - SMALL_DOUBLE, bb_z_max + SMALL_DOUBLE
+        bb_x_min, bb_x_max,
+        bb_y_min, bb_y_max,
+        bb_z_min, bb_z_max
       );
     }
 
