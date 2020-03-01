@@ -20,7 +20,6 @@ class Sphere: public Primitive {
     vec3 center;
     float r, tolerance;
     Material* material;
-    BoundingBox *bounding_box;
 
   public:
     __host__ __device__ Sphere() {};
@@ -29,6 +28,9 @@ class Sphere: public Primitive {
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
     __device__ Material* get_material();
     __device__ BoundingBox* get_bounding_box();
+
+    BoundingBox *bounding_box;
+
 };
 
 __device__ int _get_num_roots(float a, float b, float c, float* root_array);

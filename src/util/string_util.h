@@ -1,5 +1,9 @@
+#ifndef STRING_UTIL_H
+#define STRING_UTIL_H
+
 #include <iostream>
 #include <string>
+#include <time.h>
 
 // https://stackoverflow.com/questions/1798112/removing-leading-and-trailing-spaces-from-a-string
 
@@ -53,3 +57,25 @@ std::string clean_string_end(std::string str) {
 
   return new_str;
 }
+
+void print_start_process(std::string process, clock_t &start) {
+  time_t my_time = time(NULL);
+  start = clock();
+  printf("==============================================================\n");
+  printf("Time now        : %s", ctime(&my_time));
+  printf("Started process : %s\n", process.c_str());
+  printf("--------------------------------------------------------------\n");
+}
+
+void print_end_process(std::string process, clock_t start) {
+  time_t my_time = time(NULL);
+  clock_t stop = clock();
+  float time_seconds = ((float)(stop - start)) / CLOCKS_PER_SEC;
+  printf("\n");
+  printf("Time now          : %s", ctime(&my_time));
+  printf("Done with process : %s\n", process.c_str());
+  printf("The process took  : %5.2f seconds.\n", time_seconds);
+  printf("==============================================================\n\n\n");
+}
+
+#endif

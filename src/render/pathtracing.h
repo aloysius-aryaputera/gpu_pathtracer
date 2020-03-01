@@ -4,25 +4,29 @@
 #include <curand_kernel.h>
 #include <math.h>
 
+#include "../model/bvh/bvh_build.h"
 #include "../model/camera.h"
 #include "../model/cartesian_system.h"
 #include "../model/geometry/triangle.h"
 #include "../model/ray.h"
 #include "../model/scene.h"
+#include "../param.h"
 #include "../util/vector_util.h"
 
 __global__
 void render(
   vec3 *fb, Scene **scene, curandState *rand_state, int sample_size, int level,
   vec3 sky_emission, int bg_height, int bg_width,
-  float *bg_r, float *bg_g, float *bg_b
+  float *bg_r, float *bg_g, float *bg_b,
+  Node **node_list
 );
 
 __device__ vec3 _compute_color(
   hit_record rec, int level, Scene **scene, vec3 sky_emission,
   int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
-  curandState *rand_state
+  curandState *rand_state,
+  Node** node_list
 );
 
 __device__ vec3 _get_sky_color(
@@ -50,7 +54,8 @@ __device__ vec3 _compute_color(
   Ray ray_init, int level, Scene **scene, vec3 sky_emission,
   int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
-  curandState *rand_state
+  curandState *rand_state,
+  Node **node_list
 ) {
   hit_record cur_rec;
   bool hit, reflected_or_refracted;
@@ -62,8 +67,15 @@ __device__ vec3 _compute_color(
   cur_rec.object = nullptr;
 
   for (int i = 0; i < level; i++) {
-    hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
+
+    // Change this with the BVH traversal
+    // hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
+    hit = traverse_bvh(node_list[0], ray, cur_rec);
+
     if (hit) {
+      if (cur_rec.object == nullptr)
+        printf("cur_rec.object = NULL\n");
+
       reflected_or_refracted = cur_rec.object -> get_material(
       ) -> is_reflected_or_refracted(
         cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
@@ -75,14 +87,15 @@ __device__ vec3 _compute_color(
         ray = ref.ray;
         light_tmp = cur_rec.object -> get_material() -> emission;
 
-        if (light_tmp.x() > 0 || light_tmp.y() > 0 || light_tmp.z() > 0) {
-          light += light_tmp;
+        light += light_tmp;
+        mask *= (1.0) * ref.filter;
+
+        if (mask.r() < 0.005 && mask.g() < 0.005 && mask.b() < 0.005) {
+          return vec3(0, 0, 0);
+        }
+
+        if (light.r() >= 1 && light.g() >= 1 && light.b() >= 1) {
           return mask * light;
-        } else {
-          mask *= (1.0) * ref.filter;
-          if (mask.r() < 0.005 && mask.g() < 0.005 && mask.b() < 0.005) {
-            return vec3(0, 0, 0);
-          }
         }
 
       } else {
@@ -108,13 +121,15 @@ __global__
 void render(
   vec3 *fb, Scene **scene, curandState *rand_state, int sample_size, int level,
   vec3 sky_emission, int bg_height, int bg_width,
-  float *bg_r, float *bg_g, float *bg_b
+  float *bg_r, float *bg_g, float *bg_b,
+  Node **node_list
 ) {
+
+  int j = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.y + blockIdx.y * blockDim.y;
 
   hit_record init_rec, cur_rec;
   vec3 color = vec3(0, 0, 0), color_tmp;
-  int j = threadIdx.x + blockIdx.x * blockDim.x;
-  int i = threadIdx.y + blockIdx.y * blockDim.y;
 
   if(
     (j >= scene[0] -> camera -> width) || (i >= scene[0] -> camera -> height)
@@ -130,7 +145,7 @@ void render(
   for(int idx = 0; idx < sample_size; idx++) {
     color_tmp = _compute_color(
       camera_ray, level, scene, sky_emission, bg_height, bg_width, bg_r, bg_g,
-      bg_b, &local_rand_state);
+      bg_b, &local_rand_state, node_list);
     color_tmp = de_nan(color_tmp);
     color += color_tmp;
   }
@@ -138,6 +153,14 @@ void render(
 
   rand_state[pixel_index] = local_rand_state;
   fb[pixel_index] = color;
+
+  if (j == 0 && (i % (scene[0] -> camera -> height / 100) == 0)) {
+    printf(
+      "Progress = %5.5f %%\n",
+      100.0 * i * scene[0] -> camera -> width / (
+        scene[0] -> camera -> height * scene[0] -> camera -> width)
+    );
+  }
 
 }
 

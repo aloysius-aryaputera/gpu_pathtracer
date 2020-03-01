@@ -6,8 +6,8 @@ NVCC           = $(CUDA_PATH)/bin/nvcc -ccbin $(HOST_COMPILER)
 NVCC_DBG       = -g -G
 # NVCC_DBG       =
 
-NVCCFLAGS      = -m64 -O3 -std=c++14
-NVCCFLAGS_DBG  = $(NVCC_DBG) -m64
+NVCCFLAGS      = -m64 -O3 -std=c++14 --expt-extended-lambda
+NVCCFLAGS_DBG  = $(NVCC_DBG) -m64 --expt-extended-lambda
 GENCODE_FLAGS  = -gencode arch=compute_60,code=sm_60
 GENCODE_FLAGS_2  = -gencode arch=compute_37,code=sm_37
 GENCODE_FLAGS_3  = -gencode arch=compute_61,code=sm_61
@@ -36,7 +36,9 @@ INCS = \
 	util/string_util.h \
 	world_lib.h
 
-all: gpu_path_tracing gpu_path_tracing_debug gpu_path_tracing_2 gpu_path_tracing_debug_2 gpu_path_tracing_3 gpu_path_tracing_debug_3 gpu_path_tracing_4 gpu_path_tracing_debug_4
+# all: gpu_path_tracing gpu_path_tracing_debug gpu_path_tracing_2 gpu_path_tracing_debug_2 gpu_path_tracing_3 gpu_path_tracing_debug_3 gpu_path_tracing_4 gpu_path_tracing_debug_4
+all: gpu_path_tracing_3 gpu_path_tracing_debug_3
+
 
 gpu_path_tracing: gpu_path_tracing.o
 	$(NVCC) $(NVCCFLAGS) $(GENCODE_FLAGS) -o gpu_path_tracing_60 gpu_path_tracing.o -ljpeg

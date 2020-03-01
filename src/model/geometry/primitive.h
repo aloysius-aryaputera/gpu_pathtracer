@@ -15,7 +15,6 @@ struct hit_record;
 class Primitive {
   private:
     Material *material;
-    BoundingBox *bounding_box;
 
   public:
     __host__ __device__ Primitive() {}
@@ -28,6 +27,8 @@ class Primitive {
     __device__ virtual BoundingBox* get_bounding_box() {
       return this -> bounding_box;
     }
+
+    BoundingBox *bounding_box;
 
 };
 
