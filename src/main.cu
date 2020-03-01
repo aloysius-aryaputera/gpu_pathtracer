@@ -559,12 +559,11 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  Node** node_list;
-  Leaf** leaf_list;
+  Node** node_list, **leaf_list;
   checkCudaErrors(cudaMallocManaged(
     (void **)&node_list, (num_triangles[0] - 1) * sizeof(Node *)));
   checkCudaErrors(cudaMallocManaged(
-    (void **)&leaf_list, num_triangles[0] * sizeof(Leaf *)));
+    (void **)&leaf_list, num_triangles[0] * sizeof(Node *)));
 
   start = clock();
   process = "Building leaves";
@@ -616,27 +615,37 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
+  start = clock();
+  process = "Check";
+  print_start_process(process, start);
+  check<<<blocks_world, threads_world>>>(
+    leaf_list,  node_list,  num_triangles[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
   size_t cell_geom_size = max_num_objects_per_cell * \
     n_cell_x[0] * n_cell_y[0] * n_cell_z[0] * sizeof(Primitive*);
   checkCudaErrors(cudaMallocManaged((void **)&my_cell_geom, cell_geom_size));
   dim3 blocks2(n_cell_x[0] / tx2 + 1, n_cell_y[0] / ty2 + 1, n_cell_z[0] / tz2 + 1);
   dim3 threads2(tx2, ty2, tz2);
 
-  start = clock();
-  process = "Building cell array";
-  print_start_process(process, start);
-  build_cell_array<<<blocks2, threads2>>>(my_grid, my_cell_geom);
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  print_end_process(process, start);
-
-  start = clock();
-  process = "Inserting objects into the grid";
-  print_start_process(process, start);
-  insert_objects<<<blocks2, threads2>>>(my_grid);
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  print_end_process(process, start);
+  // start = clock();
+  // process = "Building cell array";
+  // print_start_process(process, start);
+  // build_cell_array<<<blocks2, threads2>>>(my_grid, my_cell_geom);
+  // checkCudaErrors(cudaGetLastError());
+  // checkCudaErrors(cudaDeviceSynchronize());
+  // print_end_process(process, start);
+  //
+  // start = clock();
+  // process = "Inserting objects into the grid";
+  // print_start_process(process, start);
+  // insert_objects<<<blocks2, threads2>>>(my_grid);
+  // checkCudaErrors(cudaGetLastError());
+  // checkCudaErrors(cudaDeviceSynchronize());
+  // print_end_process(process, start);
 
   checkCudaErrors(cudaMallocManaged((void **)&my_scene, sizeof(Scene *)));
 
@@ -669,7 +678,7 @@ int main(int argc, char **argv) {
   render<<<blocks, threads>>>(
     image_output, my_scene, rand_state, pathtracing_sample_size,
     pathtracing_level, sky_emission, bg_height, bg_width,
-    bg_texture_r, bg_texture_g, bg_texture_b
+    bg_texture_r, bg_texture_g, bg_texture_b, node_list
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());

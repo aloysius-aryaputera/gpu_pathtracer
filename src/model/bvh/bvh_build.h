@@ -6,11 +6,27 @@
 #include "../geometry/primitive.h"
 #include "../grid/bounding_box.h"
 #include "../grid/grid.h"
+#include "../ray.h"
 
 class Node {
   public:
     __host__ __device__ Node() {
       this -> visited = false;
+      this -> is_leaf = false;
+      this -> idx = -30;
+    }
+    __device__ Node(int idx_) {
+      this -> visited = false;
+      this -> is_leaf = false;
+      this -> idx = idx_;
+    }
+    __device__ Primitive* get_object() {
+      return this -> object;
+    }
+    __device__ void assign_object(Primitive* object_) {
+      this -> object = object_;
+      this -> bounding_box = object_ -> get_bounding_box();
+      this -> is_leaf = true;
     }
     __device__ void set_left_child(Node* left_);
     __device__ void set_right_child(Node* right_);
@@ -18,28 +34,160 @@ class Node {
     __device__ void mark_visited();
 
     Node *left, *right, *parent;
-    bool visited;
+    bool visited, is_leaf;
     BoundingBox *bounding_box;
+    Primitive *object;
+    int idx;
 };
 
-class Leaf: public Node {
-  public:
-    __device__ Leaf(Primitive* object_) {
-      this -> object = object_;
+// class Leaf: public Node {
+//   public:
+//     __device__ Leaf(Primitive* object_) {
+//       this -> object = object_;
+//       this -> is_leaf = true;
+//       this -> idx = -1;
+//
+//       if (object_ -> get_bounding_box() == NULL) {
+//         printf("object has no bounding_box!\n");
+//       }
+//
+//       this -> bounding_box = object_ -> get_bounding_box();
+//
+//       if (this -> bounding_box == NULL) {
+//         printf("leaf has no bounding_box!\n");
+//       }
+//     }
+//
+//     __device__ void mark_leaf() {
+//       this -> is_leaf = true;
+//     }
+//
+//     __device__ void assign_object(Primitive* object_) {
+//       this -> object = object_;
+//     }
+//
+//     __device__ Primitive* get_object() {
+//       return this -> object;
+//     }
+//
+//     Primitive* object;
+//     bool is_leaf;
+// };
 
-      if (object_ -> get_bounding_box() == NULL) {
-        printf("object has no bounding_box!\n");
-      }
+__device__ bool traverse_bvh(Node* bvh_root, Ray ray, hit_record &rec);
 
-      this -> bounding_box = object_ -> get_bounding_box();
+__device__ bool traverse_bvh(Node* bvh_root, Ray ray, hit_record &rec) {
+  Node* stack[400];
+  // Node** stack_ptr = stack;
+  Node *child_l, *child_r;
+  bool intersection_l, intersection_r, traverse_l, traverse_r, hit = false;
+  bool intersection_found = false;
+  float t;
+  hit_record cur_rec;
+  int idx_stack_top = 0;
 
-      if (this -> bounding_box == NULL) {
-        printf("leaf has no bounding_box!\n");
+  rec.t = INFINITY;
+  stack[idx_stack_top] = nullptr;
+  idx_stack_top++;
+  // *stack_ptr++ = NULL;
+
+  Node *node = bvh_root;
+  do {
+    // if (node -> is_leaf) {
+    //   printf("the node is a leaf!\n");
+    // }
+    //
+    // if (node -> left == nullptr) {
+    //   printf("Node [%d] (located at stack[%d]) does not have left child!\n", node -> idx, idx_stack_top + 1);
+    // }
+    //
+    // if (node -> right == nullptr) {
+    //   printf("Node [%d] (located at stack[%d]) does not have right child!\n", node -> idx, idx_stack_top + 1);
+    // }
+
+    child_l = node -> left;
+    child_r = node -> right;
+
+    // if (child_l -> bounding_box == nullptr)
+    //   printf("left child does not have any bounding_box\n");
+    //
+    // if (child_r -> bounding_box == nullptr)
+    //   printf("right child does not have any bounding_box\n");
+
+    // if ()
+
+    intersection_l = child_l -> bounding_box -> is_intersection(ray, t);
+    intersection_r = child_r -> bounding_box -> is_intersection(ray, t);
+
+    if (intersection_l && child_l -> is_leaf) {
+      hit = child_l -> get_object() -> hit(ray, rec.t, cur_rec);
+      if (hit) {
+        rec = cur_rec;
+        intersection_found = true;
+        // if (cur_rec.object == nullptr)
+        //   printf("Fake original object!\n");
+        // if (rec.object == nullptr)
+        //   printf("Fake object!\n");
       }
     }
 
-    Primitive* object;
-};
+    if (intersection_r && child_r -> is_leaf) {
+      hit = child_r -> get_object() -> hit(ray, rec.t, cur_rec);
+      if (hit) {
+        rec = cur_rec;
+        intersection_found = true;
+        // if (cur_rec.object == nullptr)
+        //   printf("Fake original object!\n");
+        // if (rec.object == nullptr)
+        //   printf("Fake object!\n");
+      }
+    }
+
+    traverse_l = (intersection_l && !(child_l -> is_leaf));
+    traverse_r = (intersection_r && !(child_r -> is_leaf));
+
+    if (!traverse_l && !traverse_r) {
+      // node = *--stack_ptr;
+      idx_stack_top--;
+      node = stack[idx_stack_top];
+      //
+      // if (node != nullptr && node -> left == nullptr && !(node -> is_leaf)){
+      //   printf("node is a node, but it does not have left child.\n");
+      // }
+      //
+      // if (node != nullptr && node -> right == nullptr && !(node -> is_leaf)){
+      //   printf("node is a node, but it does not have right child.\n");
+      // }
+
+    } else {
+
+      if (traverse_l)
+        node = child_l;
+      else {
+        if (traverse_r)
+          node = child_r;  
+      }
+
+      if (traverse_l && traverse_r && !(child_r -> is_leaf)) {
+        // *stack_ptr++ = child_r;
+        stack[idx_stack_top] = child_r;
+
+        if (child_r -> left == nullptr && !(child_r -> is_leaf)){
+          printf("child_r is a node, but it does not have left child.\n");
+        }
+
+        if (child_r -> right == nullptr && !(child_r -> is_leaf)){
+          printf("child_r is a node, but it does not have right child.\n");
+        }
+
+        idx_stack_top++;
+      }
+    }
+
+  } while(idx_stack_top > 0 && idx_stack_top < 400 && node != nullptr);
+
+  return intersection_found;
+}
 
 __global__ void extract_morton_code_list(
   Primitive** object_list, unsigned int* morton_code_list, int num_objects
@@ -48,12 +196,12 @@ __global__ void extract_morton_code_list(
 __global__ void build_node_list(Node** node_list, int num_objects);
 
 __global__ void set_node_relationship(
-  Node** node_list, Leaf** leaf_list, unsigned int* morton_code_list,
+  Node** node_list, Node** leaf_list, unsigned int* morton_code_list,
   int num_objects
 );
 
 __global__ void build_leaf_list(
-  Leaf** leaf_list, Primitive **object_list, int num_objects
+  Node** leaf_list, Primitive **object_list, int num_objects
 );
 
 __global__ void compute_morton_code_batch(
@@ -90,17 +238,18 @@ __global__ void compute_morton_code_batch(
 }
 
 __global__ void build_leaf_list(
-  Leaf** leaf_list, Primitive **object_list, int num_triangles
+  Node** leaf_list, Primitive **object_list, int num_triangles
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_triangles) return;
-  leaf_list[idx] = new Leaf(object_list[idx]);
+  leaf_list[idx] = new Node(idx);
+  (leaf_list[idx]) -> assign_object(object_list[idx]);
 }
 
 __global__ void build_node_list(Node** node_list, int num_objects) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_objects - 1) return;
-  node_list[idx] = new Node();
+  node_list[idx] = new Node(idx);
 }
 
 __global__ void extract_morton_code_list(
@@ -113,7 +262,7 @@ __global__ void extract_morton_code_list(
 }
 
 __global__ void set_node_relationship(
-  Node** node_list, Leaf** leaf_list, unsigned int* morton_code_list,
+  Node** node_list, Node** leaf_list, unsigned int* morton_code_list,
   int num_objects
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -211,8 +360,42 @@ __global__ void set_node_relationship(
 
 }
 
+__global__ void check(Node** leaf_list, Node** node_list, int num_objects) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (idx < num_objects - 1) {
+    if (leaf_list[idx] -> bounding_box == nullptr) {
+      printf("leaf_list[%d] does not have bounding box\n", idx);
+    }
+    if (leaf_list[idx] -> object == nullptr) {
+      printf("leaf_list[%d] does not have object\n", idx);
+    }
+    if (node_list[idx] -> is_leaf) {
+      printf("node_list[%d] is a leaf\n", idx);
+    }
+    if (node_list[idx] -> bounding_box == nullptr) {
+      printf("node_list[%d] does not have bounding box\n", idx);
+    }
+    if (node_list[idx] -> left == nullptr) {
+      printf("node_list[%d] does not have left child\n", idx);
+    }
+    if (node_list[idx] -> right == nullptr) {
+      printf("node_list[%d] does not have right child\n", idx);
+    }
+  }
+
+  if (idx == num_objects - 1) {
+    if (leaf_list[idx] -> bounding_box == nullptr) {
+      printf("leaf_list[%d] does not have bounding box\n", idx);
+    }
+    if (leaf_list[idx] -> object == nullptr) {
+      printf("leaf_list[%d] does not have object\n", idx);
+    }
+  }
+}
+
 __global__ void compute_node_bounding_boxes(
-  Leaf** leaf_list, Node** node_list, int num_objects
+  Node** leaf_list, Node** node_list, int num_objects
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_objects) return;
@@ -220,7 +403,7 @@ __global__ void compute_node_bounding_boxes(
   Node* current_node = leaf_list[idx];
   float bb_x_min, bb_x_max, bb_y_min, bb_y_max, bb_z_min, bb_z_max;
 
-  if (current_node -> parent == NULL) {
+  if (current_node -> parent == nullptr) {
     printf("Leaf %d has no parent.\n", idx);
     return;
   }
@@ -229,8 +412,8 @@ __global__ void compute_node_bounding_boxes(
     current_node = current_node -> parent;
 
     if (
-      current_node -> left -> bounding_box == NULL ||
-      current_node -> right -> bounding_box == NULL
+      current_node -> left -> bounding_box == nullptr ||
+      current_node -> right -> bounding_box == nullptr
     )
       return;
 
@@ -239,9 +422,13 @@ __global__ void compute_node_bounding_boxes(
       current_node -> right -> bounding_box,
       bb_x_min, bb_x_max, bb_y_min, bb_y_max, bb_z_min, bb_z_max
     );
-    current_node -> bounding_box = new BoundingBox(
-      bb_x_min, bb_x_max, bb_y_min, bb_y_max, bb_z_min, bb_z_max
-    );
+    if (current_node -> bounding_box == nullptr) {
+      current_node -> bounding_box = new BoundingBox(
+        bb_x_min - SMALL_DOUBLE, bb_x_max + SMALL_DOUBLE,
+        bb_y_min - SMALL_DOUBLE, bb_y_max + SMALL_DOUBLE,
+        bb_z_min - SMALL_DOUBLE, bb_z_max + SMALL_DOUBLE
+      );
+    }
 
     if (current_node == node_list[0]) {
       printf("We have reached the root!\n");
