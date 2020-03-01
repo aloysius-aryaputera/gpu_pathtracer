@@ -8,7 +8,7 @@
 
 ![](images/20200110_dragon.jpg)
 
-![](images/20200228_aventador.jpg)
+![](images/20200301_aventador.jpg)
 
 ## Credits
 
