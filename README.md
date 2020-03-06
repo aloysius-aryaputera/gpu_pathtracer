@@ -2,19 +2,19 @@
 
 ![](images/20200227_f1.jpg)
 
-![](images/20200228_la_ferrari.png)
+![](images/20200306_cars.jpg)
 
-![](images/20200224_dragon.jpg)
+![](images/20200306_dragon.jpg)
 
 ![](images/20200110_dragon.jpg)
-
-![](images/20200301_aventador.jpg)
 
 ## Credits
 
 * LaFerrari model was by [mfaprodesign](https://free3d.com/user/mfaprodesign).
 * The Lamborghini Aventador and Bumble Bee models were by [ysup12](https://free3d.com/user/ysup12).
+* The Koenigsegg Jesco model was by [Steven Grey](https://sketchfab.com/Steven007).
 * The Ferrari SF70H model was by [Dil Afroze Ahmed](https://free3d.com/user/dil_afroze).
+* The gecko model was by [DigitalLife3D](https://sketchfab.com/DigitalLife3D).
 
 ## References
 

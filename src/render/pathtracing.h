@@ -105,7 +105,7 @@ __device__ vec3 _compute_color(
     } else {
       if (i < 1){
         return _get_sky_color(
-          vec3(1, 1, 1), ray.dir, bg_height, bg_width, bg_r, bg_g, bg_b);
+          sky_emission, ray.dir, bg_height, bg_width, bg_r, bg_g, bg_b);
       } else {
         light += _get_sky_color(
           sky_emission, ray.dir, bg_height, bg_width, bg_r, bg_g, bg_b);

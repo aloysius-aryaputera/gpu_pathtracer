@@ -18,21 +18,26 @@ __host__ void save_image(
 ) {
   printf("Saving an image of width %d and height %d.\n", width, height);
   std::ofstream ofs;
+  size_t pixel_index;
+  float r, g, b;
+  char ir, ig, ib;
   ofs.open(filename);
-  ofs << "P6\n" << width << " " << height << "\n255\n";
+  ofs << "P3\n" << width << " " << height << "\n255\n";
   for (int i = 0; i < height; i++) {
     for (int j = 0; j < width; j++) {
-      size_t pixel_index = i * width + j;
+      pixel_index = i * width + j;
 
-      float r = clamp(0, 1, sqrt(image[pixel_index].r()));
-      float g = clamp(0, 1, sqrt(image[pixel_index].g()));
-      float b = clamp(0, 1, sqrt(image[pixel_index].b()));
+      r = clamp(0, 1, sqrt(image[pixel_index].r()));
+      g = clamp(0, 1, sqrt(image[pixel_index].g()));
+      b = clamp(0, 1, sqrt(image[pixel_index].b()));
 
-      char ir = (char)(255 * r);
-      char ig = (char)(255 * g);
-      char ib = (char)(255 * b);
+      ir = (char)(255 * r);
+      ig = (char)(255 * g);
+      ib = (char)(255 * b);
 
-      ofs << ir << ig << ib;
+      // printf("r = %5.5f, g = %5.5f, b = %5.5f\n", r, g, b);
+
+      ofs << (int)(255 * r) << " " << (int)(255 * g) << " " << (int)(255 * b) << " ";
     }
   }
   ofs.close();
