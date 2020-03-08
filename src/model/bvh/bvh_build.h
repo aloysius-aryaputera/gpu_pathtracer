@@ -5,7 +5,6 @@
 #include "../../util/bvh_util.h"
 #include "../geometry/primitive.h"
 #include "../grid/bounding_box.h"
-#include "../grid/grid.h"
 #include "../ray.h"
 
 class Node {
@@ -40,45 +39,10 @@ class Node {
     int idx;
 };
 
-// class Leaf: public Node {
-//   public:
-//     __device__ Leaf(Primitive* object_) {
-//       this -> object = object_;
-//       this -> is_leaf = true;
-//       this -> idx = -1;
-//
-//       if (object_ -> get_bounding_box() == NULL) {
-//         printf("object has no bounding_box!\n");
-//       }
-//
-//       this -> bounding_box = object_ -> get_bounding_box();
-//
-//       if (this -> bounding_box == NULL) {
-//         printf("leaf has no bounding_box!\n");
-//       }
-//     }
-//
-//     __device__ void mark_leaf() {
-//       this -> is_leaf = true;
-//     }
-//
-//     __device__ void assign_object(Primitive* object_) {
-//       this -> object = object_;
-//     }
-//
-//     __device__ Primitive* get_object() {
-//       return this -> object;
-//     }
-//
-//     Primitive* object;
-//     bool is_leaf;
-// };
-
 __device__ bool traverse_bvh(Node* bvh_root, Ray ray, hit_record &rec);
 
 __device__ bool traverse_bvh(Node* bvh_root, Ray ray, hit_record &rec) {
   Node* stack[400];
-  // Node** stack_ptr = stack;
   Node *child_l, *child_r;
   bool intersection_l, intersection_r, traverse_l, traverse_r, hit = false;
   bool intersection_found = false;
@@ -89,32 +53,12 @@ __device__ bool traverse_bvh(Node* bvh_root, Ray ray, hit_record &rec) {
   rec.t = INFINITY;
   stack[idx_stack_top] = nullptr;
   idx_stack_top++;
-  // *stack_ptr++ = NULL;
 
   Node *node = bvh_root;
   do {
-    // if (node -> is_leaf) {
-    //   printf("the node is a leaf!\n");
-    // }
-    //
-    // if (node -> left == nullptr) {
-    //   printf("Node [%d] (located at stack[%d]) does not have left child!\n", node -> idx, idx_stack_top + 1);
-    // }
-    //
-    // if (node -> right == nullptr) {
-    //   printf("Node [%d] (located at stack[%d]) does not have right child!\n", node -> idx, idx_stack_top + 1);
-    // }
 
     child_l = node -> left;
     child_r = node -> right;
-
-    // if (child_l -> bounding_box == nullptr)
-    //   printf("left child does not have any bounding_box\n");
-    //
-    // if (child_r -> bounding_box == nullptr)
-    //   printf("right child does not have any bounding_box\n");
-
-    // if ()
 
     intersection_l = child_l -> bounding_box -> is_intersection(ray, t);
     intersection_r = child_r -> bounding_box -> is_intersection(ray, t);
@@ -124,10 +68,6 @@ __device__ bool traverse_bvh(Node* bvh_root, Ray ray, hit_record &rec) {
       if (hit) {
         rec = cur_rec;
         intersection_found = true;
-        // if (cur_rec.object == nullptr)
-        //   printf("Fake original object!\n");
-        // if (rec.object == nullptr)
-        //   printf("Fake object!\n");
       }
     }
 
@@ -136,10 +76,6 @@ __device__ bool traverse_bvh(Node* bvh_root, Ray ray, hit_record &rec) {
       if (hit) {
         rec = cur_rec;
         intersection_found = true;
-        // if (cur_rec.object == nullptr)
-        //   printf("Fake original object!\n");
-        // if (rec.object == nullptr)
-        //   printf("Fake object!\n");
       }
     }
 
@@ -147,17 +83,8 @@ __device__ bool traverse_bvh(Node* bvh_root, Ray ray, hit_record &rec) {
     traverse_r = (intersection_r && !(child_r -> is_leaf));
 
     if (!traverse_l && !traverse_r) {
-      // node = *--stack_ptr;
       idx_stack_top--;
       node = stack[idx_stack_top];
-      //
-      // if (node != nullptr && node -> left == nullptr && !(node -> is_leaf)){
-      //   printf("node is a node, but it does not have left child.\n");
-      // }
-      //
-      // if (node != nullptr && node -> right == nullptr && !(node -> is_leaf)){
-      //   printf("node is a node, but it does not have right child.\n");
-      // }
 
     } else {
 
@@ -169,7 +96,6 @@ __device__ bool traverse_bvh(Node* bvh_root, Ray ray, hit_record &rec) {
       }
 
       if (traverse_l && traverse_r && !(child_r -> is_leaf)) {
-        // *stack_ptr++ = child_r;
         stack[idx_stack_top] = child_r;
 
         if (child_r -> left == nullptr && !(child_r -> is_leaf)){

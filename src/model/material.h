@@ -58,6 +58,7 @@ class Material {
       vec3 ambient_, vec3 diffuse_, vec3 specular_, vec3 emission_,
       vec3 transmission_,
       float t_r_, float n_s_, float n_i_,
+      int priority_,
       int texture_height_diffuse_,
       int texture_width_diffuse_,
       float *texture_r_diffuse_,
@@ -80,6 +81,7 @@ class Material {
     );
 
     vec3 emission;
+    int priority;
 };
 
 __device__ reflection_record Material::_refract(
@@ -148,6 +150,7 @@ __host__ __device__ Material::Material(
   float t_r_,
   float n_s_,
   float n_i_,
+  int priority_,
   int texture_height_diffuse_,
   int texture_width_diffuse_,
   float *texture_r_diffuse_,
@@ -172,6 +175,7 @@ __host__ __device__ Material::Material(
   this -> n_s = n_s_;
   this -> n_i = n_i_;
   this -> t_r = t_r_;
+  this -> priority = priority_;
 
   this -> texture_height_diffuse = texture_height_diffuse_;
   this -> texture_width_diffuse = texture_width_diffuse_;

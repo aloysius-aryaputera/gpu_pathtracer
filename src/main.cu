@@ -150,7 +150,7 @@ int main(int argc, char **argv) {
   float *material_image_r, *material_image_g, *material_image_b;
   int *num_materials;
   int *material_image_height_diffuse, *material_image_width_diffuse, \
-    *material_image_offset_diffuse;
+    *material_image_offset_diffuse, *material_priority;
   int *material_image_height_specular, *material_image_width_specular, \
     *material_image_offset_specular;
   int *material_image_height_n_s, *material_image_width_n_s, \
@@ -194,30 +194,6 @@ int main(int argc, char **argv) {
 
   checkCudaErrors(cudaMallocManaged((void **)&num_materials, sizeof(int)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&ka_x, max_num_materials * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&ka_y, max_num_materials * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&ka_z, max_num_materials * sizeof(float)));
-
-  checkCudaErrors(cudaMallocManaged((void **)&kd_x, max_num_materials * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&kd_y, max_num_materials * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&kd_z, max_num_materials * sizeof(float)));
-
-  checkCudaErrors(cudaMallocManaged((void **)&ks_x, max_num_materials * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&ks_y, max_num_materials * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&ks_z, max_num_materials * sizeof(float)));
-
-  checkCudaErrors(cudaMallocManaged((void **)&ke_x, max_num_materials * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&ke_y, max_num_materials * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&ke_z, max_num_materials * sizeof(float)));
-
-  checkCudaErrors(cudaMallocManaged((void **)&tf_x, max_num_materials * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&tf_y, max_num_materials * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&tf_z, max_num_materials * sizeof(float)));
-
-  checkCudaErrors(cudaMallocManaged((void **)&t_r, max_num_materials * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&n_s, max_num_materials * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&n_i, max_num_materials * sizeof(float)));
-
   start = clock();
   process = "Extracting material file names";
   print_start_process(process, start);
@@ -247,9 +223,12 @@ int main(int argc, char **argv) {
   );
   print_end_process(process, start);
 
-  checkCudaErrors(cudaMallocManaged((void **)&material_image_r, texture_length * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&material_image_g, texture_length * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&material_image_b, texture_length * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_r, texture_length * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_g, texture_length * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_b, texture_length * sizeof(float)));
 
   start = clock();
   process = "Extracting textures";
@@ -273,11 +252,56 @@ int main(int argc, char **argv) {
   print_end_process(process, start);
 
   checkCudaErrors(cudaMallocManaged(
+    (void **)&ka_x, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&ka_y, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&ka_z, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&kd_x, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&kd_y, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&kd_z, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&ks_x, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&ks_y, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&ks_z, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&ke_x, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&ke_y, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&ke_z, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&tf_x, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&tf_y, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&tf_z, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&t_r, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&n_s, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&n_i, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged(
     (void **)&material_image_height_diffuse, max_num_materials * sizeof(int)));
   checkCudaErrors(cudaMallocManaged(
     (void **)&material_image_width_diffuse, max_num_materials * sizeof(int)));
   checkCudaErrors(cudaMallocManaged(
     (void **)&material_image_offset_diffuse, max_num_materials * sizeof(int)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_priority, max_num_materials * sizeof(int)));
 
   checkCudaErrors(cudaMallocManaged(
     (void **)&material_image_height_specular,
@@ -315,6 +339,7 @@ int main(int argc, char **argv) {
     ke_x, ke_y, ke_z,
     tf_x, tf_y, tf_z,
     t_r, n_s, n_i,
+    material_priority,
     material_image_height_diffuse, material_image_width_diffuse,
     material_image_offset_diffuse,
     material_image_height_specular, material_image_width_specular,
@@ -409,6 +434,7 @@ int main(int argc, char **argv) {
     ke_x, ke_y, ke_z,
     tf_x, tf_y, tf_z,
     t_r, n_s, n_i,
+    material_priority,
     material_image_height_diffuse,
     material_image_width_diffuse,
     material_image_offset_diffuse,
