@@ -8,9 +8,11 @@
 #include "../model/camera.h"
 #include "../model/cartesian_system.h"
 #include "../model/geometry/triangle.h"
+#include "../model/material.h"
 #include "../model/ray.h"
 #include "../param.h"
 #include "../util/vector_util.h"
+#include "material_list_operations.h"
 
 __global__
 void render(
@@ -57,11 +59,17 @@ __device__ vec3 _compute_color(
   Node **node_list
 ) {
   hit_record cur_rec;
-  bool hit, reflected_or_refracted;
+  bool hit, reflected = false, refracted = false, false_hit = false;
+  bool entering = false, exiting = false;
   vec3 mask = vec3(1, 1, 1), light = vec3(0, 0, 0), light_tmp = vec3(0, 0, 0);
   vec3 v3_rand, v3_rand_world;
   Ray ray = ray_init;
   reflection_record ref;
+  Material* material_list[400];
+
+  int material_list_length = 0;
+
+  add_new_material(material_list, material_list_length, nullptr);
 
   cur_rec.object = nullptr;
 
@@ -73,13 +81,36 @@ __device__ vec3 _compute_color(
       if (cur_rec.object == nullptr)
         printf("cur_rec.object = NULL\n");
 
-      reflected_or_refracted = cur_rec.object -> get_material(
-      ) -> is_reflected_or_refracted(
+      cur_rec.object -> get_material(
+      ) -> check_if_reflected_or_refracted(
         cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
+        reflected, false_hit, refracted,
+        entering, exiting,
+        material_list, material_list_length,
         ref, rand_state
       );
 
-      if (reflected_or_refracted) {
+      if (false_hit && entering)
+        add_new_material(
+          material_list, material_list_length, cur_rec.object -> get_material()
+        );
+
+      if (false_hit && exiting)
+        remove_a_material(
+          material_list, material_list_length, cur_rec.object -> get_material()
+        );
+
+      if (!false_hit && refracted && entering)
+        add_new_material(
+          material_list, material_list_length, cur_rec.object -> get_material()
+        );
+
+      if (!false_hit && refracted && exiting)
+        remove_a_material(
+          material_list, material_list_length, cur_rec.object -> get_material()
+        );
+
+      if (reflected || refracted) {
 
         ray = ref.ray;
         light_tmp = cur_rec.object -> get_material() -> emission;
