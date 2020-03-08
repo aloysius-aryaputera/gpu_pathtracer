@@ -205,7 +205,7 @@ __global__ void build_leaf_list(
 );
 
 __global__ void compute_morton_code_batch(
-  Primitive **object_array, Grid **grid, int num_triangles
+  Primitive **object_array, BoundingBox **world_bounding_box, int num_triangles
 );
 
 __device__ void Node::mark_visited() {
@@ -225,14 +225,14 @@ __device__ void Node::set_parent(Node* parent_) {
 }
 
 __global__ void compute_morton_code_batch(
-  Primitive **object_array, Grid **grid, int num_triangles
+  Primitive **object_array, BoundingBox **world_bounding_box, int num_triangles
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (idx >= num_triangles) return;
 
   object_array[idx] -> get_bounding_box() -> compute_normalized_center(
-    grid[0] -> world_bounding_box
+    world_bounding_box[0]
   );
   object_array[idx] -> get_bounding_box() -> compute_bb_morton_3d();
 }

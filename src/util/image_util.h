@@ -20,7 +20,7 @@ __host__ void save_image(
   std::ofstream ofs;
   size_t pixel_index;
   float r, g, b;
-  char ir, ig, ib;
+
   ofs.open(filename);
   ofs << "P3\n" << width << " " << height << "\n255\n";
   for (int i = 0; i < height; i++) {
@@ -30,12 +30,6 @@ __host__ void save_image(
       r = clamp(0, 1, sqrt(image[pixel_index].r()));
       g = clamp(0, 1, sqrt(image[pixel_index].g()));
       b = clamp(0, 1, sqrt(image[pixel_index].b()));
-
-      ir = (char)(255 * r);
-      ig = (char)(255 * g);
-      ib = (char)(255 * b);
-
-      // printf("r = %5.5f, g = %5.5f, b = %5.5f\n", r, g, b);
 
       ofs << (int)(255 * r) << " " << (int)(255 * g) << " " << (int)(255 * b) << " ";
     }
