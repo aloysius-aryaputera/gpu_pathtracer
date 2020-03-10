@@ -8,21 +8,22 @@
 #include "../model/camera.h"
 #include "../model/cartesian_system.h"
 #include "../model/geometry/triangle.h"
+#include "../model/material.h"
 #include "../model/ray.h"
-#include "../model/scene.h"
 #include "../param.h"
 #include "../util/vector_util.h"
+#include "material_list_operations.h"
 
 __global__
 void render(
-  vec3 *fb, Scene **scene, curandState *rand_state, int sample_size, int level,
+  vec3 *fb, Camera **camera, curandState *rand_state, int sample_size, int level,
   vec3 sky_emission, int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
   Node **node_list
 );
 
 __device__ vec3 _compute_color(
-  hit_record rec, int level, Scene **scene, vec3 sky_emission,
+  hit_record rec, int level, vec3 sky_emission,
   int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
   curandState *rand_state,
@@ -51,38 +52,65 @@ __device__ vec3 _get_sky_color(
 }
 
 __device__ vec3 _compute_color(
-  Ray ray_init, int level, Scene **scene, vec3 sky_emission,
+  Ray ray_init, int level, vec3 sky_emission,
   int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
   curandState *rand_state,
   Node **node_list
 ) {
   hit_record cur_rec;
-  bool hit, reflected_or_refracted;
+  bool hit, reflected = false, refracted = false, false_hit = false;
+  bool entering = false, exiting = false;
   vec3 mask = vec3(1, 1, 1), light = vec3(0, 0, 0), light_tmp = vec3(0, 0, 0);
   vec3 v3_rand, v3_rand_world;
   Ray ray = ray_init;
   reflection_record ref;
+  Material* material_list[400];
+
+  int material_list_length = 0;
+
+  add_new_material(material_list, material_list_length, nullptr);
 
   cur_rec.object = nullptr;
 
   for (int i = 0; i < level; i++) {
 
-    // Change this with the BVH traversal
-    // hit = scene[0] -> grid -> do_traversal(ray, cur_rec);
     hit = traverse_bvh(node_list[0], ray, cur_rec);
 
     if (hit) {
       if (cur_rec.object == nullptr)
         printf("cur_rec.object = NULL\n");
 
-      reflected_or_refracted = cur_rec.object -> get_material(
-      ) -> is_reflected_or_refracted(
+      cur_rec.object -> get_material(
+      ) -> check_if_reflected_or_refracted(
         cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
+        reflected, false_hit, refracted,
+        entering, exiting,
+        material_list, material_list_length,
         ref, rand_state
       );
 
-      if (reflected_or_refracted) {
+      if (false_hit && entering)
+        add_new_material(
+          material_list, material_list_length, cur_rec.object -> get_material()
+        );
+
+      if (false_hit && exiting)
+        remove_a_material(
+          material_list, material_list_length, cur_rec.object -> get_material()
+        );
+
+      if (!false_hit && refracted && entering)
+        add_new_material(
+          material_list, material_list_length, cur_rec.object -> get_material()
+        );
+
+      if (!false_hit && refracted && exiting)
+        remove_a_material(
+          material_list, material_list_length, cur_rec.object -> get_material()
+        );
+
+      if (reflected || refracted) {
 
         ray = ref.ray;
         light_tmp = cur_rec.object -> get_material() -> emission;
@@ -119,7 +147,7 @@ __device__ vec3 _compute_color(
 
 __global__
 void render(
-  vec3 *fb, Scene **scene, curandState *rand_state, int sample_size, int level,
+  vec3 *fb, Camera **camera, curandState *rand_state, int sample_size, int level,
   vec3 sky_emission, int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
   Node **node_list
@@ -132,19 +160,19 @@ void render(
   vec3 color = vec3(0, 0, 0), color_tmp;
 
   if(
-    (j >= scene[0] -> camera -> width) || (i >= scene[0] -> camera -> height)
+    (j >= camera[0] -> width) || (i >= camera[0] -> height)
   ) {
     return;
   }
 
-  int pixel_index = i * (scene[0] -> camera -> width) + j;
+  int pixel_index = i * (camera[0] -> width) + j;
   curandState local_rand_state = rand_state[pixel_index];
-  Ray camera_ray = scene[0] -> camera -> compute_ray(
+  Ray camera_ray = camera[0] -> compute_ray(
     i + .5, j + .5, &local_rand_state), ray;
 
   for(int idx = 0; idx < sample_size; idx++) {
     color_tmp = _compute_color(
-      camera_ray, level, scene, sky_emission, bg_height, bg_width, bg_r, bg_g,
+      camera_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
       bg_b, &local_rand_state, node_list);
     color_tmp = de_nan(color_tmp);
     color += color_tmp;
@@ -154,11 +182,11 @@ void render(
   rand_state[pixel_index] = local_rand_state;
   fb[pixel_index] = color;
 
-  if (j == 0 && (i % (scene[0] -> camera -> height / 100) == 0)) {
+  if (j == 0 && (i % (camera[0] -> height / 100) == 0)) {
     printf(
       "Progress = %5.5f %%\n",
-      100.0 * i * scene[0] -> camera -> width / (
-        scene[0] -> camera -> height * scene[0] -> camera -> width)
+      100.0 * i * camera[0] -> width / (
+        camera[0] -> height * camera[0] -> width)
     );
   }
 
