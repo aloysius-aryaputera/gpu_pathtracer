@@ -32,6 +32,8 @@ void _extract_single_material_data(
   int *material_image_offset_diffuse,
   int *material_image_height_specular, int *material_image_width_specular,
   int *material_image_offset_specular,
+  int *material_image_height_emission, int *material_image_width_emission,
+  int *material_image_offset_emission,
   int *material_image_height_n_s, int *material_image_width_n_s,
   int *material_image_offset_n_s,
   int *num_materials,
@@ -70,6 +72,8 @@ void extract_material_data(
   int *material_image_offset_diffuse,
   int *material_image_height_specular, int *material_image_width_specular,
   int *material_image_offset_specular,
+  int *material_image_height_emission, int *material_image_width_emission,
+  int *material_image_offset_emission,
   int *material_image_height_n_s, int *material_image_width_n_s,
   int *material_image_offset_n_s,
   int *num_materials,
@@ -209,6 +213,8 @@ void _extract_single_material_data(
   int *material_image_offset_diffuse,
   int *material_image_height_specular, int *material_image_width_specular,
   int *material_image_offset_specular,
+  int *material_image_height_emission, int *material_image_width_emission,
+  int *material_image_offset_emission,
   int *material_image_height_n_s, int *material_image_width_n_s,
   int *material_image_offset_n_s,
   int *num_materials,
@@ -256,6 +262,10 @@ void _extract_single_material_data(
     *(material_image_height_specular + idx) = texture_height_array[0];
     *(material_image_width_specular + idx) = texture_width_array[0];
     *(material_image_offset_specular + idx) = texture_offset_array[0];
+
+    *(material_image_height_emission + idx) = texture_height_array[0];
+    *(material_image_width_emission + idx) = texture_width_array[0];
+    *(material_image_offset_emission + idx) = texture_offset_array[0];
 
     *(material_image_height_n_s + idx) = texture_height_array[0];
     *(material_image_width_n_s + idx) = texture_width_array[0];
@@ -363,6 +373,15 @@ void _extract_single_material_data(
           *(material_image_width_specular + idx) = texture_width_array[result.second];
           *(material_image_offset_specular + idx) = texture_offset_array[result.second];
 
+        } else if (chunks[0] == "map_Ke") {
+          texture_file_name = chunks[1];
+          std::pair<bool, int> result = find_in_vector<std::string>(
+            texture_file_name_array, texture_file_name);
+
+          *(material_image_height_emission + idx) = texture_height_array[result.second];
+          *(material_image_width_emission + idx) = texture_width_array[result.second];
+          *(material_image_offset_emission + idx) = texture_offset_array[result.second];
+
         } else if (chunks[0] == "map_Ns") {
           texture_file_name = chunks[1];
           std::pair<bool, int> result = find_in_vector<std::string>(
@@ -399,6 +418,8 @@ void extract_material_data(
   int *material_image_offset_diffuse,
   int *material_image_height_specular, int *material_image_width_specular,
   int *material_image_offset_specular,
+  int *material_image_height_emission, int *material_image_width_emission,
+  int *material_image_offset_emission,
   int *material_image_height_n_s, int *material_image_width_n_s,
   int *material_image_offset_n_s,
   int *num_materials,
@@ -423,6 +444,8 @@ void extract_material_data(
       material_image_offset_diffuse,
       material_image_height_specular, material_image_width_specular,
       material_image_offset_specular,
+      material_image_height_emission, material_image_width_emission,
+      material_image_offset_emission,
       material_image_height_n_s, material_image_width_n_s,
       material_image_offset_n_s,
       num_materials,

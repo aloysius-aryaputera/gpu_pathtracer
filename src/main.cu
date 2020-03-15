@@ -155,6 +155,8 @@ int main(int argc, char **argv) {
     *material_image_offset_specular;
   int *material_image_height_n_s, *material_image_width_n_s, \
     *material_image_offset_n_s;
+  int *material_image_height_emission, *material_image_width_emission, \
+    *material_image_offset_emission;
 
   float *bg_texture_r, *bg_texture_g, *bg_texture_b;
   int bg_height, bg_width;
@@ -294,11 +296,14 @@ int main(int argc, char **argv) {
     (void **)&n_i, max_num_materials * sizeof(float)));
 
   checkCudaErrors(cudaMallocManaged(
-    (void **)&material_image_height_diffuse, max_num_materials * sizeof(int)));
+    (void **)&material_image_height_diffuse,
+    max_num_materials * sizeof(int)));
   checkCudaErrors(cudaMallocManaged(
-    (void **)&material_image_width_diffuse, max_num_materials * sizeof(int)));
+    (void **)&material_image_width_diffuse,
+    max_num_materials * sizeof(int)));
   checkCudaErrors(cudaMallocManaged(
-    (void **)&material_image_offset_diffuse, max_num_materials * sizeof(int)));
+    (void **)&material_image_offset_diffuse,
+    max_num_materials * sizeof(int)));
 
   checkCudaErrors(cudaMallocManaged(
     (void **)&material_priority, max_num_materials * sizeof(int)));
@@ -323,6 +328,16 @@ int main(int argc, char **argv) {
     (void **)&material_image_offset_n_s,
     max_num_materials * sizeof(int)));
 
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_height_emission,
+    max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_width_emission,
+    max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_offset_emission,
+    max_num_materials * sizeof(int)));
+
   start = clock();
   process = "Extracting material data";
   print_start_process(process, start);
@@ -344,6 +359,8 @@ int main(int argc, char **argv) {
     material_image_offset_diffuse,
     material_image_height_specular, material_image_width_specular,
     material_image_offset_specular,
+    material_image_height_emission, material_image_width_emission,
+    material_image_offset_emission,
     material_image_height_n_s, material_image_width_n_s,
     material_image_offset_n_s,
     num_materials,
@@ -441,6 +458,9 @@ int main(int argc, char **argv) {
     material_image_height_specular,
     material_image_width_specular,
     material_image_offset_specular,
+    material_image_height_emission,
+    material_image_width_emission,
+    material_image_offset_emission,
     material_image_height_n_s,
     material_image_width_n_s,
     material_image_offset_n_s,

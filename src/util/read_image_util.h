@@ -153,7 +153,7 @@ void _extract_image_resource_requirement_single_mtl(
         std::vector <std::string> chunks = split(str, ' ');
         if (
           chunks[0] == "map_Kd" || chunks[0] == "map_Ks" ||
-          chunks[0] == "map_Ns"
+          chunks[0] == "map_Ns" || chunks[0] == "map_Ke"
         ) {
           std::pair<bool, int> result = find_in_vector<std::string>(
             image_file_name, chunks[1]);

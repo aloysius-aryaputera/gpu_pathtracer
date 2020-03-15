@@ -122,7 +122,7 @@ __device__ vec3 _compute_color(
           return vec3(0, 0, 0);
         }
 
-        if (light.r() >= 1 && light.g() >= 1 && light.b() >= 1) {
+        if (light.r() > 0 && light.g() > 0 && light.b() > 0) {
           return mask * light;
         }
 
