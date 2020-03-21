@@ -159,14 +159,6 @@ __global__ void create_world(
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   int idx = i;
 
-  // int i = threadIdx.x + blockIdx.x * blockDim.x;
-  // int j = threadIdx.y + blockIdx.y * blockDim.y;
-  // int k = threadIdx.z + blockIdx.z * blockDim.z;
-
-  // int factor = int(powf(num_triangles[0], 1.0 / 2) + 1);
-
-  // int idx = k + j * factor;
-
   if (idx >= num_triangles[0]) return;
 
   *(geom_array + idx) = new Triangle(
