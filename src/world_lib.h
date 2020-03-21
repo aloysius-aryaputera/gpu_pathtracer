@@ -130,6 +130,11 @@ __global__ void create_material(
     material_image_r + material_image_offset_specular[i],
     material_image_g + material_image_offset_specular[i],
     material_image_b + material_image_offset_specular[i],
+    material_image_height_emission[i],
+    material_image_width_emission[i],
+    material_image_r + material_image_offset_emission[i],
+    material_image_g + material_image_offset_emission[i],
+    material_image_b + material_image_offset_emission[i],
     material_image_height_n_s[i],
     material_image_width_n_s[i],
     material_image_r + material_image_offset_n_s[i],
@@ -153,6 +158,14 @@ __global__ void create_world(
 ) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   int idx = i;
+
+  // int i = threadIdx.x + blockIdx.x * blockDim.x;
+  // int j = threadIdx.y + blockIdx.y * blockDim.y;
+  // int k = threadIdx.z + blockIdx.z * blockDim.z;
+
+  // int factor = int(powf(num_triangles[0], 1.0 / 2) + 1);
+
+  // int idx = k + j * factor;
 
   if (idx >= num_triangles[0]) return;
 

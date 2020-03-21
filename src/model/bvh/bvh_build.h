@@ -176,6 +176,7 @@ __global__ void build_node_list(Node** node_list, int num_objects) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_objects - 1) return;
   node_list[idx] = new Node(idx);
+  (node_list[idx]) -> bounding_box = new BoundingBox();
 }
 
 __global__ void extract_morton_code_list(
@@ -324,6 +325,15 @@ __global__ void compute_node_bounding_boxes(
   Node** leaf_list, Node** node_list, int num_objects
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
+
+  // int i = threadIdx.x + blockIdx.x * blockDim.x;
+  // int j = threadIdx.y + blockIdx.y * blockDim.y;
+  // int k = threadIdx.z + blockIdx.z * blockDim.z;
+
+  // int factor = int(powf(num_objects, 1.0 / 2) + 1);
+
+  // int idx = k + j * factor;
+
   if (idx >= num_objects) return;
 
   Node* current_node = leaf_list[idx];
@@ -338,8 +348,8 @@ __global__ void compute_node_bounding_boxes(
     current_node = current_node -> parent;
 
     if (
-      current_node -> left -> bounding_box == nullptr ||
-      current_node -> right -> bounding_box == nullptr
+      !(current_node -> left -> bounding_box -> initialized) ||
+      !(current_node -> right -> bounding_box -> initialized)
     )
       return;
 
@@ -348,8 +358,10 @@ __global__ void compute_node_bounding_boxes(
       current_node -> right -> bounding_box,
       bb_x_min, bb_x_max, bb_y_min, bb_y_max, bb_z_min, bb_z_max
     );
-    if (current_node -> bounding_box == nullptr) {
-      current_node -> bounding_box = new BoundingBox(
+    // if (current_node -> bounding_box == nullptr) {
+    if (!(current_node -> bounding_box -> initialized)) {
+      // current_node -> bounding_box = new BoundingBox(
+      current_node -> bounding_box -> initialize(
         bb_x_min, bb_x_max,
         bb_y_min, bb_y_max,
         bb_z_min, bb_z_max

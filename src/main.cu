@@ -503,8 +503,8 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Creating the world";
   print_start_process(process, start);
-  dim3 blocks_world(num_triangles[0] / 256 + 1);
-  dim3 threads_world(256);
+  dim3 blocks_world(num_triangles[0] / 1024 + 1);
+  dim3 threads_world(1024);
   create_world<<<blocks_world, threads_world>>>(
     my_geom, my_material,
     x, y, z,

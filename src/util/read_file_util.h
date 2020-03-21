@@ -320,6 +320,10 @@ void _extract_single_material_data(
           *(material_image_width_specular + idx) = texture_width_array[0];
           *(material_image_offset_specular + idx) = texture_offset_array[0];
 
+          *(material_image_height_emission + idx) = texture_height_array[0];
+          *(material_image_width_emission + idx) = texture_width_array[0];
+          *(material_image_offset_emission + idx) = texture_offset_array[0];
+
           *(material_image_height_n_s + idx) = texture_height_array[0];
           *(material_image_width_n_s + idx) = texture_width_array[0];
           *(material_image_offset_n_s + idx) = texture_offset_array[0];

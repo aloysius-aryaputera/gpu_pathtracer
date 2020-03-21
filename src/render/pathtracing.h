@@ -113,7 +113,9 @@ __device__ vec3 _compute_color(
       if (reflected || refracted) {
 
         ray = ref.ray;
-        light_tmp = cur_rec.object -> get_material() -> emission;
+        light_tmp = cur_rec.object -> get_material() -> get_texture_emission(
+          cur_rec.uv_vector
+        );
 
         light += light_tmp;
         mask *= (1.0) * ref.filter;
