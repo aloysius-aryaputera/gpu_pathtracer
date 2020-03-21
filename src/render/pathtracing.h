@@ -113,7 +113,9 @@ __device__ vec3 _compute_color(
       if (reflected || refracted) {
 
         ray = ref.ray;
-        light_tmp = cur_rec.object -> get_material() -> emission;
+        light_tmp = cur_rec.object -> get_material() -> get_texture_emission(
+          cur_rec.uv_vector
+        );
 
         light += light_tmp;
         mask *= (1.0) * ref.filter;
@@ -122,7 +124,7 @@ __device__ vec3 _compute_color(
           return vec3(0, 0, 0);
         }
 
-        if (light.r() >= 1 && light.g() >= 1 && light.b() >= 1) {
+        if (light.r() > 0 && light.g() > 0 && light.b() > 0) {
           return mask * light;
         }
 

@@ -51,10 +51,12 @@ class Material {
     vec3 ambient, diffuse, specular, transmission;
     int texture_width_diffuse, texture_height_diffuse;
     int texture_width_specular, texture_height_specular;
+    int texture_width_emission, texture_height_emission;
     int texture_width_n_s, texture_height_n_s;
     float t_r, n_s;
     float *texture_r_diffuse, *texture_g_diffuse, *texture_b_diffuse;
     float *texture_r_specular, *texture_g_specular, *texture_b_specular;
+    float *texture_r_emission, *texture_g_emission, *texture_b_emission;
     float *texture_r_n_s, *texture_g_n_s, *texture_b_n_s;
 
   public:
@@ -74,6 +76,11 @@ class Material {
       float *texture_r_specular_,
       float *texture_g_specular_,
       float *texture_b_specular_,
+      int texture_height_emission_,
+      int texture_width_emission_,
+      float *texture_r_emission_,
+      float *texture_g_emission_,
+      float *texture_b_emission_,
       int texture_height_n_s_,
       int texture_width_n_s_,
       float *texture_r_n_s_,
@@ -87,6 +94,7 @@ class Material {
       Material **material_list, int material_list_length,
       reflection_record &ref, curandState *rand_state
     );
+    __device__ vec3 get_texture_emission(vec3 uv_vector);
 
     vec3 emission;
     int priority;
@@ -290,6 +298,11 @@ __host__ __device__ Material::Material(
   float *texture_r_specular_,
   float *texture_g_specular_,
   float *texture_b_specular_,
+  int texture_height_emission_,
+  int texture_width_emission_,
+  float *texture_r_emission_,
+  float *texture_g_emission_,
+  float *texture_b_emission_,
   int texture_height_n_s_,
   int texture_width_n_s_,
   float *texture_r_n_s_,
@@ -317,6 +330,12 @@ __host__ __device__ Material::Material(
   this -> texture_r_specular = texture_r_specular_;
   this -> texture_g_specular = texture_g_specular_;
   this -> texture_b_specular = texture_b_specular_;
+
+  this -> texture_height_emission = texture_height_emission_;
+  this -> texture_width_emission = texture_width_emission_;
+  this -> texture_r_emission = texture_r_emission_;
+  this -> texture_g_emission = texture_g_emission_;
+  this -> texture_b_emission = texture_b_emission_;
 
   this -> texture_height_n_s = texture_height_n_s_;
   this -> texture_width_n_s = texture_width_n_s_;
@@ -416,6 +435,15 @@ __device__ vec3 Material::_get_texture(
 
   return selected_texture * filter;
 }
+
+__device__ vec3 Material::get_texture_emission(vec3 uv_vector) {
+  return this -> _get_texture(
+    uv_vector, this -> emission, this -> texture_r_emission,
+    this -> texture_g_emission, this -> texture_b_emission,
+    this -> texture_height_emission, this -> texture_width_emission
+  );
+}
+
 
 __device__ vec3 Material::_get_texture_diffuse(vec3 uv_vector) {
   return this -> _get_texture(
