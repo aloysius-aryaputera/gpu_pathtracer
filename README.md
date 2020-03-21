@@ -19,9 +19,13 @@
 * The Koenigsegg Jesco model was by [Steven Grey](https://sketchfab.com/Steven007).
 * The Ferrari SF70H model was by [Dil Afroze Ahmed](https://free3d.com/user/dil_afroze).
 * The gecko model was by [DigitalLife3D](https://sketchfab.com/DigitalLife3D).
-* The glass of whiskey 1 was by [Pedro Caio](https://free3d.com/user/pedrocaio442).
-* The glass of whiskey 2 was by [pledg](https://www.cgtrader.com/pledg).
-* The royal ascot tumbler duo was by [jonesolivier](https://www.turbosquid.com/Search/Artists/jonesolivier).
+* The mechanical shark and the ship in a bottle were by [Loïc Norgeot](https://sketchfab.com/norgeotloic).
+* Glass 1 was by [Pedro Caio](https://free3d.com/user/pedrocaio442).
+* Glass 2 was by [pledg](https://www.cgtrader.com/pledg).
+* The doughnut was by [Mada Syauqy](https://free3d.com/user/masmada).
+* The vase of flower was by [IvanMasanin](https://www.turbosquid.com/Search/Artists/IvanMasanin).
+* The apple was by [Giiman](https://www.turbosquid.com/Search/Artists/Giimann).
+* The plate was by [Grinya Lesnoy](https://free3d.com/user/lesovic).
 
 ## References
 
