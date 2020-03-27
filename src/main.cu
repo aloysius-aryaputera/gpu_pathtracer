@@ -18,6 +18,7 @@
 #include "model/grid/cell.h"
 #include "model/grid/grid.h"
 #include "model/material.h"
+#include "model/object.h"
 #include "model/ray.h"
 #include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
@@ -71,27 +72,6 @@ __global__ void free_world(
     delete *scene;
 }
 
-__global__ void test(Primitive **object_array, int n) {
-  printf("%u\n", object_array[0] -> get_bounding_box() -> morton_code);
-  printf("%d\n", object_array[0] -> get_bounding_box() -> morton_code < object_array[1] -> get_bounding_box() -> morton_code);
-  printf("%u\n", object_array[1] -> get_bounding_box() -> morton_code);
-  printf("%d\n", object_array[1] -> get_bounding_box() -> morton_code < object_array[2] -> get_bounding_box() -> morton_code);
-  printf("%u\n", object_array[2] -> get_bounding_box() -> morton_code);
-  printf("%u\n", object_array[n / 2] -> get_bounding_box() -> morton_code);
-  printf("%u\n", object_array[n - 5] -> get_bounding_box() -> morton_code);
-  printf("%d\n", object_array[n - 5] -> get_bounding_box() -> morton_code < object_array[n - 3] -> get_bounding_box() -> morton_code);
-  printf("%u\n", object_array[n - 3] -> get_bounding_box() -> morton_code);
-  printf("%d\n", object_array[n - 3] -> get_bounding_box() -> morton_code < object_array[n - 1] -> get_bounding_box() -> morton_code);
-  printf("%u\n", object_array[n - 1] -> get_bounding_box() -> morton_code);
-}
-
-__global__ void my_clz(unsigned int x) {
-  int result = __clz(x);
-  printf("clz = %d\n", result);
-  printf("clz_2 = %d\n", __clz(41));
-  printf("******************************************\n");
-}
-
 int main(int argc, char **argv) {
   cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024ULL*1024ULL*1024ULL*4ULL);
 
@@ -132,6 +112,7 @@ int main(int argc, char **argv) {
 
   BoundingBox **world_bounding_box;
   Primitive **my_geom;
+  Object **my_objects;
   unsigned int *morton_code_list;
   Material **my_material;
   Camera **my_camera;
@@ -139,7 +120,7 @@ int main(int argc, char **argv) {
 
   int num_pixels = im_width * im_height;
   int max_num_materials = 100;
-  int num_vertices, num_faces, num_vt, num_vn;
+  int num_objects, num_vertices, num_faces, num_vt, num_vn;
   size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state;
   size_t rand_state_size = num_pixels * sizeof(curandState);
@@ -249,7 +230,7 @@ int main(int argc, char **argv) {
   print_start_process(process, start);
   extract_num_elements(
     input_folder_path, obj_filename,
-    num_vertices, num_vt, num_vn, num_faces
+    num_objects, num_vertices, num_vt, num_vn, num_faces
   );
   print_end_process(process, start);
 
@@ -373,33 +354,61 @@ int main(int argc, char **argv) {
     *norm_1_idx, *norm_2_idx, *norm_3_idx, \
     *tex_1_idx, *tex_2_idx, *tex_3_idx;
   int *num_triangles, *material_idx;
+  int *object_num_primitives, *object_primitive_offset_idx;
+  int *triangle_object_idx;
 
-  checkCudaErrors(cudaMallocManaged((void **)&num_triangles, sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&num_triangles, sizeof(int)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&material_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&object_num_primitives, num_objects * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&object_primitive_offset_idx, num_objects * sizeof(int)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&x, max(1, num_vertices) * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&y, max(1, num_vertices) * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&z, max(1, num_vertices) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&triangle_object_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_idx, num_faces * sizeof(int)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&x_norm, max(1, num_vn) * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&y_norm, max(1, num_vn) * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&z_norm, max(1, num_vn) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&x, max(1, num_vertices) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&y, max(1, num_vertices) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&z, max(1, num_vertices) * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&x_tex, max(1, num_vt) * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&y_tex, max(1, num_vt) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&x_norm, max(1, num_vn) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&y_norm, max(1, num_vn) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&z_norm, max(1, num_vn) * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&point_1_idx, num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&point_2_idx, num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&point_3_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&x_tex, max(1, num_vt) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&y_tex, max(1, num_vt) * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&norm_1_idx, num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&norm_2_idx, num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&norm_3_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&point_1_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&point_2_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&point_3_idx, num_faces * sizeof(int)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&tex_1_idx, num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&tex_2_idx, num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&tex_3_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&norm_1_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&norm_2_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&norm_3_idx, num_faces * sizeof(int)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&tex_1_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&tex_2_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&tex_3_idx, num_faces * sizeof(int)));
 
   start = clock();
   process = "Reading OBJ file";
@@ -416,7 +425,10 @@ int main(int argc, char **argv) {
     material_name,
     material_idx,
     num_triangles,
-    num_materials
+    num_materials,
+    triangle_object_idx,
+    object_num_primitives,
+    object_primitive_offset_idx
   );
   print_end_process(process, start);
 
@@ -496,9 +508,22 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
 
   checkCudaErrors(cudaMallocManaged(
+    (void **)&my_objects, num_objects * sizeof(Object *)));
+  checkCudaErrors(cudaMallocManaged(
     (void **)&my_geom, num_triangles[0] * sizeof(Primitive *)));
   checkCudaErrors(cudaMallocManaged(
     (void **)&morton_code_list, num_triangles[0] * sizeof(unsigned int)));
+
+  start = clock();
+  process = "Creating the objects";
+  print_start_process(process, start);
+  create_objects<<<1, num_objects>>>(
+    my_objects, my_geom, object_num_primitives, object_primitive_offset_idx,
+    num_objects
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
 
   start = clock();
   process = "Creating the world";

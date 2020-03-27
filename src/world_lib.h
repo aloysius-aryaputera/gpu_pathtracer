@@ -11,6 +11,7 @@
 #include "model/grid/cell.h"
 #include "model/grid/grid.h"
 #include "model/material.h"
+#include "model/object.h"
 #include "model/ray.h"
 #include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
@@ -29,6 +30,11 @@ __global__ void create_world(
   int *tex_1_idx, int *tex_2_idx, int *tex_3_idx,
   int *material_idx,
   int* num_triangles
+);
+
+__global__ void create_objects(
+  Object** object_array, Primitive** geom_array, int* object_num_primitives,
+  int *object_primitive_offset_idx, int num_objects
 );
 
 __global__ void create_material(
@@ -144,6 +150,20 @@ __global__ void create_material(
 
 }
 
+__global__ void create_objects(
+  Object** object_array, Primitive** geom_array, int* object_num_primitives,
+  int *object_primitive_offset_idx, int num_objects
+) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (idx >= num_objects) return;
+
+  *(object_array + idx) = new Object(
+    geom_array + object_primitive_offset_idx[idx], object_num_primitives[idx]
+  );
+
+}
+
 __global__ void create_world(
   Primitive** geom_array,
   Material** material_array,
@@ -156,8 +176,7 @@ __global__ void create_world(
   int *material_idx,
   int* num_triangles
 ) {
-  int i = threadIdx.x + blockIdx.x * blockDim.x;
-  int idx = i;
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (idx >= num_triangles[0]) return;
 

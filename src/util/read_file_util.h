@@ -52,7 +52,10 @@ void extract_triangle_data(
   std::vector <std::string> material_name,
   int *material_idx,
   int* num_triangles,
-  int* num_materials
+  int* num_materials,
+  int* object_idx,
+  int* object_num_primitives,
+  int* object_primitive_offset_idx
 );
 void extract_material_data(
   std::string folder_path,
@@ -85,7 +88,7 @@ void extract_material_file_names(
 );
 void extract_num_elements(
   std::string folder_path, std::string obj_filename,
-  int &num_vertices, int &num_vt, int &num_vn, int &num_faces
+  int &num_objects, int &num_vertices, int &num_vt, int &num_vn, int &num_faces
 );
 
 // https://thispointer.com/c-how-to-find-an-element-in-vector-and-get-its-index/
@@ -113,12 +116,13 @@ std::pair<bool, int > find_in_vector(const std::vector<T>  & vecOfElements, cons
 
 void extract_num_elements(
   std::string folder_path, std::string obj_filename,
-  int &num_vertices, int &num_vt, int &num_vn, int &num_faces
+  int &num_objects, int &num_vertices, int &num_vt, int &num_vn, int &num_faces
 ) {
   std::string complete_obj_filename = folder_path + obj_filename;
   std::ifstream myfile (complete_obj_filename.c_str());
   std::string str;
 
+  num_objects = 0;
   num_vertices = 0;
   num_vt = 0;
   num_vn = 0;
@@ -130,7 +134,9 @@ void extract_num_elements(
         str = reduce(str);
         str = clean_string_end(str);
         std::vector <std::string> chunks = split(str, ' ');
-        if (chunks[0] == "v") {
+        if (chunks[0] == "o") {
+          num_objects += 1;
+        } else if (chunks[0] == "v") {
           num_vertices += 1;
         } else if (chunks[0] == "vt") {
           num_vt += 1;
@@ -143,6 +149,7 @@ void extract_num_elements(
     }
     myfile.close();
   }
+  printf("Number of objects  = %d\n", num_objects);
   printf("Number of vertices = %d\n", num_vertices);
   printf("Number of vt       = %d\n", num_vt);
   printf("Number of vn       = %d\n", num_vn);
@@ -470,11 +477,14 @@ void extract_triangle_data(
   std::vector <std::string> material_name,
   int *material,
   int* num_triangles,
-  int* num_materials
+  int* num_materials,
+  int* triangle_object_idx,
+  int* object_num_primitives,
+  int* object_primitive_offset_idx
 ) {
 
   int point_idx = 0, triangle_idx = 0, norm_idx = 0, tex_idx = 0, \
-    current_material_idx = 0;
+    current_material_idx = 0, object_idx = 0;
   std::string str, single_material_name;
   std::string filename = folder_path + obj_filename;
   std::ifstream myfile (filename.c_str());
@@ -498,6 +508,14 @@ void extract_triangle_data(
           } else {
             current_material_idx = 0;
           }
+        } else if (chunks[0] == "o") {
+          *(object_primitive_offset_idx + object_idx) = triangle_idx;
+          object_idx++;
+
+          if (object_idx >= 1) {
+            *(object_num_primitives + object_idx - 1) = \
+              triangle_idx - *(object_primitive_offset_idx + object_idx - 1);
+          }
         } else if (chunks[0] == "v") {
           *(x + point_idx) = std::stof(chunks[1]);
           *(y + point_idx) = std::stof(chunks[2]);
@@ -520,6 +538,7 @@ void extract_triangle_data(
             sub_chunks_2 = split(chunks[2 + i], '/');
             sub_chunks_3 = split(chunks[3 + i], '/');
 
+            *(triangle_object_idx + triangle_idx) = object_idx - 1;
             *(point_1_idx + triangle_idx) = std::stoi(sub_chunks_1[0]) - 1;
             *(point_2_idx + triangle_idx) = std::stoi(sub_chunks_2[0]) - 1;
             *(point_3_idx + triangle_idx) = std::stoi(sub_chunks_3[0]) - 1;
