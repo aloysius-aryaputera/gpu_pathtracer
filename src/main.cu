@@ -18,7 +18,7 @@
 #include "model/grid/cell.h"
 #include "model/grid/grid.h"
 #include "model/material.h"
-#include "model/object.h"
+#include "model/object/object.h"
 #include "model/ray.h"
 #include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
@@ -518,7 +518,7 @@ int main(int argc, char **argv) {
   process = "Creating the objects";
   print_start_process(process, start);
   create_objects<<<1, num_objects>>>(
-    my_objects, my_geom, object_num_primitives, object_primitive_offset_idx,
+    my_objects, object_num_primitives, object_primitive_offset_idx,
     num_objects
   );
   checkCudaErrors(cudaGetLastError());
@@ -531,7 +531,9 @@ int main(int argc, char **argv) {
   dim3 blocks_world(num_triangles[0] / 1024 + 1);
   dim3 threads_world(1024);
   create_world<<<blocks_world, threads_world>>>(
-    my_geom, my_material,
+    my_geom,
+    my_objects, triangle_object_idx,
+    my_material,
     x, y, z,
     x_norm, y_norm, z_norm,
     x_tex, y_tex,

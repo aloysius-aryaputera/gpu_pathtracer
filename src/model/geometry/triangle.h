@@ -7,6 +7,7 @@
 #include "../../param.h"
 #include "../grid/bounding_box.h"
 #include "../material.h"
+#include "../object/object.h"
 #include "../ray.h"
 #include "../vector_and_matrix/vec3.h"
 #include "primitive.h"
@@ -25,14 +26,16 @@ class Triangle: public Primitive {
     __host__ __device__ Triangle() {};
     __device__ Triangle(
       vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_,
+      Object *object_,
       vec3 norm_1_, vec3 norm_2_, vec3 norm_3_, vec3 tex_1_, vec3 tex_2_,
       vec3 tex_3_
     );
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
     __device__ Material* get_material();
     __device__ BoundingBox* get_bounding_box();
-    
+
     BoundingBox *bounding_box;
+    Object *object;
 };
 
 
@@ -70,6 +73,7 @@ __device__ void Triangle::_compute_bounding_box() {
 
 __device__ Triangle::Triangle(
   vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_,
+  Object* object_,
   vec3 norm_1_=vec3(0, 0, 0), vec3 norm_2_=vec3(0, 0, 0),
   vec3 norm_3_=vec3(0, 0, 0), vec3 tex_1_=vec3(0, 0, 0),
   vec3 tex_2_=vec3(0, 0, 0), vec3 tex_3_=vec3(0, 0, 0)

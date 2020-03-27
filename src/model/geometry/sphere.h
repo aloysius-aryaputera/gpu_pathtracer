@@ -7,6 +7,7 @@
 #include "../../param.h"
 #include "../grid/bounding_box.h"
 #include "../material.h"
+#include "../object/object.h"
 #include "../ray.h"
 #include "../vector_and_matrix/vec3.h"
 #include "primitive.h"

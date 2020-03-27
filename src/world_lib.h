@@ -11,7 +11,7 @@
 #include "model/grid/cell.h"
 #include "model/grid/grid.h"
 #include "model/material.h"
-#include "model/object.h"
+#include "model/object/object.h"
 #include "model/ray.h"
 #include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
@@ -21,6 +21,8 @@
 
 __global__ void create_world(
   Primitive** geom_array,
+  Object** object_array,
+  int *triangle_object_idx,
   Material** material_array,
   float *x, float *y, float *z,
   float *x_norm, float *y_norm, float *z_norm,
@@ -33,7 +35,7 @@ __global__ void create_world(
 );
 
 __global__ void create_objects(
-  Object** object_array, Primitive** geom_array, int* object_num_primitives,
+  Object** object_array, int* object_num_primitives,
   int *object_primitive_offset_idx, int num_objects
 );
 
@@ -151,7 +153,7 @@ __global__ void create_material(
 }
 
 __global__ void create_objects(
-  Object** object_array, Primitive** geom_array, int* object_num_primitives,
+  Object** object_array, int* object_num_primitives,
   int *object_primitive_offset_idx, int num_objects
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -159,13 +161,15 @@ __global__ void create_objects(
   if (idx >= num_objects) return;
 
   *(object_array + idx) = new Object(
-    geom_array + object_primitive_offset_idx[idx], object_num_primitives[idx]
+    object_primitive_offset_idx[idx], object_num_primitives[idx]
   );
 
 }
 
 __global__ void create_world(
   Primitive** geom_array,
+  Object** object_array,
+  int *triangle_object_idx,
   Material** material_array,
   float *x, float *y, float *z,
   float *x_norm, float *y_norm, float *z_norm,
@@ -186,6 +190,7 @@ __global__ void create_world(
     vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]),
 
     material_array[material_idx[idx]],
+    object_array[triangle_object_idx[idx]],
 
     vec3(x_norm[norm_1_idx[idx]], y_norm[norm_1_idx[idx]], z_norm[norm_1_idx[idx]]),
     vec3(x_norm[norm_2_idx[idx]], y_norm[norm_2_idx[idx]], z_norm[norm_2_idx[idx]]),
