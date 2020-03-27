@@ -37,7 +37,7 @@ INCS = \
 	world_lib.h
 
 # all: gpu_path_tracing gpu_path_tracing_debug gpu_path_tracing_2 gpu_path_tracing_debug_2 gpu_path_tracing_3 gpu_path_tracing_debug_3 gpu_path_tracing_4 gpu_path_tracing_debug_4
-all: gpu_path_tracing_3 gpu_path_tracing_debug_3
+all: gpu_path_tracing gpu_path_tracing_debug
 
 
 gpu_path_tracing: gpu_path_tracing.o
