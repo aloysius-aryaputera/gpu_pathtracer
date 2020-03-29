@@ -21,6 +21,7 @@
 
 __global__ void create_world(
   Primitive** geom_array,
+  float *triangle_area,
   Object** object_array,
   int *triangle_object_idx,
   Material** material_array,
@@ -36,7 +37,7 @@ __global__ void create_world(
 
 __global__ void create_objects(
   Object** object_array, int* object_num_primitives,
-  int *object_primitive_offset_idx, int num_objects
+  int *object_primitive_offset_idx, float *triangle_area,  int num_objects
 );
 
 __global__ void create_material(
@@ -46,6 +47,7 @@ __global__ void create_material(
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
+  float *path_length,
   float *t_r, float *n_s, float *n_i,
   int *material_priority,
   int *material_image_height_diffuse,
@@ -97,6 +99,7 @@ __global__ void create_material(
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
+  float *path_length,
   float *t_r, float *n_s, float *n_i,
   int *material_priority,
   int *material_image_height_diffuse,
@@ -126,6 +129,7 @@ __global__ void create_material(
     vec3(ks_x[i], ks_y[i], ks_z[i]),
     vec3(ke_x[i], ke_y[i], ke_z[i]),
     vec3(tf_x[i], tf_y[i], tf_z[i]),
+    path_length[i],
     t_r[i], n_s[i], n_i[i],
     material_priority[i],
     material_image_height_diffuse[i],
@@ -154,20 +158,22 @@ __global__ void create_material(
 
 __global__ void create_objects(
   Object** object_array, int* object_num_primitives,
-  int *object_primitive_offset_idx, int num_objects
+  int *object_primitive_offset_idx, float* triangle_area, int num_objects
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (idx >= num_objects) return;
 
   *(object_array + idx) = new Object(
-    object_primitive_offset_idx[idx], object_num_primitives[idx]
+    object_primitive_offset_idx[idx], object_num_primitives[idx],
+    triangle_area + object_primitive_offset_idx[idx]
   );
 
 }
 
 __global__ void create_world(
   Primitive** geom_array,
+  float *triangle_area,
   Object** object_array,
   int *triangle_object_idx,
   Material** material_array,
@@ -201,4 +207,10 @@ __global__ void create_world(
     vec3(x_tex[tex_3_idx[idx]], y_tex[tex_3_idx[idx]], 0)
   );
 
+  triangle_area[idx] = (*(geom_array + idx)) -> area;
+
+  if (geom_array[idx] -> sub_surface_scattering)
+    object_array[triangle_object_idx[idx]] -> set_as_sub_surface_scattering();
+
+  // object_array[triangle_object_idx[idx]] -> set_as_sub_surface_scattering();
 }

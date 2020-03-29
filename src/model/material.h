@@ -53,7 +53,7 @@ class Material {
     int texture_width_specular, texture_height_specular;
     int texture_width_emission, texture_height_emission;
     int texture_width_n_s, texture_height_n_s;
-    float t_r, n_s;
+    float t_r, n_s, path_length;
     float *texture_r_diffuse, *texture_g_diffuse, *texture_b_diffuse;
     float *texture_r_specular, *texture_g_specular, *texture_b_specular;
     float *texture_r_emission, *texture_g_emission, *texture_b_emission;
@@ -64,6 +64,7 @@ class Material {
     __host__ __device__ Material(
       vec3 ambient_, vec3 diffuse_, vec3 specular_, vec3 emission_,
       vec3 transmission_,
+      float path_length_,
       float t_r_, float n_s_, float n_i_,
       int priority_,
       int texture_height_diffuse_,
@@ -95,10 +96,12 @@ class Material {
       reflection_record &ref, curandState *rand_state
     );
     __device__ vec3 get_texture_emission(vec3 uv_vector);
+    // __device__ bool is_sub_surface_scattering();
 
     vec3 emission;
     int priority;
     float n_i;
+    bool sub_surface_scattering;
 };
 
 __device__ int get_material_priority(Material* material) {
@@ -142,6 +145,10 @@ __device__ void find_highest_prioritised_materials(
     }
   }
 }
+
+// __device__ bool Material::is_sub_surface_scattering() {
+//   return this -> path_length > 0;
+// }
 
 __device__ reflection_record Material::_refract(
   vec3 hit_point, vec3 v_in, vec3 normal,
@@ -284,6 +291,7 @@ __device__ reflection_record Material::_refract(
 __host__ __device__ Material::Material(
   vec3 ambient_, vec3 diffuse_, vec3 specular_, vec3 emission_,
   vec3 transmission_,
+  float path_length_,
   float t_r_,
   float n_s_,
   float n_i_,
@@ -314,6 +322,7 @@ __host__ __device__ Material::Material(
   this -> specular = specular_;
   this -> emission = emission_;
   this -> transmission = transmission_;
+  this -> path_length = path_length_;
   this -> n_s = n_s_;
   this -> n_i = n_i_;
   this -> t_r = t_r_;
@@ -345,6 +354,11 @@ __host__ __device__ Material::Material(
 
   this -> diffuse_mag = diffuse_.length();
   this -> specular_mag = specular_.length();
+
+  this -> sub_surface_scattering = (this -> path_length > 0);
+
+  if (this -> sub_surface_scattering)
+    printf("The material is SSS\n");
 }
 
 __device__ void Material::check_if_reflected_or_refracted(

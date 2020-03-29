@@ -19,6 +19,7 @@
 #include "model/grid/grid.h"
 #include "model/material.h"
 #include "model/object/object.h"
+#include "model/object/object_operations.h"
 #include "model/ray.h"
 #include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
@@ -121,6 +122,7 @@ int main(int argc, char **argv) {
   int num_pixels = im_width * im_height;
   int max_num_materials = 100;
   int num_objects, num_vertices, num_faces, num_vt, num_vn;
+  int *num_sss_objects;
   size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state;
   size_t rand_state_size = num_pixels * sizeof(curandState);
@@ -128,6 +130,7 @@ int main(int argc, char **argv) {
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
   float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z, *n_s, *n_i, *t_r;
   float *tf_x, *tf_y, *tf_z;
+  float *path_length;
   float *material_image_r, *material_image_g, *material_image_b;
   int *num_materials;
   int *material_image_height_diffuse, *material_image_width_diffuse, \
@@ -270,6 +273,9 @@ int main(int argc, char **argv) {
     (void **)&tf_z, max_num_materials * sizeof(float)));
 
   checkCudaErrors(cudaMallocManaged(
+    (void **)&path_length, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged(
     (void **)&t_r, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged(
     (void **)&n_s, max_num_materials * sizeof(float)));
@@ -334,6 +340,7 @@ int main(int argc, char **argv) {
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
     tf_x, tf_y, tf_z,
+    path_length,
     t_r, n_s, n_i,
     material_priority,
     material_image_height_diffuse, material_image_width_diffuse,
@@ -356,6 +363,7 @@ int main(int argc, char **argv) {
   int *num_triangles, *material_idx;
   int *object_num_primitives, *object_primitive_offset_idx;
   int *triangle_object_idx;
+  float *triangle_area;
 
   checkCudaErrors(cudaMallocManaged(
     (void **)&num_triangles, sizeof(int)));
@@ -369,6 +377,8 @@ int main(int argc, char **argv) {
     (void **)&triangle_object_idx, num_faces * sizeof(int)));
   checkCudaErrors(cudaMallocManaged(
     (void **)&material_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&triangle_area, num_faces * sizeof(float)));
 
   checkCudaErrors(cudaMallocManaged(
     (void **)&x, max(1, num_vertices) * sizeof(float)));
@@ -462,6 +472,7 @@ int main(int argc, char **argv) {
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
     tf_x, tf_y, tf_z,
+    path_length,
     t_r, n_s, n_i,
     material_priority,
     material_image_height_diffuse,
@@ -519,7 +530,7 @@ int main(int argc, char **argv) {
   print_start_process(process, start);
   create_objects<<<1, num_objects>>>(
     my_objects, object_num_primitives, object_primitive_offset_idx,
-    num_objects
+    triangle_area, num_objects
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -532,6 +543,7 @@ int main(int argc, char **argv) {
   dim3 threads_world(1024);
   create_world<<<blocks_world, threads_world>>>(
     my_geom,
+    triangle_area,
     my_objects, triangle_object_idx,
     my_material,
     x, y, z,
@@ -543,6 +555,16 @@ int main(int argc, char **argv) {
     material_idx,
     num_triangles
   );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  checkCudaErrors(cudaMallocManaged((void **)&num_sss_objects, sizeof(int)));
+
+  start = clock();
+  process = "Computing the number of SSS objects";
+  print_start_process(process, start);
+  compute_num_sss_objects<<<1, 1>>>(num_sss_objects, my_objects, num_objects);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);

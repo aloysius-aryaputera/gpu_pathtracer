@@ -31,6 +31,8 @@ class Primitive {
 
     BoundingBox *bounding_box;
     Object *object;
+    float area;
+    bool sub_surface_scattering;
 
 };
 

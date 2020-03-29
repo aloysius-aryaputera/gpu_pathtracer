@@ -31,6 +31,8 @@ class Sphere: public Primitive {
     __device__ BoundingBox* get_bounding_box();
 
     BoundingBox *bounding_box;
+    float area;
+    bool sub_surface_scattering;
 
 };
 

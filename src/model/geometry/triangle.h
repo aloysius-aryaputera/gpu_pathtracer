@@ -17,7 +17,7 @@ class Triangle: public Primitive {
     __host__ __device__ float _compute_tolerance();
     __device__ void _compute_bounding_box();
 
-    float area, inv_tolerance, tolerance;
+    float inv_tolerance, tolerance;
     vec3 point_1, point_2, point_3, norm_1, norm_2, norm_3, normal;
     vec3 tex_1, tex_2, tex_3;
     Material *material;
@@ -36,6 +36,8 @@ class Triangle: public Primitive {
 
     BoundingBox *bounding_box;
     Object *object;
+    float area;
+    bool sub_surface_scattering;
 };
 
 
@@ -96,6 +98,8 @@ __device__ Triangle::Triangle(
   this -> tex_1 = tex_1_;
   this -> tex_2 = tex_2_;
   this -> tex_3 = tex_3_;
+
+  this -> sub_surface_scattering = this -> material -> sub_surface_scattering;
 
   if (
     compute_distance(norm_1_, vec3(0, 0, 0)) < this -> tolerance ||

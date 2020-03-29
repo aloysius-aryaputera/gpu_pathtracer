@@ -26,6 +26,7 @@ void _extract_single_material_data(
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
+  float *path_length,
   float *t_r, float *n_s, float *n_i,
   int *material_priority,
   int *material_image_height_diffuse, int *material_image_width_diffuse,
@@ -69,6 +70,7 @@ void extract_material_data(
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
+  float *path_length,
   float *t_r, float *n_s, float *n_i,
   int *material_priority,
   int *material_image_height_diffuse, int *material_image_width_diffuse,
@@ -214,6 +216,7 @@ void _extract_single_material_data(
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
+  float *path_length,
   float *t_r, float *n_s, float *n_i,
   int *material_priority,
   int *material_image_height_diffuse, int *material_image_width_diffuse,
@@ -255,6 +258,8 @@ void _extract_single_material_data(
     *(tf_x + idx) = 1;
     *(tf_y + idx) = 1;
     *(tf_z + idx) = 1;
+
+    *(path_length + idx) = 0;
 
     *(n_s + idx) = 0;
     *(n_i + idx) = 0;
@@ -313,6 +318,8 @@ void _extract_single_material_data(
           *(tf_y + idx) = 1;
           *(tf_z + idx) = 1;
 
+          *(path_length + idx) = 0;
+
           *(n_s + idx) = 0;
           *(n_i + idx) = 0;
           *(t_r + idx) = 1;
@@ -355,6 +362,8 @@ void _extract_single_material_data(
           *(tf_x + idx) = std::stof(chunks[1]);
           *(tf_y + idx) = std::stof(chunks[2]);
           *(tf_z + idx) = std::stof(chunks[3]);
+        } else if (chunks[0] == "path_length") {
+          *(path_length + idx) = std::stof(chunks[1]);
         } else if (chunks[0] == "d") {
           *(t_r + idx) = 1.0 - clamp(std::stof(chunks[1]), 0, 1);
         } else if (chunks[0] == "Tr") {
@@ -423,6 +432,7 @@ void extract_material_data(
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
+  float *path_length,
   float *t_r, float *n_s, float *n_i,
   int *material_priority,
   int *material_image_height_diffuse, int *material_image_width_diffuse,
@@ -449,6 +459,7 @@ void extract_material_data(
       ks_x, ks_y, ks_z,
       ke_x, ke_y, ke_z,
       tf_x, tf_y, tf_z,
+      path_length,
       t_r, n_s, n_i,
       material_priority,
       material_image_height_diffuse, material_image_width_diffuse,
