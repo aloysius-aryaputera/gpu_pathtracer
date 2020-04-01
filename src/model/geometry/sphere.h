@@ -21,6 +21,7 @@ class Sphere: public Primitive {
     vec3 center;
     float r, tolerance;
     Material* material;
+    bool sub_surface_scattering;
 
   public:
     __host__ __device__ Sphere() {};
@@ -29,10 +30,12 @@ class Sphere: public Primitive {
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
     __device__ Material* get_material();
     __device__ BoundingBox* get_bounding_box();
+    __device__ bool is_sub_surface_scattering() {
+      return false;
+    }
 
     BoundingBox *bounding_box;
     float area;
-    bool sub_surface_scattering;
 
 };
 

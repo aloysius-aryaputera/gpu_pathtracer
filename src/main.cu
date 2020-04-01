@@ -109,6 +109,8 @@ int main(int argc, char **argv) {
   float sky_emission_g = std::stof(argv[22]);
   float sky_emission_b = std::stof(argv[23]);
 
+  int sss_pts_per_objects = std::stoi(argv[24]);
+
   int tx = 8, ty = 8;
 
   BoundingBox **world_bounding_box;

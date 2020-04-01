@@ -16,6 +16,7 @@ struct hit_record;
 class Primitive {
   private:
     Material *material;
+    bool sub_surface_scattering;
 
   public:
     __host__ __device__ Primitive() {}
@@ -28,11 +29,13 @@ class Primitive {
     __device__ virtual BoundingBox* get_bounding_box() {
       return this -> bounding_box;
     }
+    __device__ virtual bool is_sub_surface_scattering() {
+      return false;
+    }
 
     BoundingBox *bounding_box;
     Object *object;
     float area;
-    bool sub_surface_scattering;
 
 };
 

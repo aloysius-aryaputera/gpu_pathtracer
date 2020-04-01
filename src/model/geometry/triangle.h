@@ -21,6 +21,7 @@ class Triangle: public Primitive {
     vec3 point_1, point_2, point_3, norm_1, norm_2, norm_3, normal;
     vec3 tex_1, tex_2, tex_3;
     Material *material;
+    bool sub_surface_scattering;
 
   public:
     __host__ __device__ Triangle() {};
@@ -33,11 +34,11 @@ class Triangle: public Primitive {
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
     __device__ Material* get_material();
     __device__ BoundingBox* get_bounding_box();
+    __device__ bool is_sub_surface_scattering();
 
     BoundingBox *bounding_box;
     Object *object;
     float area;
-    bool sub_surface_scattering;
 };
 
 
@@ -99,7 +100,8 @@ __device__ Triangle::Triangle(
   this -> tex_2 = tex_2_;
   this -> tex_3 = tex_3_;
 
-  this -> sub_surface_scattering = this -> material -> sub_surface_scattering;
+  this -> sub_surface_scattering = \
+    this -> get_material() -> sub_surface_scattering;
 
   if (
     compute_distance(norm_1_, vec3(0, 0, 0)) < this -> tolerance ||
@@ -127,6 +129,10 @@ __host__ __device__ float Triangle::_compute_tolerance() {
     tolerance_ = dist_3;
   }
   return min(SMALL_DOUBLE, tolerance_ / 100);
+}
+
+__device__ bool Triangle::is_sub_surface_scattering() {
+  return this -> sub_surface_scattering;
 }
 
 __device__ Material* Triangle::get_material() {

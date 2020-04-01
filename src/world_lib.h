@@ -209,8 +209,7 @@ __global__ void create_world(
 
   triangle_area[idx] = (*(geom_array + idx)) -> area;
 
-  if (geom_array[idx] -> sub_surface_scattering)
+  if (geom_array[idx] -> is_sub_surface_scattering())
     object_array[triangle_object_idx[idx]] -> set_as_sub_surface_scattering();
 
-  // object_array[triangle_object_idx[idx]] -> set_as_sub_surface_scattering();
 }
