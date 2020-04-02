@@ -20,6 +20,7 @@
 #include "model/material.h"
 #include "model/object/object.h"
 #include "model/object/object_operations.h"
+#include "model/point/point.h"
 #include "model/ray.h"
 #include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
@@ -119,6 +120,7 @@ int main(int argc, char **argv) {
   unsigned int *morton_code_list;
   Material **my_material;
   Camera **my_camera;
+  Point **sss_pts;
   vec3 *image_output;
 
   int num_pixels = im_width * im_height;
@@ -561,16 +563,6 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  checkCudaErrors(cudaMallocManaged((void **)&num_sss_objects, sizeof(int)));
-
-  start = clock();
-  process = "Computing the number of SSS objects";
-  print_start_process(process, start);
-  compute_num_sss_objects<<<1, 1>>>(num_sss_objects, my_objects, num_objects);
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  print_end_process(process, start);
-
   checkCudaErrors(cudaFree(x));
   checkCudaErrors(cudaFree(y));
   checkCudaErrors(cudaFree(z));
@@ -585,6 +577,20 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(norm_3_idx));
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
+
+  checkCudaErrors(cudaMallocManaged((void **)&num_sss_objects, sizeof(int)));
+
+  start = clock();
+  process = "Computing the number of SSS objects";
+  print_start_process(process, start);
+  compute_num_sss_objects<<<1, 1>>>(num_sss_objects, my_objects, num_objects);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  checkCudaErrors(
+    cudaMallocManaged((void **)&sss_pts,
+    sss_pts_per_objects * num_sss_objects[0] * sizeof(Point*)));
 
   checkCudaErrors(cudaMallocManaged(
     (void **)&world_bounding_box, sizeof(BoundingBox *)));
