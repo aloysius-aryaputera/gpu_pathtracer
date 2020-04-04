@@ -358,7 +358,7 @@ int main(int argc, char **argv) {
   int *num_triangles, *material_idx;
   int *object_num_primitives, *object_primitive_offset_idx;
   int *triangle_object_idx;
-  float *triangle_area;
+  float *triangle_area, *accumulated_triangle_area;
 
   checkCudaErrors(cudaMallocManaged(
     (void **)&num_triangles, sizeof(int)));
@@ -374,6 +374,8 @@ int main(int argc, char **argv) {
     (void **)&material_idx, num_faces * sizeof(int)));
   checkCudaErrors(cudaMallocManaged(
     (void **)&triangle_area, num_faces * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&accumulated_triangle_area, num_faces * sizeof(float)));
 
   checkCudaErrors(cudaMallocManaged(
     (void **)&x, max(1, num_vertices) * sizeof(float)));
@@ -525,7 +527,7 @@ int main(int argc, char **argv) {
   print_start_process(process, start);
   create_objects<<<1, num_objects>>>(
     my_objects, object_num_primitives, object_primitive_offset_idx,
-    triangle_area, num_objects
+    triangle_area, accumulated_triangle_area, num_objects
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());

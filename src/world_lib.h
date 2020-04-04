@@ -38,7 +38,8 @@ __global__ void create_world(
 
 __global__ void create_objects(
   Object** object_array, int* object_num_primitives,
-  int *object_primitive_offset_idx, float *triangle_area,  int num_objects
+  int *object_primitive_offset_idx, float *triangle_area,
+  float *accumulated_triangle_area, int num_objects
 );
 
 __global__ void create_material(
@@ -159,7 +160,8 @@ __global__ void create_material(
 
 __global__ void create_objects(
   Object** object_array, int* object_num_primitives,
-  int *object_primitive_offset_idx, float* triangle_area, int num_objects
+  int *object_primitive_offset_idx, float* triangle_area,
+  float *accumulated_triangle_area, int num_objects
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -167,7 +169,8 @@ __global__ void create_objects(
 
   *(object_array + idx) = new Object(
     object_primitive_offset_idx[idx], object_num_primitives[idx],
-    triangle_area + object_primitive_offset_idx[idx]
+    triangle_area + object_primitive_offset_idx[idx],
+    accumulated_triangle_area + object_primitive_offset_idx[idx]
   );
 
 }
