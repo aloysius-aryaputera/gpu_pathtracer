@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
   float sky_emission_g = std::stof(argv[22]);
   float sky_emission_b = std::stof(argv[23]);
 
-  int sss_pts_per_objects = std::stoi(argv[24]);
+  int sss_pts_per_object = std::stoi(argv[24]);
 
   int tx = 8, ty = 8;
 
@@ -130,6 +130,9 @@ int main(int argc, char **argv) {
   size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state;
   size_t rand_state_size = num_pixels * sizeof(curandState);
+
+  bool *sss_object_marker_array;
+  int *pt_offset_array;
 
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
   float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z, *n_s, *n_i, *t_r;
@@ -540,6 +543,9 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&sss_object_marker_array, num_objects * sizeof(bool)));
+
   start = clock();
   process = "Creating the world";
   print_start_process(process, start);
@@ -557,7 +563,8 @@ int main(int argc, char **argv) {
     norm_1_idx, norm_2_idx, norm_3_idx,
     tex_1_idx, tex_2_idx, tex_3_idx,
     material_idx,
-    num_triangles
+    num_triangles,
+    sss_object_marker_array
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -579,18 +586,32 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
 
   checkCudaErrors(cudaMallocManaged((void **)&num_sss_objects, sizeof(int)));
+  checkCudaErrors(
+    cudaMallocManaged((void **)&pt_offset_array, num_objects * sizeof(int)));
 
   start = clock();
   process = "Computing the number of SSS objects";
   print_start_process(process, start);
-  compute_num_sss_objects<<<1, 1>>>(num_sss_objects, my_objects, num_objects);
+  compute_num_sss_objects<<<1, 1>>>(
+    num_sss_objects, my_objects, pt_offset_array, num_objects,
+    sss_pts_per_object
+  );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
   checkCudaErrors(
     cudaMallocManaged((void **)&sss_pts,
-    sss_pts_per_objects * num_sss_objects[0] * sizeof(Point*)));
+    sss_pts_per_object * num_sss_objects[0] * sizeof(Point*)));
+
+  start = clock();
+  process = "Allocating points for SSS objects";
+  print_start_process(process, start);
+  allocate_pts_sss<<<1, num_objects>>>(
+    my_objects, sss_pts, pt_offset_array, num_objects);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
 
   checkCudaErrors(cudaMallocManaged(
     (void **)&world_bounding_box, sizeof(BoundingBox *)));

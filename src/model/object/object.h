@@ -17,6 +17,7 @@ class Object {
       int primitives_offset_idx_, int num_primitives_, float *triangle_area_
     );
     __device__ void set_as_sub_surface_scattering();
+    __device__ void allocate_point_array(Point** sss_pt_array_);
 
     int num_primitives, primitives_offset_idx;
     bool sub_surface_scattering;
@@ -32,6 +33,10 @@ __device__ Object::Object(
   this -> sub_surface_scattering = false;
 
   this -> _compute_accummulated_triangle_area();
+}
+
+__device__ void Object::allocate_point_array(Point** sss_pt_array_) {
+  this -> sss_pt_array = sss_pt_array_;
 }
 
 __device__ void Object::set_as_sub_surface_scattering() {
