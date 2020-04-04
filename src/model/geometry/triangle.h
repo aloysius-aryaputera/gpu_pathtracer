@@ -2,6 +2,7 @@
 #ifndef TRIANGLE_H
 #define TRIANGLE_H
 
+#include <curand_kernel.h>
 #include <math.h>
 
 #include "../../param.h"
@@ -35,16 +36,29 @@ class Triangle: public Primitive {
     __device__ Material* get_material();
     __device__ BoundingBox* get_bounding_box();
     __device__ bool is_sub_surface_scattering();
+    __device__ vec3 get_random_point_on_surface(curandState *rand_state);
 
     BoundingBox *bounding_box;
     Object *object;
     float area;
 };
 
-
-
 __host__ __device__ float _compute_triangle_area(
   vec3 point_1, vec3 point_2, vec3 point_3);
+
+__device__ vec3 Triangle::get_random_point_on_surface(
+  curandState *rand_state
+) {
+  float random_number = curand_uniform(&rand_state[0]);
+  float random_number_2 = curand_uniform(&rand_state[0]);
+
+  float u = 1 - powf(random_number, .5);
+  float v = random_number_2 * powf(random_number, .5);
+
+  return u * this -> point_1 + v * this -> point_2 + (
+    1 - u - v) * this -> point_3;
+
+}
 
 __device__ void Triangle::_compute_bounding_box() {
   float x_min, x_max, y_min, y_max, z_min, z_max;

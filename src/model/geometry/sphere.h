@@ -2,6 +2,7 @@
 #ifndef SPHERE_H
 #define SPHERE_H
 
+#include <curand_kernel.h>
 #include <math.h>
 
 #include "../../param.h"
@@ -32,6 +33,11 @@ class Sphere: public Primitive {
     __device__ BoundingBox* get_bounding_box();
     __device__ bool is_sub_surface_scattering() {
       return false;
+    }
+    __device__ vec3 get_random_point_on_surface(
+      curandState *rand_state
+    ) {
+      return vec3(0, 0, 0);
     }
 
     BoundingBox *bounding_box;

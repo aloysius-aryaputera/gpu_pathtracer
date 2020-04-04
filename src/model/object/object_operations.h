@@ -51,4 +51,21 @@ __global__ void allocate_pts_sss(
   }
 }
 
+__global__ void create_sss_pts(
+  Object** object, Primitive** geom_array, Point** point_array, int *pt_offset,
+  curandState *rand_state, int object_idx, int num_pts_per_object
+) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (!object[object_idx] -> sub_surface_scattering) return;
+  if (idx >= num_pts_per_object) return;
+
+  int primitive_idx = (object[object_idx]) -> pick_primitive_idx_for_sampling(
+    rand_state, idx);
+  vec3 pts_loc = geom_array[primitive_idx] -> get_random_point_on_surface(
+    rand_state);
+  // vec3 pts_loc = vec3(0, 0, 0);
+  point_array[pt_offset[object_idx] + idx] = new Point(pts_loc);
+}
+
 #endif

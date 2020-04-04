@@ -16,7 +16,8 @@
 
 __global__
 void render(
-  vec3 *fb, Camera **camera, curandState *rand_state, int sample_size, int level,
+  vec3 *fb, Camera **camera, curandState *rand_state, int sample_size,
+  int level,
   vec3 sky_emission, int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
   Node **node_list
@@ -149,7 +150,8 @@ __device__ vec3 _compute_color(
 
 __global__
 void render(
-  vec3 *fb, Camera **camera, curandState *rand_state, int sample_size, int level,
+  vec3 *fb, Camera **camera, curandState *rand_state, int sample_size,
+  int level,
   vec3 sky_emission, int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
   Node **node_list
@@ -158,19 +160,19 @@ void render(
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
 
-  hit_record init_rec, cur_rec;
-  vec3 color = vec3(0, 0, 0), color_tmp;
-
   if(
     (j >= camera[0] -> width) || (i >= camera[0] -> height)
   ) {
     return;
   }
 
+  hit_record init_rec, cur_rec;
+  vec3 color = vec3(0, 0, 0), color_tmp;
   int pixel_index = i * (camera[0] -> width) + j;
   curandState local_rand_state = rand_state[pixel_index];
   Ray camera_ray = camera[0] -> compute_ray(
     i + .5, j + .5, &local_rand_state), ray;
+  fb[pixel_index] = color;
 
   for(int idx = 0; idx < sample_size; idx++) {
     color_tmp = _compute_color(

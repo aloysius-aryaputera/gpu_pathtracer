@@ -96,7 +96,6 @@ class Material {
       reflection_record &ref, curandState *rand_state
     );
     __device__ vec3 get_texture_emission(vec3 uv_vector);
-    // __device__ bool is_sub_surface_scattering();
 
     vec3 emission;
     int priority;
@@ -145,10 +144,6 @@ __device__ void find_highest_prioritised_materials(
     }
   }
 }
-
-// __device__ bool Material::is_sub_surface_scattering() {
-//   return this -> path_length > 0;
-// }
 
 __device__ reflection_record Material::_refract(
   vec3 hit_point, vec3 v_in, vec3 normal,

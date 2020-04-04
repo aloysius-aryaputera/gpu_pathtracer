@@ -41,11 +41,6 @@ __global__ void create_objects(
   int *object_primitive_offset_idx, float *triangle_area,  int num_objects
 );
 
-// __host__ void compute_pt_array_offset(
-//   bool* sss_object_marker_array, int* pt_offset_array, int num_objects,
-//   int num_pts_per_object
-// );
-
 __global__ void create_material(
   Material** material_array,
   float *ka_x, float *ka_y, float *ka_z,
@@ -161,23 +156,6 @@ __global__ void create_material(
   );
 
 }
-
-// __host__ void compute_pt_array_offset(
-//   bool* sss_object_marker_array, int* pt_offset_array, int num_objects,
-//   int num_pts_per_object
-// ) {
-//   int offset = 0;
-//   for (int i = 0; i < num_objects; i++) {
-//     if (i == 0) {
-//       pt_offset_array[i] = offset;
-//     } else {
-//       if (sss_object_marker_array[i - 1]) {
-//         offset += num_pts_per_object;
-//       }
-//       pt_offset_array[i] = offset;
-//     }
-//   }
-// }
 
 __global__ void create_objects(
   Object** object_array, int* object_num_primitives,
