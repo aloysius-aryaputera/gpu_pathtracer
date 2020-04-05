@@ -21,6 +21,7 @@
 #include "model/object/object.h"
 #include "model/object/object_operations.h"
 #include "model/point/point.h"
+#include "model/point/point_operations.h"
 #include "model/ray.h"
 #include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
@@ -75,30 +76,31 @@ int main(int argc, char **argv) {
   std::string input_folder_path = argv[1];
   std::string obj_filename = argv[2];
   std::string texture_bg_path = argv[3];
-  std::string image_output_path = argv[4];
+  std::string pt_image_output_path = argv[4];
+  std::string image_output_path = argv[5];
 
-  int im_width = std::stoi(argv[5]);
-  int im_height = std::stoi(argv[6]);
-  int pathtracing_sample_size = std::stoi(argv[7]);
-  int pathtracing_level = std::stoi(argv[8]);
-  float eye_x = std::stof(argv[9]);
-  float eye_y = std::stof(argv[10]);
-  float eye_z = std::stof(argv[11]);
-  float center_x = std::stof(argv[12]);
-  float center_y = std::stof(argv[13]);
-  float center_z = std::stof(argv[14]);
-  float up_x = std::stof(argv[15]);
-  float up_y = std::stof(argv[16]);
-  float up_z = std::stof(argv[17]);
-  float fovy = std::stof(argv[18]);
-  float aperture = std::stof(argv[19]);
-  float focus_dist = std::stof(argv[20]);
+  int im_width = std::stoi(argv[6]);
+  int im_height = std::stoi(argv[7]);
+  int pathtracing_sample_size = std::stoi(argv[8]);
+  int pathtracing_level = std::stoi(argv[9]);
+  float eye_x = std::stof(argv[10]);
+  float eye_y = std::stof(argv[11]);
+  float eye_z = std::stof(argv[12]);
+  float center_x = std::stof(argv[13]);
+  float center_y = std::stof(argv[14]);
+  float center_z = std::stof(argv[15]);
+  float up_x = std::stof(argv[16]);
+  float up_y = std::stof(argv[17]);
+  float up_z = std::stof(argv[18]);
+  float fovy = std::stof(argv[19]);
+  float aperture = std::stof(argv[20]);
+  float focus_dist = std::stof(argv[21]);
 
-  float sky_emission_r = std::stof(argv[21]);
-  float sky_emission_g = std::stof(argv[22]);
-  float sky_emission_b = std::stof(argv[23]);
+  float sky_emission_r = std::stof(argv[22]);
+  float sky_emission_g = std::stof(argv[23]);
+  float sky_emission_b = std::stof(argv[24]);
 
-  int sss_pts_per_object = std::stoi(argv[24]);
+  int sss_pts_per_object = std::stoi(argv[25]);
 
   int tx = 8, ty = 8;
 
@@ -644,6 +646,23 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
+
+  start = clock();
+  process = "Creating point image";
+  print_start_process(process, start);
+  create_point_image<<<sss_pts_per_object * num_sss_objects[0] / tx + 1, tx>>>(
+    image_output, my_camera, sss_pts, sss_pts_per_object * num_sss_objects[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Saving pts image";
+  print_start_process(process, start);
+  save_image(image_output, im_width, im_height, pt_image_output_path);
+  print_end_process(process, start);
+  checkCudaErrors(cudaDeviceSynchronize());
 
   start = clock();
   process = "Computing the world bounding box";

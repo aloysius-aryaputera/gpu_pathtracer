@@ -2,11 +2,20 @@
 #ifndef OBJECT_OPERATIONS_H
 #define OBJECT_OPERATIONS_H
 
+#include "../point/point.h"
 #include "object.h"
 
 __global__ void compute_num_sss_objects(
   int *num_sss_objects, Object** object_array, int *pt_offset_array,
   int num_objects, int num_pts_per_object
+);
+__global__ void allocate_pts_sss(
+  Object ** object_array, Point** point_array, int *pt_offset_array,
+  int num_objects
+);
+__global__ void create_sss_pts(
+  Object** object, Primitive** geom_array, Point** point_array, int *pt_offset,
+  curandState *rand_state, int object_idx, int num_pts_per_object
 );
 
 __global__ void compute_num_sss_objects(

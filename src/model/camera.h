@@ -40,22 +40,38 @@ __host__ __device__ Camera::Camera(
   this -> lens_radius = aperture_ / 2.0;
   this -> focus_dist = focus_dist_;
   this -> fovy = fovy_;
-  this -> fovx = 2.0f * atan(((float)width / (float)height) * tan(M_PI * fovy / 180 / 2)) * \
-    180 / M_PI;
+  this -> fovx = 2.0f * atan(((float)width / (float)height) * tan(
+    M_PI * fovy / 180 / 2)) * 180 / M_PI;
   this -> w = unit_vector(this -> eye - this -> center);
   this -> u = unit_vector(cross(this -> up, this -> w));
   this -> v = cross(this -> w, this -> u);
 }
 
-__device__ Ray Camera::compute_ray(
-  float i, float j, curandState *rand_state
-) {
+__device__ int Camera::compute_j(vec3 direction) {
+  int j = floorf(
+    (float)this -> width / 2 + (float)this -> width / 2 / tan(
+      this -> fovx * M_PI / 180.0 / 2) * (
+        dot(direction + this -> w, this -> u))
+  );
+  return j;
+}
+
+__device__ int Camera::compute_i(vec3 direction) {
+  int i = floorf(
+    (float)this -> height / 2 - (float)this -> height / 2 / tan(
+      this -> fovy * M_PI / 180.0 / 2) * (
+        dot(direction + this -> w, this -> v))
+  );
+  return i;
+}
+
+__device__ Ray Camera::compute_ray(float i, float j, curandState *rand_state) {
   vec3 dir;
   float alpha, beta;
-  alpha = tan(this -> fovx * M_PI / 180.0 / 2) * (j - ((float)this -> width / 2)) / (
-    (float)this -> width / 2);
-  beta = tan(this -> fovy * M_PI / 180.0 / 2) * (((float)this -> height / 2) - i) / (
-    (float)this -> height / 2);
+  alpha = tan(this -> fovx * M_PI / 180.0 / 2) * (
+    j - ((float)this -> width / 2)) / ((float)this -> width / 2);
+  beta = tan(this -> fovy * M_PI / 180.0 / 2) * (
+    ((float)this -> height / 2) - i) / ((float)this -> height / 2);
   dir = unit_vector(alpha * this -> u + beta * this -> v - this -> w);
 
   vec3 point = this -> eye + this -> focus_dist * dir;
