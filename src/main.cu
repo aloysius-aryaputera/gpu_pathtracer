@@ -632,8 +632,18 @@ int main(int argc, char **argv) {
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);
   }
-  // init_curand_state<<<sss_pts_per_object * num_sss_objects[0] / 8 + 1, 8>>>(
-  //   sss_pts_per_object * num_sss_objects[0], rand_state_sss);
+
+  checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
+  dim3 blocks(im_width / tx + 1, im_height / ty + 1);
+  dim3 threads(tx, ty);
+
+  start = clock();
+  process = "Clearing image";
+  print_start_process(process, start);
+  clear_image<<<blocks, threads>>>(image_output, im_width, im_height);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
 
   start = clock();
   process = "Computing the world bounding box";
@@ -746,10 +756,6 @@ int main(int argc, char **argv) {
   print_end_process(process, start);
 
   vec3 sky_emission = vec3(sky_emission_r, sky_emission_g, sky_emission_b);
-  checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
-
-  dim3 blocks(im_width / tx + 1, im_height / ty + 1);
-  dim3 threads(tx, ty);
 
   start = clock();
   process = "Rendering";

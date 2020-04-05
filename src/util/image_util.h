@@ -9,6 +9,7 @@ __host__ float clamp(const float &lo, const float &hi, const float &v);
 __host__ void save_image(
   vec3* image, int width, int height, std::string filename
 );
+__global__ void clear_image(vec3 *image, int width, int height);
 
 __host__ float clamp(const float &lo, const float &hi, const float &v)
 { return std::max(lo, std::min(hi, v)); }
@@ -35,6 +36,17 @@ __host__ void save_image(
     }
   }
   ofs.close();
+}
+
+__global__ void clear_image(vec3 *image, int width, int height) {
+  int j = threadIdx.x + blockIdx.x * blockDim.x;
+  int i = threadIdx.y + blockIdx.y * blockDim.y;
+
+  if((j >= width) || (i >= height)) return;
+
+  int pixel_index = i * width + j;
+  image[pixel_index] = vec3(0, 0, 0);
+
 }
 
 #endif
