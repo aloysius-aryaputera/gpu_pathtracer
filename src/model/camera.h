@@ -20,6 +20,8 @@ class Camera {
       float aperture_, float focus_dist_
     );
     __device__ Ray compute_ray(float i, float j, curandState *rand_state);
+    __device__ int compute_i(vec3 direction);
+    __device__ int compute_j(vec3 direction);
 
     int width, height;
     vec3 eye;
