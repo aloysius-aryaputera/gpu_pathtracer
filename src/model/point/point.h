@@ -13,6 +13,7 @@ class Point {
 
 __device__ Point::Point(vec3 location_) {
   this -> location = location_;
+  print_vec3(this -> location);
 }
 
 #endif

@@ -18,6 +18,7 @@ class Primitive {
   private:
     Material *material;
     bool sub_surface_scattering;
+    float area;
 
   public:
     __host__ __device__ Primitive() {}
@@ -40,9 +41,12 @@ class Primitive {
       return vec3(0, 0, 0);
     }
 
+    __device__ virtual float get_area() {
+      return this -> area;
+    }
+
     BoundingBox *bounding_box;
     Object *object;
-    float area;
 
 };
 

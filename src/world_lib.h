@@ -212,7 +212,7 @@ __global__ void create_world(
     vec3(x_tex[tex_3_idx[idx]], y_tex[tex_3_idx[idx]], 0)
   );
 
-  triangle_area[idx] = (*(geom_array + idx)) -> area;
+  triangle_area[idx] = (*(geom_array + idx)) -> get_area();
 
   if (geom_array[idx] -> is_sub_surface_scattering())
   {

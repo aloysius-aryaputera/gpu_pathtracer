@@ -23,6 +23,7 @@ class Sphere: public Primitive {
     float r, tolerance;
     Material* material;
     bool sub_surface_scattering;
+    float area;
 
   public:
     __host__ __device__ Sphere() {};
@@ -34,14 +35,15 @@ class Sphere: public Primitive {
     __device__ bool is_sub_surface_scattering() {
       return false;
     }
-    __device__ vec3 get_random_point_on_surface(
-      curandState *rand_state
-    ) {
+    __device__ vec3 get_random_point_on_surface(curandState *rand_state) {
       return vec3(0, 0, 0);
     }
 
+    __device__ float get_area() {
+      return this -> area;
+    }
+
     BoundingBox *bounding_box;
-    float area;
 
 };
 

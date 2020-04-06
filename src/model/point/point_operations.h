@@ -22,6 +22,8 @@ __global__ void create_point_image(
   int j = camera[0] -> compute_j(direction);
   int pixel_index = i * (camera[0] -> width) + j;
 
+  printf("i = %d, j = %d\n", i, j);
+
   if (pixel_index < (camera[0] -> width * camera[0] -> height))
     fb[pixel_index] = vec3(1, 1, 1);
 

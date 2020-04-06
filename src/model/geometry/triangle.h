@@ -23,6 +23,7 @@ class Triangle: public Primitive {
     vec3 tex_1, tex_2, tex_3;
     Material *material;
     bool sub_surface_scattering;
+    float area;
 
   public:
     __host__ __device__ Triangle() {};
@@ -37,10 +38,12 @@ class Triangle: public Primitive {
     __device__ BoundingBox* get_bounding_box();
     __device__ bool is_sub_surface_scattering();
     __device__ vec3 get_random_point_on_surface(curandState *rand_state);
+    __device__ float get_area() {
+      return this -> area;
+    }
 
     BoundingBox *bounding_box;
     Object *object;
-    float area;
 };
 
 __host__ __device__ float _compute_triangle_area(

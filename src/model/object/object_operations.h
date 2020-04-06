@@ -28,7 +28,10 @@ __global__ void compute_num_sss_objects(
 
   int offset = 0;
   num_sss_objects[0] = 0;
+
   for (int i = 0; i < num_objects; i++) {
+
+    object_array[i] -> compute_accummulated_triangle_area();
 
     if (object_array[i] -> sub_surface_scattering)
       (num_sss_objects[0])++;

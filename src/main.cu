@@ -616,7 +616,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Generating curand state for SSS points sampling";
   print_start_process(process, start);
-  init_curand_state<<<sss_pts_per_object * num_sss_objects[0] / 8 + 1, 8>>>(
+  init_curand_state<<<sss_pts_per_object * num_sss_objects[0], 1>>>(
     sss_pts_per_object * num_sss_objects[0], rand_state_sss);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -626,7 +626,7 @@ int main(int argc, char **argv) {
     start = clock();
     process = "Creating SSS points sampling for object " + std::to_string(i);
     print_start_process(process, start);
-    create_sss_pts<<<sss_pts_per_object / tx + 1, tx>>>(
+    create_sss_pts<<<sss_pts_per_object, 1>>>(
       my_objects, my_geom, sss_pts, pt_offset_array, rand_state_sss,
       i, sss_pts_per_object
     );
