@@ -40,7 +40,6 @@ __device__ vec3 _get_sky_color(
   vec3 sky_emission, vec3 look_dir, int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b
 ) {
-  // return sky_emission * (look_dir.y() + 1) / 2.0;
   float u = .5 + atan2(look_dir.z(), look_dir.x()) / (2.0 * M_PI);
   float v = .5 - asin(look_dir.y()) / M_PI;
 
@@ -61,7 +60,7 @@ __device__ vec3 _compute_color(
 ) {
   hit_record cur_rec;
   bool hit, reflected = false, refracted = false, false_hit = false;
-  bool entering = false, exiting = false;
+  bool entering = false;
   vec3 mask = vec3(1, 1, 1), light = vec3(0, 0, 0), light_tmp = vec3(0, 0, 0);
   vec3 v3_rand, v3_rand_world;
   Ray ray = ray_init;
@@ -86,7 +85,7 @@ __device__ vec3 _compute_color(
       ) -> check_if_reflected_or_refracted(
         cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
         reflected, false_hit, refracted,
-        entering, exiting,
+        entering,
         material_list, material_list_length,
         ref, rand_state
       );
@@ -96,7 +95,7 @@ __device__ vec3 _compute_color(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
 
-      if (false_hit && exiting)
+      if (false_hit && !entering)
         remove_a_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
@@ -106,7 +105,7 @@ __device__ vec3 _compute_color(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
 
-      if (!false_hit && refracted && exiting)
+      if (!false_hit && refracted && !entering)
         remove_a_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );

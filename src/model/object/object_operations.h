@@ -32,7 +32,6 @@ __global__ void compute_num_sss_objects(
   for (int i = 0; i < num_objects; i++) {
 
     object_array[i] -> compute_accummulated_triangle_area();
-    // printf("Here!\n");
 
     if (object_array[i] -> sub_surface_scattering)
       (num_sss_objects[0])++;
@@ -75,10 +74,12 @@ __global__ void create_sss_pts(
 
   int primitive_idx = (object[object_idx]) -> pick_primitive_idx_for_sampling(
     rand_state, idx);
-  vec3 pts_loc = geom_array[primitive_idx] -> get_random_point_on_surface(
+  hit_record pts_record = geom_array[primitive_idx] -> get_random_point_on_surface(
     rand_state);
-  // vec3 pts_loc = vec3(0, 0, 0);
-  point_array[pt_offset[object_idx] + idx] = new Point(pts_loc);
+  vec3 filter = pts_record.object -> get_material() -> get_texture_diffuse(
+    pts_record.uv_vector);
+  point_array[pt_offset[object_idx] + idx] = new Point(
+    pts_record.point, filter, pts_record.normal);
 }
 
 #endif

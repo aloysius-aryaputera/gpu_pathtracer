@@ -37,7 +37,7 @@ class Triangle: public Primitive {
     __device__ Material* get_material();
     __device__ BoundingBox* get_bounding_box();
     __device__ bool is_sub_surface_scattering();
-    __device__ vec3 get_random_point_on_surface(curandState *rand_state);
+    __device__ hit_record get_random_point_on_surface(curandState *rand_state);
     __device__ float get_area() {
       return this -> area;
     }
@@ -49,17 +49,25 @@ class Triangle: public Primitive {
 __host__ __device__ float _compute_triangle_area(
   vec3 point_1, vec3 point_2, vec3 point_3);
 
-__device__ vec3 Triangle::get_random_point_on_surface(
+__device__ hit_record Triangle::get_random_point_on_surface(
   curandState *rand_state
 ) {
+  hit_record new_hit_record;
   float random_number = curand_uniform(&rand_state[0]);
   float random_number_2 = curand_uniform(&rand_state[0]);
 
   float u = 1 - powf(random_number, .5);
   float v = random_number_2 * powf(random_number, .5);
 
-  return u * this -> point_1 + v * this -> point_2 + (
+  new_hit_record.point =  u * this -> point_1 + v * this -> point_2 + (
     1 - u - v) * this -> point_3;
+  new_hit_record.normal = unit_vector(
+    u * this -> norm_1 + v * this -> norm_2 + (1 - u - v) * this -> norm_3);
+  new_hit_record.uv_vector = u * this -> tex_1 + v * this -> tex_2 + (
+    1 - u - v) * this -> tex_3;
+  new_hit_record.object = this;
+
+  return new_hit_record;
 
 }
 

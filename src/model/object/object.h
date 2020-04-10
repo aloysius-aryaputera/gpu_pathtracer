@@ -75,7 +75,6 @@ __device__ void Object::compute_accummulated_triangle_area() {
   float acc = 0;
   for (int i = 0; i < this -> num_primitives; i++) {
     acc += (this -> triangle_area)[i];
-    // printf("triangle_area[%d] = %f\n", i, this -> triangle_area[i]);
     (this -> accumulated_triangle_area)[i] = acc;
   }
 }

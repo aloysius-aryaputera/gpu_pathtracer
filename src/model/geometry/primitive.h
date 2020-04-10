@@ -35,11 +35,8 @@ class Primitive {
       return false;
     }
 
-    __device__ virtual vec3 get_random_point_on_surface(
-      curandState *rand_state
-    ) {
-      return vec3(0, 0, 0);
-    }
+    __device__ virtual hit_record get_random_point_on_surface(
+      curandState *rand_state);
 
     __device__ virtual float get_area() {
       return this -> area;
@@ -59,5 +56,12 @@ struct hit_record
     Primitive* object;
     Ray coming_ray;
 };
+
+__device__ hit_record Primitive::get_random_point_on_surface(
+  curandState *rand_state
+) {
+  hit_record new_hit_record;
+  return new_hit_record;
+}
 
 #endif

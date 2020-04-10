@@ -35,8 +35,11 @@ class Sphere: public Primitive {
     __device__ bool is_sub_surface_scattering() {
       return false;
     }
-    __device__ vec3 get_random_point_on_surface(curandState *rand_state) {
-      return vec3(0, 0, 0);
+    __device__ hit_record get_random_point_on_surface(
+      curandState *rand_state
+    ) {
+      hit_record new_hit_record;
+      return new_hit_record;
     }
 
     __device__ float get_area() {

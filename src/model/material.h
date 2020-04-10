@@ -37,13 +37,12 @@ class Material {
       vec3 uv_vector, vec3 filter, float* texture_r, float* texture_g,
       float* texture_b, int texture_height, int texture_width
     );
-    __device__ vec3 _get_texture_diffuse(vec3 uv_vector);
     __device__ vec3 _get_texture_specular(vec3 uv_vector);
     __device__ float _get_texture_n_s(vec3 uv_vector);
     __device__ reflection_record _refract(
       vec3 hit_point, vec3 v_in, vec3 normal,
       bool &reflected, bool &false_hit, bool &refracted,
-      bool &entering, bool &exiting,
+      bool &entering,
       Material** material_list, int material_list_length,
       curandState *rand_state
     );
@@ -92,11 +91,12 @@ class Material {
     __device__ void check_if_reflected_or_refracted(
       Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
       bool &reflected, bool &false_hit, bool &refracted,
-      bool &entering, bool &exiting,
+      bool &entering,
       Material **material_list, int material_list_length,
       reflection_record &ref, curandState *rand_state
     );
     __device__ vec3 get_texture_emission(vec3 uv_vector);
+    __device__ vec3 get_texture_diffuse(vec3 uv_vector);
 
     vec3 emission;
     int priority;
@@ -149,7 +149,7 @@ __device__ void find_highest_prioritised_materials(
 __device__ reflection_record Material::_refract(
   vec3 hit_point, vec3 v_in, vec3 normal,
   bool &reflected, bool &false_hit, bool &refracted,
-  bool &entering, bool &exiting,
+  bool &entering,
   Material** material_list, int material_list_length,
   curandState *rand_state
 ) {
@@ -189,10 +189,8 @@ __device__ reflection_record Material::_refract(
 
     if (dot(v_in, normal) <= 0) {
       entering = true;
-      exiting = false;
     } else {
       entering = false;
-      exiting = true;
     }
 
     return ref;
@@ -224,7 +222,6 @@ __device__ reflection_record Material::_refract(
       refracted = true;
       false_hit = false;
       entering = true;
-      exiting = false;
 
     } else {
       vec3 v_out = reflect(v_in, normal);
@@ -235,7 +232,6 @@ __device__ reflection_record Material::_refract(
       refracted = false;
       false_hit = false;
       entering = false;
-      exiting = false;
 
     }
   } else {
@@ -257,7 +253,6 @@ __device__ reflection_record Material::_refract(
       refracted = false;
       false_hit = false;
       entering = false;
-      exiting = false;
 
     }else {
       vec3 v_in_perpendicular = cos_theta_1 * normal;
@@ -278,7 +273,6 @@ __device__ reflection_record Material::_refract(
       refracted = true;
       false_hit = false;
       entering = false;
-      exiting = true;
     }
   }
   return ref;
@@ -360,7 +354,7 @@ __host__ __device__ Material::Material(
 __device__ void Material::check_if_reflected_or_refracted(
   Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
   bool &reflected, bool &false_hit, bool &refracted,
-  bool &entering, bool &exiting,
+  bool &entering,
   Material** material_list, int material_list_length,
   reflection_record &ref, curandState *rand_state
 ) {
@@ -369,7 +363,7 @@ __device__ void Material::check_if_reflected_or_refracted(
     ref = this -> _refract(
       hit_point, coming_ray.dir, normal,
       reflected, false_hit, refracted,
-      entering, exiting,
+      entering,
       material_list, material_list_length,
       rand_state
     );
@@ -391,7 +385,7 @@ __device__ void Material::check_if_reflected_or_refracted(
   if (random_number <= factor) {
     ref.ray = generate_ray(hit_point, vec3(0, 0, 0), normal, 1, rand_state);
     cos_theta = dot(ref.ray.dir, normal);
-    ref.filter = this -> _get_texture_diffuse(uv_vector) * cos_theta;
+    ref.filter = this -> get_texture_diffuse(uv_vector) * cos_theta;
     refracted = false;
     reflected = true;
     false_hit = false;
@@ -450,7 +444,7 @@ __device__ vec3 Material::get_texture_emission(vec3 uv_vector) {
 }
 
 
-__device__ vec3 Material::_get_texture_diffuse(vec3 uv_vector) {
+__device__ vec3 Material::get_texture_diffuse(vec3 uv_vector) {
   return this -> _get_texture(
     uv_vector, this -> diffuse, this -> texture_r_diffuse,
     this -> texture_g_diffuse, this -> texture_b_diffuse,
