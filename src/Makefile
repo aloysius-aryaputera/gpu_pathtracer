@@ -14,27 +14,7 @@ GENCODE_FLAGS_3  = -gencode arch=compute_61,code=sm_61
 GENCODE_FLAGS_4  = -gencode arch=compute_75,code=sm_75
 
 SRCS = main.cu
-INCS = \
-  external/libjpeg_cpp/jpeg.h #\
-	# model/camera.h \
-	# model/cartesian_system.h \
-	# model/data_structure/local_vector.h \
-	# model/geometry/primitive.h \
-	# model/geometry/sphere.h \
-	# model/geometry/triangle.h \
-	# model/grid/bounding_box.h \
-	# model/grid/cell.h \
-	# model/grid/grid.h \
-	# model/material.h \
-	# model/ray.h \
-	# model/scene.h \
-	# model/vector_and_matrix/vec3.h \
-	# param.h \
-	# render/pathtracing.h \
-	# util/image_util.h \
-	# util/read_file_util.h \
-	# util/string_util.h \
-	# world_lib.h
+INCS = external/libjpeg_cpp/jpeg.h
 
 # all: gpu_path_tracing gpu_path_tracing_debug gpu_path_tracing_2 gpu_path_tracing_debug_2 gpu_path_tracing_3 gpu_path_tracing_debug_3 gpu_path_tracing_4 gpu_path_tracing_debug_4
 all: gpu_path_tracing gpu_path_tracing_debug

@@ -7,6 +7,7 @@
 #include "../util/vector_util.h"
 #include "cartesian_system.h"
 #include "ray/ray.h"
+#include "ray/ray_operations.h"
 #include "vector_and_matrix/vec3.h"
 
 struct reflection_record
@@ -375,9 +376,6 @@ __device__ void Material::check_if_reflected_or_refracted(
     return;
   }
 
-  CartesianSystem new_xyz_system = CartesianSystem(normal);
-  vec3 v3_rand = get_random_unit_vector_hemisphere(rand_state);
-  vec3 v3_rand_world = new_xyz_system.to_world_system(v3_rand);
   vec3 reflected_ray_dir;
   float cos_theta, random_number = curand_uniform(&rand_state[0]);
   float factor = \
@@ -391,8 +389,8 @@ __device__ void Material::check_if_reflected_or_refracted(
   }
 
   if (random_number <= factor) {
-    cos_theta = v3_rand.z();
-    ref.ray = Ray(hit_point, v3_rand_world);
+    ref.ray = generate_ray(hit_point, vec3(0, 0, 0), normal, 1, rand_state);
+    cos_theta = dot(ref.ray.dir, normal);
     ref.filter = this -> _get_texture_diffuse(uv_vector) * cos_theta;
     refracted = false;
     reflected = true;
@@ -400,11 +398,9 @@ __device__ void Material::check_if_reflected_or_refracted(
     return;
   } else {
     reflected_ray_dir = reflect(coming_ray.dir, normal);
-    reflected_ray_dir = unit_vector(
-      reflected_ray_dir + fuziness * v3_rand_world
-    );
-    cos_theta = dot(reflected_ray_dir, normal);
-    ref.ray = Ray(hit_point, reflected_ray_dir);
+    ref.ray = generate_ray(
+      hit_point, reflected_ray_dir, normal, fuziness, rand_state);
+    cos_theta = dot(ref.ray.dir, normal);
     ref.filter = this -> _get_texture_specular(uv_vector) * cos_theta;
     if (cos_theta <= 0) {
       refracted = false;

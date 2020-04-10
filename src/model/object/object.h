@@ -50,13 +50,8 @@ __device__ int Object::pick_primitive_idx_for_sampling(
   float accumulated_area = 0;
   int idx = 0;
 
-  // printf("random_number = %f\n", random_number);
-
   random_number *= this -> accumulated_triangle_area[
     (this -> num_primitives) - 1];
-
-  // printf("max acc triangle area = %f\n",
-  //   this -> accumulated_triangle_area[(this -> num_primitives) - 1]);
 
   while(
     random_number > accumulated_area && idx < (this -> num_primitives)
@@ -64,8 +59,6 @@ __device__ int Object::pick_primitive_idx_for_sampling(
     accumulated_area = this -> accumulated_triangle_area[idx];
     idx++;
   }
-
-  // printf("idx = %d\n", idx);
 
   return idx;
 }
