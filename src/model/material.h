@@ -6,7 +6,7 @@
 
 #include "../util/vector_util.h"
 #include "cartesian_system.h"
-#include "ray.h"
+#include "ray/ray.h"
 #include "vector_and_matrix/vec3.h"
 
 struct reflection_record

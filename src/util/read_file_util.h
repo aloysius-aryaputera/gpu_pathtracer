@@ -495,7 +495,7 @@ void extract_triangle_data(
 ) {
 
   int point_idx = 0, triangle_idx = 0, norm_idx = 0, tex_idx = 0, \
-    current_material_idx = 0, object_idx = 0;
+    current_material_idx = 0, object_idx = -1;
   std::string str, single_material_name;
   std::string filename = folder_path + obj_filename;
   std::ifstream myfile (filename.c_str());
@@ -520,13 +520,9 @@ void extract_triangle_data(
             current_material_idx = 0;
           }
         } else if (chunks[0] == "o") {
-          *(object_primitive_offset_idx + object_idx) = triangle_idx;
           object_idx++;
-
-          if (object_idx >= 1) {
-            *(object_num_primitives + object_idx - 1) = \
-              triangle_idx - *(object_primitive_offset_idx + object_idx - 1);
-          }
+          *(object_primitive_offset_idx + object_idx) = triangle_idx;
+          *(object_num_primitives + object_idx) = 0;
         } else if (chunks[0] == "v") {
           *(x + point_idx) = std::stof(chunks[1]);
           *(y + point_idx) = std::stof(chunks[2]);
@@ -549,7 +545,7 @@ void extract_triangle_data(
             sub_chunks_2 = split(chunks[2 + i], '/');
             sub_chunks_3 = split(chunks[3 + i], '/');
 
-            *(triangle_object_idx + triangle_idx) = object_idx - 1;
+            *(triangle_object_idx + triangle_idx) = object_idx;
             *(point_1_idx + triangle_idx) = std::stoi(sub_chunks_1[0]) - 1;
             *(point_2_idx + triangle_idx) = std::stoi(sub_chunks_2[0]) - 1;
             *(point_3_idx + triangle_idx) = std::stoi(sub_chunks_3[0]) - 1;
@@ -577,6 +573,7 @@ void extract_triangle_data(
             *(material + triangle_idx) = current_material_idx;
 
             triangle_idx++;
+            (*(object_num_primitives + object_idx))++;
           }
         }
       }

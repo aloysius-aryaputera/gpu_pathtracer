@@ -2,9 +2,9 @@
 #ifndef RAY_H
 #define RAY_H
 
-#include <cuda_fp16.h>
+// #include <cuda_fp16.h>
 
-#include "vector_and_matrix/vec3.h"
+#include "../vector_and_matrix/vec3.h"
 
 class Ray {
   public:

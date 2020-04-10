@@ -12,7 +12,7 @@
 #include "model/grid/grid.h"
 #include "model/material.h"
 #include "model/object/object.h"
-#include "model/ray.h"
+#include "model/ray/ray.h"
 #include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"

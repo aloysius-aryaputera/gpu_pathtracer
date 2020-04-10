@@ -9,7 +9,7 @@
 #include "../model/cartesian_system.h"
 #include "../model/geometry/triangle.h"
 #include "../model/material.h"
-#include "../model/ray.h"
+#include "../model/ray/ray.h"
 #include "../param.h"
 #include "../util/vector_util.h"
 #include "material_list_operations.h"

@@ -22,7 +22,7 @@
 #include "model/object/object_operations.h"
 #include "model/point/point.h"
 #include "model/point/point_operations.h"
-#include "model/ray.h"
+#include "model/ray/ray.h"
 #include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
@@ -592,9 +592,10 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
+  int num_sss_points = max(1, sss_pts_per_object * num_sss_objects[0]);
+
   checkCudaErrors(
-    cudaMallocManaged((void **)&sss_pts,
-    sss_pts_per_object * num_sss_objects[0] * sizeof(Point*)));
+    cudaMallocManaged((void **)&sss_pts, num_sss_points * sizeof(Point*)));
 
   start = clock();
   process = "Allocating points for SSS objects";
@@ -610,14 +611,12 @@ int main(int argc, char **argv) {
 
   checkCudaErrors(
     cudaMallocManaged(
-      (void **)&rand_state_sss,
-      sss_pts_per_object * num_sss_objects[0] * sizeof(curandState)));
+      (void **)&rand_state_sss, num_sss_points * sizeof(curandState)));
 
   start = clock();
   process = "Generating curand state for SSS points sampling";
   print_start_process(process, start);
-  init_curand_state<<<sss_pts_per_object * num_sss_objects[0], 1>>>(
-    sss_pts_per_object * num_sss_objects[0], rand_state_sss);
+  init_curand_state<<<num_sss_points, 1>>>(num_sss_points, rand_state_sss);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
@@ -650,8 +649,8 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Creating point image";
   print_start_process(process, start);
-  create_point_image<<<sss_pts_per_object * num_sss_objects[0] / tx + 1, tx>>>(
-    image_output, my_camera, sss_pts, sss_pts_per_object * num_sss_objects[0]
+  create_point_image<<<num_sss_points / tx + 1, tx>>>(
+    image_output, my_camera, sss_pts, num_sss_points
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());

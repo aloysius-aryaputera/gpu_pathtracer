@@ -16,13 +16,13 @@ __global__ void create_point_image(
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (idx >= num_pts) return;
+  if (num_pts <= 1) return;
 
-  vec3 direction = unit_vector(point_array[idx] -> location - camera[0] -> eye);
+  vec3 direction = unit_vector(
+    point_array[idx] -> location - camera[0] -> eye);
   int i = camera[0] -> compute_i(direction);
   int j = camera[0] -> compute_j(direction);
   int pixel_index = i * (camera[0] -> width) + j;
-
-  printf("i = %d, j = %d\n", i, j);
 
   if (pixel_index < (camera[0] -> width * camera[0] -> height))
     fb[pixel_index] = vec3(1, 1, 1);

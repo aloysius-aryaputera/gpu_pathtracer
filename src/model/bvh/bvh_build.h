@@ -5,7 +5,7 @@
 #include "../../util/bvh_util.h"
 #include "../geometry/primitive.h"
 #include "../grid/bounding_box.h"
-#include "../ray.h"
+#include "../ray/ray.h"
 
 class Node {
   public:

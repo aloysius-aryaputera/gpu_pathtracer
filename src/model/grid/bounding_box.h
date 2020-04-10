@@ -6,7 +6,7 @@
 
 #include "../../param.h"
 #include "../../util/bvh_util.h"
-#include "../ray.h"
+#include "../ray/ray.h"
 #include "../vector_and_matrix/vec3.h"
 
 class BoundingBox {
