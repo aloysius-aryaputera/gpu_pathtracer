@@ -2,6 +2,7 @@
 #ifndef OBJECT_OPERATIONS_H
 #define OBJECT_OPERATIONS_H
 
+#include "../grid/bounding_box.h"
 #include "../point/point.h"
 #include "object.h"
 

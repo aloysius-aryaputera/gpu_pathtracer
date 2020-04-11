@@ -76,31 +76,30 @@ int main(int argc, char **argv) {
   std::string input_folder_path = argv[1];
   std::string obj_filename = argv[2];
   std::string texture_bg_path = argv[3];
-  std::string pt_image_output_path = argv[4];
-  std::string image_output_path = argv[5];
+  std::string image_output_path = argv[4];
 
-  int im_width = std::stoi(argv[6]);
-  int im_height = std::stoi(argv[7]);
-  int pathtracing_sample_size = std::stoi(argv[8]);
-  int pathtracing_level = std::stoi(argv[9]);
-  float eye_x = std::stof(argv[10]);
-  float eye_y = std::stof(argv[11]);
-  float eye_z = std::stof(argv[12]);
-  float center_x = std::stof(argv[13]);
-  float center_y = std::stof(argv[14]);
-  float center_z = std::stof(argv[15]);
-  float up_x = std::stof(argv[16]);
-  float up_y = std::stof(argv[17]);
-  float up_z = std::stof(argv[18]);
-  float fovy = std::stof(argv[19]);
-  float aperture = std::stof(argv[20]);
-  float focus_dist = std::stof(argv[21]);
+  int im_width = std::stoi(argv[5]);
+  int im_height = std::stoi(argv[6]);
+  int pathtracing_sample_size = std::stoi(argv[7]);
+  int pathtracing_level = std::stoi(argv[8]);
+  float eye_x = std::stof(argv[9]);
+  float eye_y = std::stof(argv[10]);
+  float eye_z = std::stof(argv[11]);
+  float center_x = std::stof(argv[12]);
+  float center_y = std::stof(argv[13]);
+  float center_z = std::stof(argv[14]);
+  float up_x = std::stof(argv[15]);
+  float up_y = std::stof(argv[16]);
+  float up_z = std::stof(argv[17]);
+  float fovy = std::stof(argv[18]);
+  float aperture = std::stof(argv[19]);
+  float focus_dist = std::stof(argv[20]);
 
-  float sky_emission_r = std::stof(argv[22]);
-  float sky_emission_g = std::stof(argv[23]);
-  float sky_emission_b = std::stof(argv[24]);
+  float sky_emission_r = std::stof(argv[21]);
+  float sky_emission_g = std::stof(argv[22]);
+  float sky_emission_b = std::stof(argv[23]);
 
-  int sss_pts_per_object = std::stoi(argv[25]);
+  int sss_pts_per_object = std::stoi(argv[24]);
 
   int tx = 8, ty = 8;
 
@@ -529,7 +528,8 @@ int main(int argc, char **argv) {
   print_start_process(process, start);
   create_objects<<<1, num_objects>>>(
     my_objects, object_num_primitives, object_primitive_offset_idx,
-    triangle_area, accumulated_triangle_area, num_objects
+    triangle_area, accumulated_triangle_area, num_objects,
+    sss_pts_per_object
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -634,35 +634,6 @@ int main(int argc, char **argv) {
     print_end_process(process, start);
   }
 
-  checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
-  dim3 blocks(im_width / tx + 1, im_height / ty + 1);
-  dim3 threads(tx, ty);
-
-  start = clock();
-  process = "Clearing image";
-  print_start_process(process, start);
-  clear_image<<<blocks, threads>>>(image_output, im_width, im_height);
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  print_end_process(process, start);
-
-  start = clock();
-  process = "Creating point image";
-  print_start_process(process, start);
-  create_point_image<<<num_sss_points / tx + 1, tx>>>(
-    image_output, my_camera, sss_pts, num_sss_points
-  );
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  print_end_process(process, start);
-
-  start = clock();
-  process = "Saving pts image";
-  print_start_process(process, start);
-  save_image(image_output, im_width, im_height, pt_image_output_path);
-  print_end_process(process, start);
-  checkCudaErrors(cudaDeviceSynchronize());
-
   start = clock();
   process = "Computing the world bounding box";
   print_start_process(process, start);
@@ -762,6 +733,53 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
+  vec3 sky_emission = vec3(sky_emission_r, sky_emission_g, sky_emission_b);
+
+  start = clock();
+  process = "Doing first pass for SSS objects";
+  print_start_process(process, start);
+  do_sss_first_pass<<<num_sss_points, 1>>>(
+    sss_pts, num_sss_points,
+    pathtracing_sample_size,
+    pathtracing_level, sky_emission,
+    bg_height, bg_width,
+    bg_texture_r, bg_texture_g, bg_texture_b, node_list,
+    rand_state_sss
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
+  dim3 blocks(im_width / tx + 1, im_height / ty + 1);
+  dim3 threads(tx, ty);
+
+  start = clock();
+  process = "Clearing image";
+  print_start_process(process, start);
+  clear_image<<<blocks, threads>>>(image_output, im_width, im_height);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Creating point image";
+  print_start_process(process, start);
+  create_point_image<<<num_sss_points / tx + 1, tx>>>(
+    image_output, my_camera, sss_pts, num_sss_points
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Saving pts image";
+  print_start_process(process, start);
+  save_image(
+    image_output, im_width, im_height, image_output_path + "_pts.ppm");
+  print_end_process(process, start);
+  checkCudaErrors(cudaDeviceSynchronize());
+
   checkCudaErrors(
     cudaMallocManaged((void **)&rand_state_image, rand_state_image_size));
 
@@ -772,8 +790,6 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
-
-  vec3 sky_emission = vec3(sky_emission_r, sky_emission_g, sky_emission_b);
 
   start = clock();
   process = "Rendering";
@@ -790,7 +806,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Saving image";
   print_start_process(process, start);
-  save_image(image_output, im_width, im_height, image_output_path);
+  save_image(image_output, im_width, im_height, image_output_path + ".ppm");
   print_end_process(process, start);
   checkCudaErrors(cudaDeviceSynchronize());
 

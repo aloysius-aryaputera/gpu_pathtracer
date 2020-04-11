@@ -2,6 +2,7 @@
 #ifndef POINT_OPERATIONS_H
 #define POINT_OPERATIONS_H
 
+#include "../../util/image_util.h"
 #include "../camera.h"
 #include "../vector_and_matrix/vec3.h"
 #include "point.h"
@@ -25,7 +26,7 @@ __global__ void create_point_image(
   int pixel_index = i * (camera[0] -> width) + j;
 
   if (pixel_index < (camera[0] -> width * camera[0] -> height))
-    fb[pixel_index] = vec3(1, 1, 1);
+    fb[pixel_index] = point_array[idx] -> color;
 
 }
 

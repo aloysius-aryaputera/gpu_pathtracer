@@ -9,7 +9,9 @@
 #include "../model/cartesian_system.h"
 #include "../model/geometry/triangle.h"
 #include "../model/material.h"
+#include "../model/point/point.h"
 #include "../model/ray/ray.h"
+#include "../model/ray/ray_operations.h"
 #include "../param.h"
 #include "../util/vector_util.h"
 #include "material_list_operations.h"
@@ -23,12 +25,24 @@ void render(
   Node **node_list
 );
 
+__global__
+void do_sss_first_pass(
+  Point **point_list,
+  int num_points,
+  int sample_size,
+  int level,
+  vec3 sky_emission, int bg_height, int bg_width,
+  float *bg_r, float *bg_g, float *bg_b,
+  Node **node_list,
+  curandState *rand_state
+);
+
 __device__ vec3 _compute_color(
-  hit_record rec, int level, vec3 sky_emission,
+  Ray ray_init, int level, vec3 sky_emission,
   int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
   curandState *rand_state,
-  Node** node_list
+  Node **node_list
 );
 
 __device__ vec3 _get_sky_color(
@@ -50,6 +64,8 @@ __device__ vec3 _get_sky_color(
 
   return sky_emission * vec3(bg_r[idx], bg_g[idx], bg_b[idx]);
 }
+
+
 
 __device__ vec3 _compute_color(
   Ray ray_init, int level, vec3 sky_emission,
@@ -145,6 +161,47 @@ __device__ vec3 _compute_color(
   }
 
   return mask * light;
+}
+
+__global__
+void do_sss_first_pass(
+  Point **point_list,
+  int num_points,
+  int sample_size,
+  int level,
+  vec3 sky_emission, int bg_height, int bg_width,
+  float *bg_r, float *bg_g, float *bg_b,
+  Node **node_list,
+  curandState *rand_state
+) {
+
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+  if (i >= num_points) return;
+  if (num_points <= 1) return;
+
+  vec3 init_point = point_list[i] -> location;
+  vec3 filter = point_list[i] -> filter;
+  vec3 normal = point_list[i] -> normal;
+  vec3 color_tmp, color = vec3(0, 0, 0);
+  Ray init_ray;
+  float cos_theta;
+  curandState local_rand_state = rand_state[i];
+
+  for(int idx = 0; idx < sample_size; idx++) {
+    init_ray = generate_ray(init_point, vec3(0, 0, 0), normal, 1, rand_state);
+    color_tmp = _compute_color(
+      init_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
+      bg_b, &local_rand_state, node_list
+    );
+    color_tmp = de_nan(color_tmp);
+    cos_theta = dot(init_ray.dir, normal);
+    color += color_tmp * cos_theta;
+  }
+  color *= (1.0 / sample_size);
+  color *= filter;
+
+  point_list[i] -> assign_color(color);
+
 }
 
 __global__
