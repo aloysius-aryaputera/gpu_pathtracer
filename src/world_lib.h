@@ -204,7 +204,8 @@ __global__ void create_world(
     vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]),
 
     material_array[material_idx[idx]],
-    object_array[triangle_object_idx[idx]],
+    // object_array[triangle_object_idx[idx]],
+    triangle_object_idx[idx],
 
     vec3(x_norm[norm_1_idx[idx]], y_norm[norm_1_idx[idx]], z_norm[norm_1_idx[idx]]),
     vec3(x_norm[norm_2_idx[idx]], y_norm[norm_2_idx[idx]], z_norm[norm_2_idx[idx]]),

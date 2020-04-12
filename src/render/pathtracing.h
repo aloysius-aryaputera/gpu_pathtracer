@@ -178,7 +178,7 @@ void do_sss_first_pass(
 
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   if (i >= num_points) return;
-  if (num_points <= 1) return;
+  //if (num_points <= 1) return;
 
   vec3 init_point = point_list[i] -> location;
   vec3 filter = point_list[i] -> filter;

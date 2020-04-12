@@ -43,7 +43,8 @@ class Primitive {
     }
 
     BoundingBox *bounding_box;
-    Object *object;
+    // Object *object;
+    int object_idx;
 
 };
 

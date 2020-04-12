@@ -4,6 +4,7 @@
 
 #include <curand_kernel.h>
 
+#include "../bvh/bvh.h"
 #include "../grid/bounding_box.h"
 #include "../point/point.h"
 #include "../vector_and_matrix/vec3.h"
@@ -27,10 +28,13 @@ class Object {
     );
     __device__ void compute_accummulated_triangle_area();
     __device__ void compute_boundaries();
+    __device__ void assign_bvh_root_node_idx(int idx);
+    __device__ void assign_bvh_leaf_zero_idx(int idx);
 
     int num_primitives, primitives_offset_idx, num_pts;
     bool sub_surface_scattering;
     Point** sss_pt_array;
+    int bvh_root_node_idx, bvh_leaf_zero_idx;
     float x_min, x_max, y_min, y_max, z_min, z_max;
 };
 
@@ -44,6 +48,14 @@ __device__ Object::Object(
   this -> accumulated_triangle_area = accumulated_triangle_area_;
   this -> sub_surface_scattering = false;
   this -> num_pts = num_pts_;
+}
+
+__device__ void Object::assign_bvh_root_node_idx(int idx) {
+  this -> bvh_root_node_idx = idx;
+}
+
+__device__ void Object::assign_bvh_leaf_zero_idx(int idx) {
+  this -> bvh_leaf_zero_idx = idx;
 }
 
 __device__ int Object::pick_primitive_idx_for_sampling(

@@ -24,13 +24,30 @@ __global__ void create_sss_pts(
 __global__ void compute_pts_morton_code_batch(
   Object** object_array, Point** point_array, int num_points
 );
+__global__ void compute_sss_pts_offset(Object **object_array, int num_objects);
+
+__global__ void compute_sss_pts_offset(
+  Object **object_array, int num_objects
+) {
+  int node_offset, leaf_offset;
+  node_offset = 0;
+  leaf_offset = 0;
+  for (int i = 0; i < num_objects; i++) {
+    object_array[i] -> assign_bvh_root_node_idx(node_offset);
+    object_array[i] -> assign_bvh_leaf_zero_idx(leaf_offset);
+    if (object_array[i] -> num_pts > 0) {
+      node_offset += (object_array[i] -> num_pts - 1);
+    }
+    leaf_offset += object_array[i] -> num_pts;
+  }
+}
 
 __global__ void compute_pts_morton_code_batch(
   Object** object_array, Point** point_array, int num_points
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_points) return;
-  if (num_points <= 1) return;
+  //if (num_points <= 1) return;
 
   int object_idx = point_array[idx] -> object_idx;
   float x_min = object_array[object_idx] -> x_min;

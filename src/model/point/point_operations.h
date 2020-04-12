@@ -17,7 +17,6 @@ __global__ void create_point_image(
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (idx >= num_pts) return;
-  if (num_pts <= 1) return;
 
   vec3 direction = unit_vector(
     point_array[idx] -> location - camera[0] -> eye);

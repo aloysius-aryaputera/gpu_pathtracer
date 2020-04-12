@@ -29,7 +29,8 @@ class Triangle: public Primitive {
     __host__ __device__ Triangle() {};
     __device__ Triangle(
       vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_,
-      Object *object_,
+      // Object *object_,
+      int object_idx,
       vec3 norm_1_, vec3 norm_2_, vec3 norm_3_, vec3 tex_1_, vec3 tex_2_,
       vec3 tex_3_
     );
@@ -43,7 +44,8 @@ class Triangle: public Primitive {
     }
 
     BoundingBox *bounding_box;
-    Object *object;
+    // Object *object;
+    int object_idx;
 };
 
 __host__ __device__ float _compute_triangle_area(
@@ -101,7 +103,8 @@ __device__ void Triangle::_compute_bounding_box() {
 
 __device__ Triangle::Triangle(
   vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_,
-  Object* object_,
+  // Object* object_,
+  int object_idx_,
   vec3 norm_1_=vec3(0, 0, 0), vec3 norm_2_=vec3(0, 0, 0),
   vec3 norm_3_=vec3(0, 0, 0), vec3 tex_1_=vec3(0, 0, 0),
   vec3 tex_2_=vec3(0, 0, 0), vec3 tex_3_=vec3(0, 0, 0)
@@ -109,6 +112,7 @@ __device__ Triangle::Triangle(
   this -> point_1 = vec3(point_1_.x(), point_1_.y(), point_1_.z());
   this -> point_2 = vec3(point_2_.x(), point_2_.y(), point_2_.z());
   this -> point_3 = vec3(point_3_.x(), point_3_.y(), point_3_.z());
+  this -> object_idx = object_idx_;
   this -> material = material_;
   this -> tolerance = this -> _compute_tolerance();
   this -> inv_tolerance = 1.0f / this -> tolerance;

@@ -595,10 +595,10 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  int num_sss_points = max(1, sss_pts_per_object * num_sss_objects[0]);
+  int num_sss_points = sss_pts_per_object * num_sss_objects[0];
 
-  checkCudaErrors(
-    cudaMallocManaged((void **)&sss_pts, num_sss_points * sizeof(Point*)));
+  checkCudaErrors(cudaMallocManaged
+    ((void **)&sss_pts, max(1, num_sss_points) * sizeof(Point*)));
 
   start = clock();
   process = "Allocating points for SSS objects";
@@ -612,14 +612,14 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged(
     (void **)&world_bounding_box, sizeof(BoundingBox *)));
 
-  checkCudaErrors(
-    cudaMallocManaged(
-      (void **)&rand_state_sss, num_sss_points * sizeof(curandState)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&rand_state_sss, max(1, num_sss_points) * sizeof(curandState)));
 
   start = clock();
   process = "Generating curand state for SSS points sampling";
   print_start_process(process, start);
-  init_curand_state<<<num_sss_points, 1>>>(num_sss_points, rand_state_sss);
+  init_curand_state<<<max(1, num_sss_points), 1>>>(
+    num_sss_points, rand_state_sss);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
@@ -671,6 +671,34 @@ int main(int argc, char **argv) {
       thrust::device, sss_pts + pt_offset_array[i],
       sss_pts + pt_offset_array[i] + num_pt_array[i],
       sort_points);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+  }
+
+  start = clock();
+  process = "Computing sss points offset list";
+  print_start_process(process, start);
+  compute_sss_pts_offset<<<1, 1>>>(my_objects, num_objects);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  Node** sss_pts_node_list, **sss_pts_leaf_list;
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&sss_pts_node_list,
+    max(1, (num_sss_points - 1)) * sizeof(Node *)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&sss_pts_leaf_list,
+    max(1, num_sss_points) * sizeof(Node *)));
+
+  for (int i = 0; i < num_objects; i++) {
+    start = clock();
+    process = "Building sss points leaves for object " + std::to_string(i);;
+    print_start_process(process, start);
+    build_sss_pts_leaf_list<<<max(1, num_sss_points), 1>>>(
+      sss_pts_leaf_list, sss_pts, my_objects, i, pt_offset_array
+    );
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);
@@ -781,7 +809,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Doing first pass for SSS objects";
   print_start_process(process, start);
-  do_sss_first_pass<<<num_sss_points, 1>>>(
+  do_sss_first_pass<<<max(1, num_sss_points), 1>>>(
     sss_pts, num_sss_points,
     pathtracing_sample_size,
     pathtracing_level, sky_emission,

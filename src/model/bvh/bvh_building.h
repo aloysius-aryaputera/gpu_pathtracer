@@ -13,6 +13,10 @@ __global__ void extract_morton_code_list(
 
 __global__ void build_node_list(Node** node_list, int num_objects);
 
+__global__ void build_sss_pts_node_list(
+  Node** node_list, Object** object_list, int object_idx
+);
+
 __global__ void set_node_relationship(
   Node** node_list, Node** leaf_list, unsigned int* morton_code_list,
   int num_objects
@@ -20,6 +24,11 @@ __global__ void set_node_relationship(
 
 __global__ void build_leaf_list(
   Node** leaf_list, Primitive **object_list, int num_objects
+);
+
+__global__ void build_sss_pts_leaf_list(
+  Node** leaf_list, Point** point_list, Object** object_list, int object_idx,
+  int *pt_offset_array
 );
 
 __global__ void compute_morton_code_batch(
@@ -54,9 +63,41 @@ __global__ void build_leaf_list(
   (leaf_list[idx]) -> assign_object(object_list[idx]);
 }
 
+__global__ void build_sss_pts_leaf_list(
+  Node** leaf_list, Point** point_list, Object** object_list, int object_idx,
+  int *pt_offset_array
+) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (object_list[object_idx] -> num_pts < 1) return;
+  if (idx >= object_list[object_idx] -> num_pts) return;
+
+  Node** effective_leaf_list = leaf_list + \
+    object_list[object_idx] -> bvh_leaf_zero_idx;
+  // Point** effective_point_list = point_list + \
+  //   pt_offset_array[object_idx];
+  printf("pt_offset_array[object_idx] = %d\n", pt_offset_array[object_idx]);
+
+  effective_leaf_list[idx] = new Node(idx);
+  // (effective_leaf_list[idx]) -> assign_point(effective_point_list[idx]);
+
+}
+
 __global__ void build_node_list(Node** node_list, int num_objects) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_objects - 1) return;
+  node_list[idx] = new Node(idx);
+  (node_list[idx]) -> bounding_box = new BoundingBox();
+}
+
+__global__ void build_sss_pts_node_list(
+  Node** node_list, Object** object_list, int object_idx
+) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  Node** effective_node_list = node_list + \
+    object_list[object_idx] -> bvh_root_node_idx;
+  if (object_list[object_idx] -> num_pts < 1) return;
+  if (idx >= object_list[object_idx] -> num_pts - 1) return;
   node_list[idx] = new Node(idx);
   (node_list[idx]) -> bounding_box = new BoundingBox();
 }
