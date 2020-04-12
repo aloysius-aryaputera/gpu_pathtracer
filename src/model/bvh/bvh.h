@@ -1,6 +1,6 @@
-//File: bvh_build.h
-#ifndef BVH_BUILD_H
-#define BVH_BUILD_H
+//File: bvh.h
+#ifndef BVH_H
+#define BVH_H
 
 #include "../../util/bvh_util.h"
 #include "../geometry/primitive.h"

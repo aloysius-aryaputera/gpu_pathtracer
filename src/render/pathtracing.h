@@ -4,8 +4,8 @@
 #include <curand_kernel.h>
 #include <math.h>
 
-#include "../model/bvh/bvh_build.h"
-#include "../model/bvh/bvh_operations.h"
+#include "../model/bvh/bvh.h"
+#include "../model/bvh/bvh_traversal.h"
 #include "../model/camera.h"
 #include "../model/cartesian_system.h"
 #include "../model/geometry/triangle.h"

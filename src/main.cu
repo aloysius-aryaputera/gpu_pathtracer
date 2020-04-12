@@ -9,7 +9,8 @@
 
 #include "external/libjpeg_cpp/jpeg.h"
 
-#include "model/bvh/bvh_build.h"
+#include "model/bvh/bvh.h"
+#include "model/bvh/bvh_building.h"
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
 #include "model/geometry/sphere.h"
