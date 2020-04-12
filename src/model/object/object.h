@@ -26,12 +26,12 @@ class Object {
       curandState *rand_state, int sampling_idx
     );
     __device__ void compute_accummulated_triangle_area();
-    __device__ void generate_world_pts_bounding_box();
+    __device__ void compute_boundaries();
 
     int num_primitives, primitives_offset_idx, num_pts;
     bool sub_surface_scattering;
     Point** sss_pt_array;
-    BoundingBox *world_pts_bounding_box;
+    float x_min, x_max, y_min, y_max, z_min, z_max;
 };
 
 __device__ Object::Object(
@@ -83,12 +83,20 @@ __device__ void Object::compute_accummulated_triangle_area() {
   }
 }
 
-__device__ void Object::generate_world_pts_bounding_box() {
+__device__ void Object::compute_boundaries() {
   float x_min = INFINITY, x_max = -INFINITY;
   float y_min = INFINITY, y_max = -INFINITY;
   float z_min = INFINITY, z_max = -INFINITY;
 
-  // for (int i = 0; i < this -> )
+  for (int i = 0; i < this -> num_pts; i++) {
+    this -> x_min = min(x_min, this -> sss_pt_array[i] -> bounding_box -> x_min);
+    this -> x_max = max(x_max, this -> sss_pt_array[i] -> bounding_box -> x_max);
+    this -> y_min = min(y_min, this -> sss_pt_array[i] -> bounding_box -> y_min);
+    this -> y_max = max(y_max, this -> sss_pt_array[i] -> bounding_box -> y_max);
+    this -> z_min = min(z_min, this -> sss_pt_array[i] -> bounding_box -> z_min);
+    this -> z_max = max(z_max, this -> sss_pt_array[i] -> bounding_box -> z_max);
+  }
+
 }
 
 #endif

@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
   size_t rand_state_image_size = num_pixels * sizeof(curandState);
 
   bool *sss_object_marker_array;
-  int *pt_offset_array;
+  int *pt_offset_array, *num_pt_array;
 
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
   float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z, *n_s, *n_i, *t_r;
@@ -580,13 +580,15 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&num_sss_objects, sizeof(int)));
   checkCudaErrors(
     cudaMallocManaged((void **)&pt_offset_array, num_objects * sizeof(int)));
+  checkCudaErrors(
+    cudaMallocManaged((void **)&num_pt_array, num_objects * sizeof(int)));
 
   start = clock();
   process = "Computing the number of SSS objects";
   print_start_process(process, start);
   compute_num_sss_objects<<<1, 1>>>(
-    num_sss_objects, my_objects, pt_offset_array, num_objects,
-    sss_pts_per_object
+    num_sss_objects, my_objects, pt_offset_array, num_pt_array,
+    num_objects, sss_pts_per_object
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -635,6 +637,45 @@ int main(int argc, char **argv) {
   }
 
   start = clock();
+  process = "Computing the object boundaries";
+  print_start_process(process, start);
+  compute_object_boundaries_batch<<<num_objects, 1>>>(
+    my_objects, num_objects
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Computing the morton code of every point bounding box";
+  print_start_process(process, start);
+  compute_pts_morton_code_batch<<<blocks_world, threads_world>>>(
+    my_objects, sss_pts, num_sss_points
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  auto sort_points = []  __device__ (Point* pt_1, Point* pt_2) {
+    return pt_1 -> bounding_box -> morton_code < \
+      pt_2 -> bounding_box -> morton_code;
+  };
+
+  for (int i = 0; i < num_objects; i++) {
+    start = clock();
+    process = "Sorting the points based on morton code of object " + \
+      std::to_string(i);
+    print_start_process(process, start);
+    thrust::stable_sort(
+      thrust::device, sss_pts + pt_offset_array[i],
+      sss_pts + pt_offset_array[i] + num_pt_array[i],
+      sort_points);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+  }
+
+  start = clock();
   process = "Computing the world bounding box";
   print_start_process(process, start);
   compute_world_bounding_box<<<1, 1>>>(
@@ -645,7 +686,7 @@ int main(int argc, char **argv) {
   print_end_process(process, start);
 
   start = clock();
-  process = "Computing the morton code of every bounding box";
+  process = "Computing the morton code of every geometry bounding box";
   print_start_process(process, start);
   compute_morton_code_batch<<<blocks_world, threads_world>>>(
     my_geom, world_bounding_box, num_triangles[0]
@@ -654,7 +695,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  auto ff = []  __device__ (Primitive* obj_1, Primitive* obj_2) {
+  auto sort_geom = []  __device__ (Primitive* obj_1, Primitive* obj_2) {
     return obj_1 -> get_bounding_box() -> morton_code < \
       obj_2 -> get_bounding_box() -> morton_code;
   };
@@ -662,7 +703,8 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Sorting the objects based on morton code";
   print_start_process(process, start);
-  thrust::stable_sort(thrust::device, my_geom, my_geom + num_triangles[0], ff);
+  thrust::stable_sort(
+    thrust::device, my_geom, my_geom + num_triangles[0], sort_geom);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);

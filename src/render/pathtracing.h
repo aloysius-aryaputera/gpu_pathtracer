@@ -5,6 +5,7 @@
 #include <math.h>
 
 #include "../model/bvh/bvh_build.h"
+#include "../model/bvh/bvh_operations.h"
 #include "../model/camera.h"
 #include "../model/cartesian_system.h"
 #include "../model/geometry/triangle.h"
