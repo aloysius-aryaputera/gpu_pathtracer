@@ -731,6 +731,18 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
+  for (int i = 0; i < num_objects; i++) {
+    start = clock();
+    process = "Setting the sss nodes relationship of object " + std::to_string(i);;
+    print_start_process(process, start);
+    set_pts_sss_node_relationship<<<max(1, num_sss_points), 1>>>(
+      sss_pts_node_list, sss_pts_leaf_list, morton_code_list, my_objects, i
+    );
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+  }
+
   start = clock();
   process = "Computing the world bounding box";
   print_start_process(process, start);
@@ -802,7 +814,7 @@ int main(int argc, char **argv) {
   print_end_process(process, start);
 
   start = clock();
-  process = "Set node relationship";
+  process = "Setting node relationship";
   print_start_process(process, start);
   set_node_relationship<<<blocks_world, threads_world>>>(
     node_list, leaf_list, morton_code_list, num_triangles[0]
