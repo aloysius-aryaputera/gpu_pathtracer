@@ -704,6 +704,33 @@ int main(int argc, char **argv) {
     print_end_process(process, start);
   }
 
+  for (int i = 0; i < num_objects; i++) {
+    start = clock();
+    process = "Building sss points nodes for object " + std::to_string(i);;
+    print_start_process(process, start);
+    build_sss_pts_node_list<<<max(1, num_sss_points), 1>>>(
+      sss_pts_node_list, my_objects, i
+    );
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+  }
+
+  unsigned int *sss_morton_code_list;
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&sss_morton_code_list,
+    max(1, num_sss_points) * sizeof(unsigned int)));
+
+  start = clock();
+  process = "Extracting the morton codes of the SSS points";
+  print_start_process(process, start);
+  extract_sss_morton_code_list<<<max(1, num_sss_points), 1>>>(
+    sss_pts, sss_morton_code_list, num_sss_points
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
   start = clock();
   process = "Computing the world bounding box";
   print_start_process(process, start);

@@ -7,6 +7,10 @@
 #include "../ray/ray.h"
 #include "bvh.h"
 
+__global__ void extract_sss_morton_code_list(
+  Point** point_list, unsigned int* morton_code_list, int num_pts
+);
+
 __global__ void extract_morton_code_list(
   Primitive** object_list, unsigned int* morton_code_list, int num_objects
 );
@@ -74,12 +78,11 @@ __global__ void build_sss_pts_leaf_list(
 
   Node** effective_leaf_list = leaf_list + \
     object_list[object_idx] -> bvh_leaf_zero_idx;
-  // Point** effective_point_list = point_list + \
-  //   pt_offset_array[object_idx];
-  printf("pt_offset_array[object_idx] = %d\n", pt_offset_array[object_idx]);
+  Point** effective_point_list = point_list + \
+    pt_offset_array[object_idx];
 
   effective_leaf_list[idx] = new Node(idx);
-  // (effective_leaf_list[idx]) -> assign_point(effective_point_list[idx]);
+  (effective_leaf_list[idx]) -> assign_point(effective_point_list[idx]);
 
 }
 
@@ -98,8 +101,8 @@ __global__ void build_sss_pts_node_list(
     object_list[object_idx] -> bvh_root_node_idx;
   if (object_list[object_idx] -> num_pts < 1) return;
   if (idx >= object_list[object_idx] -> num_pts - 1) return;
-  node_list[idx] = new Node(idx);
-  (node_list[idx]) -> bounding_box = new BoundingBox();
+  effective_node_list[idx] = new Node(idx);
+  (effective_node_list[idx]) -> bounding_box = new BoundingBox();
 }
 
 __global__ void extract_morton_code_list(
@@ -109,6 +112,14 @@ __global__ void extract_morton_code_list(
   if (idx >= num_objects) return;
   morton_code_list[idx] = \
     object_list[idx] -> get_bounding_box() -> morton_code;
+}
+
+__global__ void extract_sss_morton_code_list(
+  Point** point_list, unsigned int* morton_code_list, int num_pts
+) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  if (idx >= num_pts) return;
+  morton_code_list[idx] = point_list[idx] -> bounding_box -> morton_code;
 }
 
 __global__ void set_node_relationship(
