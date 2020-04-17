@@ -33,14 +33,14 @@ __global__ void create_world(
   int *tex_1_idx, int *tex_2_idx, int *tex_3_idx,
   int *material_idx,
   int* num_triangles,
-  bool* sss_object_marker_array
+  bool* sss_object_marker_array,
+  int sss_pts_per_object
 );
 
 __global__ void create_objects(
   Object** object_array, int* object_num_primitives,
   int *object_primitive_offset_idx, float *triangle_area,
-  float *accumulated_triangle_area, int num_objects,
-  int sss_pts_per_object
+  float *accumulated_triangle_area, int num_objects
 );
 
 __global__ void create_material(
@@ -162,8 +162,7 @@ __global__ void create_material(
 __global__ void create_objects(
   Object** object_array, int* object_num_primitives,
   int *object_primitive_offset_idx, float* triangle_area,
-  float *accumulated_triangle_area, int num_objects,
-  int sss_pts_per_object
+  float *accumulated_triangle_area, int num_objects
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -172,8 +171,7 @@ __global__ void create_objects(
   *(object_array + idx) = new Object(
     object_primitive_offset_idx[idx], object_num_primitives[idx],
     triangle_area + object_primitive_offset_idx[idx],
-    accumulated_triangle_area + object_primitive_offset_idx[idx],
-    sss_pts_per_object
+    accumulated_triangle_area + object_primitive_offset_idx[idx]
   );
 
 }
@@ -192,7 +190,8 @@ __global__ void create_world(
   int *tex_1_idx, int *tex_2_idx, int *tex_3_idx,
   int *material_idx,
   int* num_triangles,
-  bool* sss_object_marker_array
+  bool* sss_object_marker_array,
+  int sss_pts_per_object
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -220,7 +219,9 @@ __global__ void create_world(
 
   if (geom_array[idx] -> is_sub_surface_scattering())
   {
-    object_array[triangle_object_idx[idx]] -> set_as_sub_surface_scattering();
+    object_array[triangle_object_idx[idx]] -> set_as_sub_surface_scattering(
+      sss_pts_per_object
+    );
     sss_object_marker_array[triangle_object_idx[idx]] = true;
   } else {
     sss_object_marker_array[triangle_object_idx[idx]] = false;

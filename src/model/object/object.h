@@ -19,9 +19,9 @@ class Object {
     __host__ __device__ Object() {}
     __device__ Object(
       int primitives_offset_idx_, int num_primitives_, float *triangle_area_,
-      float *accumulated_triangle_area_, int num_pts_
+      float *accumulated_triangle_area_
     );
-    __device__ void set_as_sub_surface_scattering();
+    __device__ void set_as_sub_surface_scattering(int num_pts_);
     __device__ void allocate_point_array(Point** sss_pt_array_);
     __device__ int pick_primitive_idx_for_sampling(
       curandState *rand_state, int sampling_idx
@@ -40,14 +40,13 @@ class Object {
 
 __device__ Object::Object(
   int primitives_offset_idx_, int num_primitives_, float *triangle_area_,
-  float *accumulated_triangle_area_, int num_pts_
+  float *accumulated_triangle_area_
 ) {
   this -> primitives_offset_idx = primitives_offset_idx_;
   this -> num_primitives = num_primitives_;
   this -> triangle_area = triangle_area_;
   this -> accumulated_triangle_area = accumulated_triangle_area_;
   this -> sub_surface_scattering = false;
-  this -> num_pts = num_pts_;
 }
 
 __device__ void Object::assign_bvh_root_node_idx(int idx) {
@@ -83,8 +82,9 @@ __device__ void Object::allocate_point_array(Point** sss_pt_array_) {
   this -> sss_pt_array = sss_pt_array_;
 }
 
-__device__ void Object::set_as_sub_surface_scattering() {
+__device__ void Object::set_as_sub_surface_scattering(int num_pts_) {
   this -> sub_surface_scattering = true;
+  this -> num_pts = num_pts_;
 }
 
 __device__ void Object::compute_accummulated_triangle_area() {

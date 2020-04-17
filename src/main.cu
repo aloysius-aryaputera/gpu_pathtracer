@@ -529,8 +529,7 @@ int main(int argc, char **argv) {
   print_start_process(process, start);
   create_objects<<<1, num_objects>>>(
     my_objects, object_num_primitives, object_primitive_offset_idx,
-    triangle_area, accumulated_triangle_area, num_objects,
-    sss_pts_per_object
+    triangle_area, accumulated_triangle_area, num_objects
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -557,7 +556,8 @@ int main(int argc, char **argv) {
     tex_1_idx, tex_2_idx, tex_3_idx,
     material_idx,
     num_triangles,
-    sss_object_marker_array
+    sss_object_marker_array,
+    sss_pts_per_object
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
