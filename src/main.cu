@@ -11,6 +11,7 @@
 
 #include "model/bvh/bvh.h"
 #include "model/bvh/bvh_building.h"
+#include "model/bvh/bvh_building_pts.h"
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
 #include "model/geometry/sphere.h"
@@ -742,6 +743,16 @@ int main(int argc, char **argv) {
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);
   }
+
+  start = clock();
+  process = "Compute pts node bounding boxes";
+  print_start_process(process, start);
+  compute_node_bounding_boxes<<<blocks_world, threads_world>>>(
+    sss_pts_leaf_list, sss_pts_node_list, num_sss_points
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
 
   start = clock();
   process = "Computing the world bounding box";
