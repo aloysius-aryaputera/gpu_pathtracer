@@ -69,15 +69,17 @@ __global__ void set_pts_sss_node_relationship(
     object_list[object_idx] -> bvh_root_node_idx;
   Node **effective_leaf_list = leaf_list + \
     object_list[object_idx] -> bvh_leaf_zero_idx;
+  unsigned int* effective_morton_code_list = morton_code_list + \
+    object_list[object_idx] -> bvh_leaf_zero_idx;
 
   if (idx >= (num_pts - 1)) return;
 
   // Determine direction of the range (+1 or -1)
   int d1 = length_longest_common_prefix(
-    morton_code_list, idx, idx + 1, num_pts
+    effective_morton_code_list, idx, idx + 1, num_pts
   );
   int d2 = length_longest_common_prefix(
-    morton_code_list, idx, idx - 1, num_pts
+    effective_morton_code_list, idx, idx - 1, num_pts
   );
   int d;
   if (d1 < d2) {
@@ -91,13 +93,13 @@ __global__ void set_pts_sss_node_relationship(
   // Determine end
   int end = start + d;
   int min_delta = length_longest_common_prefix(
-    morton_code_list, idx, idx - d, num_pts
+    effective_morton_code_list, idx, idx - d, num_pts
   );
   int current_delta;
   bool flag = TRUE;
   while (end >= 0 && end <= num_pts - 1 && flag) {
     current_delta = length_longest_common_prefix(
-      morton_code_list, start, end, num_pts
+      effective_morton_code_list, start, end, num_pts
     );
     if (current_delta > min_delta) {
       end += d;
@@ -113,11 +115,11 @@ __global__ void set_pts_sss_node_relationship(
   int split = start + d;
   int idx_1 = start, idx_2 = start + d;
   int min_delta_2 = length_longest_common_prefix(
-    morton_code_list, idx_1, idx_2, num_pts
+    effective_morton_code_list, idx_1, idx_2, num_pts
   );
   while((d > 0 && idx_2 <= end) || (d < 0 && idx_2 >= end)) {
     current_delta = length_longest_common_prefix(
-      morton_code_list, idx_1, idx_2, num_pts
+      effective_morton_code_list, idx_1, idx_2, num_pts
     );
     if (current_delta < min_delta_2) {
       split = idx_2;

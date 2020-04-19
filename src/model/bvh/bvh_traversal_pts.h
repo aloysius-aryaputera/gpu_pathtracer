@@ -8,22 +8,28 @@
 #include "bvh.h"
 
 __device__ bool traverse_bvh_pts(
-  Node* bvh_root, BoundingSphere bounding_sphere, Point** point_array,
-  int max_num_pts, int &num_pts
+  Node* bvh_root, BoundingSphere bounding_sphere, //Point** point_array,
+  vec3 &color
+  //int max_num_pts, int &num_pts
 );
 
 __device__ bool traverse_bvh_pts(
-  Node* bvh_root, BoundingSphere bounding_sphere, Point** point_array,
-  int max_num_pts, int &num_pts
+  Node* bvh_root, BoundingSphere bounding_sphere, //Point** point_array,
+  vec3 &color
+  //int max_num_pts, int &num_pts
 ) {
   Node* stack[400];
   Node *child_l, *child_r;
+  Point *point;
   bool intersection_l, intersection_r, traverse_l, traverse_r;
   bool is_inside = false;
   bool pts_found = false;
   int idx_stack_top = 0;
 
-  num_pts = 0;
+  float weight, sum_weight = 0;
+  color = vec3(0, 0, 0);
+
+  // num_pts = 0;
   stack[idx_stack_top] = nullptr;
   idx_stack_top++;
 
@@ -38,17 +44,31 @@ __device__ bool traverse_bvh_pts(
 
     if (intersection_l && child_l -> is_leaf) {
       is_inside = bounding_sphere.is_inside(child_l -> point -> location);
-      if (is_inside && num_pts < max_num_pts) {
-        point_array[num_pts++] = child_l -> point;
+      // if (is_inside && num_pts < max_num_pts) {
+      if (is_inside) {
+        // point_array[num_pts++] = child_l -> point;
+        point = child_l -> point;
         pts_found = true;
+        weight = 1.0 / compute_distance(
+          point -> location, bounding_sphere.center);
+        weight = min(9999.99, weight);
+        sum_weight += weight;
+        color += weight * point -> color;
       }
     }
 
     if (intersection_r && child_r -> is_leaf) {
       is_inside = bounding_sphere.is_inside(child_r -> point -> location);
-      if (is_inside && num_pts < max_num_pts) {
-        point_array[num_pts++] = child_r -> point;
+      // if (is_inside && num_pts < max_num_pts) {
+      if (is_inside) {
+        // point_array[num_pts++] = child_r -> point;
+        point = child_r -> point;
         pts_found = true;
+        weight = 1.0 / compute_distance(
+          point -> location, bounding_sphere.center);
+        weight = min(9999.99, weight);
+        sum_weight += weight;
+        color += weight * point -> color;
       }
     }
 
@@ -84,6 +104,9 @@ __device__ bool traverse_bvh_pts(
     }
 
   } while(idx_stack_top > 0 && idx_stack_top < 400 && node != nullptr);
+
+  if (pts_found)
+    color /= sum_weight;
 
   return pts_found;
 }

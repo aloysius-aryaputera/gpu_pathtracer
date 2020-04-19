@@ -25,7 +25,7 @@ __device__ Point::Point(
   this -> filter = filter_;
   this -> normal = normal_;
   this -> bounding_box = new BoundingBox(
-    this -> location.x() - SMALL_DOUBLE, this -> location.y() + SMALL_DOUBLE,
+    this -> location.x() - SMALL_DOUBLE, this -> location.x() + SMALL_DOUBLE,
     this -> location.y() - SMALL_DOUBLE, this -> location.y() + SMALL_DOUBLE,
     this -> location.z() - SMALL_DOUBLE, this -> location.z() + SMALL_DOUBLE
   );

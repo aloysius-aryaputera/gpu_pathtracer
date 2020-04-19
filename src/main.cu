@@ -602,7 +602,8 @@ int main(int argc, char **argv) {
     ((void **)&sss_pts, max(1, num_sss_points) * sizeof(Point*)));
 
   start = clock();
-  process = "Allocating points for SSS objects";
+  process = "Allocating " + std::to_string(num_sss_points) + \
+    " points for SSS objects";
   print_start_process(process, start);
   allocate_pts_sss<<<1, num_objects>>>(
     my_objects, sss_pts, pt_offset_array, num_objects);
