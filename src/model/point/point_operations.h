@@ -17,6 +17,9 @@ __global__ void create_point_image(
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (idx >= num_pts) return;
+  if (point_array[idx] == nullptr) {
+    printf("Point [%d] cannot be found!\n", idx);
+  }
 
   vec3 direction = unit_vector(
     point_array[idx] -> location - camera[0] -> eye);

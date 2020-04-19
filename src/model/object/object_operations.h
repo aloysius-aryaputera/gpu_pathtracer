@@ -117,6 +117,7 @@ __global__ void allocate_pts_sss(
   if (idx > 0) return;
 
   for (int i = 0; i < num_objects; i++) {
+    printf("pt_offset_array[%d] = %d\n", i, pt_offset_array[i]);
     object_array[i] -> allocate_point_array(point_array + pt_offset_array[i]);
   }
 }

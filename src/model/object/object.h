@@ -75,7 +75,7 @@ __device__ int Object::pick_primitive_idx_for_sampling(
     idx++;
   }
 
-  return idx;
+  return idx + this -> primitives_offset_idx;
 }
 
 __device__ void Object::allocate_point_array(Point** sss_pt_array_) {
