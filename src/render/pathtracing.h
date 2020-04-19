@@ -1,3 +1,4 @@
+//File: pathtracing.h
 #ifndef PATHTRACING_H
 #define PATHTRACING_H
 
@@ -8,14 +9,17 @@
 #include "../model/bvh/bvh_traversal.h"
 #include "../model/camera.h"
 #include "../model/cartesian_system.h"
+#include "../model/geometry/primitive.h"
 #include "../model/geometry/triangle.h"
 #include "../model/material.h"
+#include "../model/object/object.h"
 #include "../model/point/point.h"
 #include "../model/ray/ray.h"
 #include "../model/ray/ray_operations.h"
 #include "../param.h"
 #include "../util/vector_util.h"
 #include "material_list_operations.h"
+#include "pathtracing_sss.h"
 
 __global__
 void render(
@@ -23,7 +27,8 @@ void render(
   int level,
   vec3 sky_emission, int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
-  Node **node_list
+  Node **node_list,
+  Object **object_list, Node **sss_pts_node_list
 );
 
 __global__
@@ -43,7 +48,8 @@ __device__ vec3 _compute_color(
   int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
   curandState *rand_state,
-  Node **node_list
+  Node **node_list, Object **object_list, Node **sss_pts_node_list,
+  bool sss_first_pass
 );
 
 __device__ vec3 _get_sky_color(
@@ -73,7 +79,8 @@ __device__ vec3 _compute_color(
   int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
   curandState *rand_state,
-  Node **node_list
+  Node **node_list, Object **object_list, Node **sss_pts_node_list,
+  bool sss_first_pass
 ) {
   hit_record cur_rec;
   bool hit, reflected = false, refracted = false, false_hit = false;
@@ -98,8 +105,11 @@ __device__ vec3 _compute_color(
       if (cur_rec.object == nullptr)
         printf("cur_rec.object = NULL\n");
 
-      cur_rec.object -> get_material(
-      ) -> check_if_reflected_or_refracted(
+      if (cur_rec.object -> is_sub_surface_scattering() && !sss_first_pass) {
+        return compute_color_sss(cur_rec, object_list, sss_pts_node_list);
+      }
+
+      cur_rec.object -> get_material() -> check_next_path(
         cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
         reflected, false_hit, refracted,
         entering,
@@ -178,7 +188,6 @@ void do_sss_first_pass(
 
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   if (i >= num_points) return;
-  //if (num_points <= 1) return;
 
   vec3 init_point = point_list[i] -> location;
   vec3 filter = point_list[i] -> filter;
@@ -186,13 +195,16 @@ void do_sss_first_pass(
   vec3 color_tmp, color = vec3(0, 0, 0);
   Ray init_ray;
   float cos_theta;
+  Object **empty_object_list;
+  Node **empty_node_list;
   curandState local_rand_state = rand_state[i];
 
   for(int idx = 0; idx < sample_size; idx++) {
     init_ray = generate_ray(init_point, vec3(0, 0, 0), normal, 1, rand_state);
     color_tmp = _compute_color(
       init_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
-      bg_b, &local_rand_state, node_list
+      bg_b, &local_rand_state, node_list, empty_object_list, empty_node_list,
+      true
     );
     color_tmp = de_nan(color_tmp);
     cos_theta = dot(init_ray.dir, normal);
@@ -211,7 +223,7 @@ void render(
   int level,
   vec3 sky_emission, int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
-  Node **node_list
+  Node **node_list, Object **object_list, Node **sss_pts_node_list
 ) {
 
   int j = threadIdx.x + blockIdx.x * blockDim.x;
@@ -234,7 +246,9 @@ void render(
   for(int idx = 0; idx < sample_size; idx++) {
     color_tmp = _compute_color(
       camera_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
-      bg_b, &local_rand_state, node_list);
+      bg_b, &local_rand_state, node_list, object_list, sss_pts_node_list,
+      false
+    );
     color_tmp = de_nan(color_tmp);
     color += color_tmp;
   }

@@ -42,6 +42,10 @@ class Primitive {
       return this -> area;
     }
 
+    __device__ virtual int get_object_idx() {
+      return this -> object_idx;
+    }
+
     BoundingBox *bounding_box;
     // Object *object;
     int object_idx;

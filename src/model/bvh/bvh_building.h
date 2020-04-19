@@ -251,49 +251,4 @@ __global__ void compute_node_bounding_boxes(
   }
 }
 
-// __global__ void compute_node_bounding_boxes(
-//   Node** leaf_list, Node** node_list, int num_objects
-// ) {
-//   int idx = threadIdx.x + blockIdx.x * blockDim.x;
-//
-//   if (idx >= num_objects) return;
-//
-//   Node* current_node = leaf_list[idx];
-//   float bb_x_min, bb_x_max, bb_y_min, bb_y_max, bb_z_min, bb_z_max;
-//
-//   if (current_node -> parent == nullptr) {
-//     printf("Leaf %d has no parent.\n", idx);
-//     return;
-//   }
-//
-//   while(current_node != node_list[0]) {
-//     current_node = current_node -> parent;
-//
-//     if (
-//       !(current_node -> left -> bounding_box -> initialized) ||
-//       !(current_node -> right -> bounding_box -> initialized)
-//     )
-//       return;
-//
-//     compute_bb_union(
-//       current_node -> left -> bounding_box,
-//       current_node -> right -> bounding_box,
-//       bb_x_min, bb_x_max, bb_y_min, bb_y_max, bb_z_min, bb_z_max
-//     );
-//
-//     if (!(current_node -> bounding_box -> initialized)) {
-//       current_node -> bounding_box -> initialize(
-//         bb_x_min, bb_x_max,
-//         bb_y_min, bb_y_max,
-//         bb_z_min, bb_z_max
-//       );
-//     }
-//
-//     if (current_node == node_list[0]) {
-//       printf("We have reached the root!\n");
-//       current_node -> bounding_box -> print_bounding_box();
-//     }
-//   }
-// }
-
 #endif

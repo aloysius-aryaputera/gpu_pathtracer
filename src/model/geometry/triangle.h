@@ -39,9 +39,8 @@ class Triangle: public Primitive {
     __device__ BoundingBox* get_bounding_box();
     __device__ bool is_sub_surface_scattering();
     __device__ hit_record get_random_point_on_surface(curandState *rand_state);
-    __device__ float get_area() {
-      return this -> area;
-    }
+    __device__ float get_area();
+    __device__ int get_object_idx();
 
     BoundingBox *bounding_box;
     // Object *object;
@@ -50,6 +49,14 @@ class Triangle: public Primitive {
 
 __host__ __device__ float _compute_triangle_area(
   vec3 point_1, vec3 point_2, vec3 point_3);
+
+__device__ int Triangle::get_object_idx() {
+  return this -> object_idx;
+}
+
+__device__ float Triangle::get_area() {
+  return this -> area;
+}
 
 __device__ hit_record Triangle::get_random_point_on_surface(
   curandState *rand_state

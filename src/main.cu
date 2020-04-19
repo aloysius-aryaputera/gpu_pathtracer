@@ -688,7 +688,7 @@ int main(int argc, char **argv) {
   Node** sss_pts_node_list, **sss_pts_leaf_list;
   checkCudaErrors(cudaMallocManaged(
     (void **)&sss_pts_node_list,
-    max(1, (num_sss_points - 1)) * sizeof(Node *)));
+    max(1, (num_sss_points - num_sss_objects[0])) * sizeof(Node *)));
   checkCudaErrors(cudaMallocManaged(
     (void **)&sss_pts_leaf_list,
     max(1, num_sss_points) * sizeof(Node *)));
@@ -918,7 +918,8 @@ int main(int argc, char **argv) {
   render<<<blocks, threads>>>(
     image_output, my_camera, rand_state_image, pathtracing_sample_size,
     pathtracing_level, sky_emission, bg_height, bg_width,
-    bg_texture_r, bg_texture_g, bg_texture_b, node_list
+    bg_texture_r, bg_texture_g, bg_texture_b, node_list, my_objects,
+    sss_pts_node_list
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());

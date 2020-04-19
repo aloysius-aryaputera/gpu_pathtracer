@@ -46,7 +46,12 @@ class Sphere: public Primitive {
       return this -> area;
     }
 
+    __device__ int get_object_idx() {
+      return this -> object_idx;
+    }
+
     BoundingBox *bounding_box;
+    int object_idx;
 
 };
 

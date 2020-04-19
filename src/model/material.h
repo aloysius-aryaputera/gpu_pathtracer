@@ -53,7 +53,7 @@ class Material {
     int texture_width_specular, texture_height_specular;
     int texture_width_emission, texture_height_emission;
     int texture_width_n_s, texture_height_n_s;
-    float t_r, n_s, path_length;
+    float t_r, n_s;
     float *texture_r_diffuse, *texture_g_diffuse, *texture_b_diffuse;
     float *texture_r_specular, *texture_g_specular, *texture_b_specular;
     float *texture_r_emission, *texture_g_emission, *texture_b_emission;
@@ -88,7 +88,7 @@ class Material {
       float *texture_g_n_s_,
       float *texture_b_n_s_
     );
-    __device__ void check_if_reflected_or_refracted(
+    __device__ void check_next_path(
       Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
       bool &reflected, bool &false_hit, bool &refracted,
       bool &entering,
@@ -100,7 +100,7 @@ class Material {
 
     vec3 emission;
     int priority;
-    float n_i;
+    float n_i, path_length;
     bool sub_surface_scattering;
 };
 
@@ -351,7 +351,7 @@ __host__ __device__ Material::Material(
     printf("The material is SSS\n");
 }
 
-__device__ void Material::check_if_reflected_or_refracted(
+__device__ void Material::check_next_path(
   Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
   bool &reflected, bool &false_hit, bool &refracted,
   bool &entering,
@@ -369,6 +369,8 @@ __device__ void Material::check_if_reflected_or_refracted(
     );
     return;
   }
+
+
 
   vec3 reflected_ray_dir;
   float cos_theta, random_number = curand_uniform(&rand_state[0]);
