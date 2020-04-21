@@ -46,11 +46,6 @@ class Material {
       Material** material_list, int material_list_length,
       curandState *rand_state
     );
-    __device__ bool _check_if_false_hit(
-      Material** material_list, int material_list_length,
-      Material *highest_prioritised_material,
-      Material *second_highest_prioritised_material
-    );
 
     float diffuse_mag, specular_mag;
     vec3 ambient, diffuse, specular, transmission;
@@ -97,8 +92,7 @@ class Material {
       Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
       bool &reflected, bool &false_hit, bool &refracted,
       bool &entering, bool &sss,
-      Material *highest_prioritised_material,
-      Material *second_highest_prioritised_material,
+      Material **material_list, int material_list_length,
       reflection_record &ref, curandState *rand_state
     );
     __device__ vec3 get_texture_emission(vec3 uv_vector);
@@ -152,16 +146,22 @@ __device__ void find_highest_prioritised_materials(
   }
 }
 
-__device__ bool Material::_check_if_false_hit(
+__device__ reflection_record Material::_refract(
+  vec3 hit_point, vec3 v_in, vec3 normal,
+  bool &reflected, bool &false_hit, bool &refracted,
+  bool &entering, bool &sss,
   Material** material_list, int material_list_length,
-  Material *highest_prioritised_material,
-  Material *second_highest_prioritised_material
+  curandState *rand_state
 ) {
-  highest_prioritised_material = nullptr;
-  second_highest_prioritised_material = nullptr;
+  reflection_record ref;
+  float random_number = curand_uniform(&rand_state[0]);
+
+  Material *highest_prioritised_material = nullptr;
+  Material *second_highest_prioritised_material = nullptr;
   float highest_prioritised_material_ref_idx = 1.0;
   float second_highest_prioritised_material_ref_idx = 1.0;
   int highest_prioritised_material_priority = 99999;
+  // int second_highest_prioritised_material_priority = 99999;
 
   find_highest_prioritised_materials(
     material_list, material_list_length,
@@ -169,47 +169,33 @@ __device__ bool Material::_check_if_false_hit(
     second_highest_prioritised_material
   );
 
-  highest_prioritised_material_priority = get_material_priority(
-    highest_prioritised_material);
-
-  if (this -> priority > highest_prioritised_material_priority) {
-    return false;
-  } else {
-    return true;
-  }
-}
-
-__device__ reflection_record Material::_refract(
-  vec3 hit_point, vec3 v_in, vec3 normal,
-  bool &reflected, bool &false_hit, bool &refracted,
-  bool &entering, bool &sss,
-  Material *highest_prioritised_material,
-  Material *second_highest_prioritised_material,
-  curandState *rand_state
-) {
-  reflection_record ref;
-  float random_number = curand_uniform(&rand_state[0]);
-
-  // if (false_hit) {
-  //   reflected = false;
-  //   refracted = true;
-  //   sss = false;
-  //   ref.ray = Ray(hit_point, v_in);
-  //   ref.filter = vec3(1.0, 1.0, 1.0);
-  //
-  //   if (dot(v_in, normal) <= 0) {
-  //     entering = true;
-  //   } else {
-  //     entering = false;
-  //   }
-  //
-  //   return ref;
-  // }
-
   highest_prioritised_material_ref_idx = get_material_refraction_index(
     highest_prioritised_material);
   second_highest_prioritised_material_ref_idx = \
-    get_material_refraction_index(second_highest_prioritised_material);
+    get_material_refraction_index(
+      second_highest_prioritised_material);
+
+  highest_prioritised_material_priority = get_material_priority(
+    highest_prioritised_material);
+  // second_highest_prioritised_material_priority = get_material_priority(
+  //   second_highest_prioritised_material);
+
+  if (this -> priority > highest_prioritised_material_priority) {
+    false_hit = true;
+    reflected = false;
+    refracted = true;
+    sss = false;
+    ref.ray = Ray(hit_point, v_in);
+    ref.filter = vec3(1.0, 1.0, 1.0);
+
+    if (dot(v_in, normal) <= 0) {
+      entering = true;
+    } else {
+      entering = false;
+    }
+
+    return ref;
+  }
 
   if (dot(v_in, normal) <= 0) {
     float cos_theta_1 = dot(v_in, -normal);
@@ -376,45 +362,12 @@ __device__ void Material::check_next_path(
   reflection_record &ref, curandState *rand_state
 ) {
 
-  false_hit = false;
-  Material *highest_prioritised_material = nullptr;
-  Material *second_highest_prioritised_material = nullptr;
-
-  false_hit = check_if_false_hit(
-    material_list, material_list_length,
-    highest_prioritised_material,
-    second_highest_prioritised_material
-  )
-
-  if (false_hit) {
-    reflected = false;
-    refracted = true;
-    sss = false;
-    ref.ray = Ray(hit_point, v_in);
-    ref.filter = vec3(1.0, 1.0, 1.0);
-
-    if (dot(v_in, normal) <= 0) {
-      entering = true;
-    } else {
-      entering = false;
-    }
-
-    return ref;
-  }
-
-  if (
-    this -> t_r > 0 && (
-      dot(v_in, normal) <= 0 ||
-      second_highest_prioritised_material == nullptr ||
-      !second_highest_prioritised_material -> sub_surface_scattering
-    )
-  ) {
+  if (this -> t_r > 0) {
     ref = this -> _refract(
       hit_point, coming_ray.dir, normal,
       reflected, false_hit, refracted,
       entering, sss,
-      highest_prioritised_material,
-      second_highest_prioritised_material,
+      material_list, material_list_length,
       rand_state
     );
     return;

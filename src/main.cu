@@ -706,6 +706,11 @@ int main(int argc, char **argv) {
     print_end_process(process, start);
   }
 
+  checkCudaErrors(cudaFree(pt_offset_array));
+  checkCudaErrors(cudaFree(num_pt_array));
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+
   for (int i = 0; i < num_objects; i++) {
     start = clock();
     process = "Building sss points nodes for object " + std::to_string(i);;
@@ -738,12 +743,16 @@ int main(int argc, char **argv) {
     process = "Setting the sss nodes relationship of object " + std::to_string(i);;
     print_start_process(process, start);
     set_pts_sss_node_relationship<<<max(1, num_sss_points), 1>>>(
-      sss_pts_node_list, sss_pts_leaf_list, morton_code_list, my_objects, i
+      sss_pts_node_list, sss_pts_leaf_list, sss_morton_code_list, my_objects, i
     );
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);
   }
+
+  checkCudaErrors(cudaFree(sss_morton_code_list));
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
 
   start = clock();
   process = "Compute pts node bounding boxes";
@@ -834,6 +843,10 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
+
+  checkCudaErrors(cudaFree(morton_code_list));
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
 
   start = clock();
   process = "Compute node bounding boxes";
