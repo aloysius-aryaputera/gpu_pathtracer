@@ -43,7 +43,8 @@ class Material {
       vec3 hit_point, vec3 v_in, vec3 normal,
       bool &reflected, bool &false_hit, bool &refracted,
       bool &entering, bool &sss,
-      Material** material_list, int material_list_length,
+      Material *highest_prioritised_material,
+      Material *second_highest_prioritised_material,
       curandState *rand_state
     );
     __device__ bool _check_if_false_hit(
@@ -97,8 +98,7 @@ class Material {
       Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
       bool &reflected, bool &false_hit, bool &refracted,
       bool &entering, bool &sss,
-      Material *highest_prioritised_material,
-      Material *second_highest_prioritised_material,
+      Material** material_list, int material_list_length,
       reflection_record &ref, curandState *rand_state
     );
     __device__ vec3 get_texture_emission(vec3 uv_vector);
@@ -206,9 +206,9 @@ __device__ reflection_record Material::_refract(
   //   return ref;
   // }
 
-  highest_prioritised_material_ref_idx = get_material_refraction_index(
+  float highest_prioritised_material_ref_idx = get_material_refraction_index(
     highest_prioritised_material);
-  second_highest_prioritised_material_ref_idx = \
+  float second_highest_prioritised_material_ref_idx = \
     get_material_refraction_index(second_highest_prioritised_material);
 
   if (dot(v_in, normal) <= 0) {
@@ -379,12 +379,13 @@ __device__ void Material::check_next_path(
   false_hit = false;
   Material *highest_prioritised_material = nullptr;
   Material *second_highest_prioritised_material = nullptr;
+  vec3 v_in = coming_ray.dir;
 
-  false_hit = check_if_false_hit(
+  false_hit = this -> _check_if_false_hit(
     material_list, material_list_length,
     highest_prioritised_material,
     second_highest_prioritised_material
-  )
+  );
 
   if (false_hit) {
     reflected = false;
@@ -399,14 +400,14 @@ __device__ void Material::check_next_path(
       entering = false;
     }
 
-    return ref;
+    return;
   }
 
   if (
     this -> t_r > 0 && (
       dot(v_in, normal) <= 0 ||
       second_highest_prioritised_material == nullptr ||
-      !second_highest_prioritised_material -> sub_surface_scattering
+      second_highest_prioritised_material -> t_r > 0
     )
   ) {
     ref = this -> _refract(
@@ -420,10 +421,19 @@ __device__ void Material::check_next_path(
     return;
   }
 
+  Material* actual_mat;
   vec3 reflected_ray_dir;
   float cos_theta, random_number = curand_uniform(&rand_state[0]);
+
+  if (this -> t_r > 0) {
+    actual_mat = second_highest_prioritised_material;
+  } else {
+    actual_mat = this;
+  }
+
   float factor = \
-    this -> diffuse_mag / (this -> diffuse_mag + this -> specular_mag);
+    actual_mat -> diffuse_mag / (
+      actual_mat -> diffuse_mag + actual_mat -> specular_mag);
   float fuziness, local_n_s = this -> _get_texture_n_s(uv_vector);
 
   if (local_n_s == 0) {
@@ -435,12 +445,12 @@ __device__ void Material::check_next_path(
   if (random_number <= factor) {
     ref.ray = generate_ray(hit_point, vec3(0, 0, 0), normal, 1, rand_state);
     cos_theta = dot(ref.ray.dir, normal);
-    ref.filter = this -> get_texture_diffuse(uv_vector) * cos_theta;
+    ref.filter = actual_mat -> get_texture_diffuse(uv_vector) * cos_theta;
     refracted = false;
     reflected = true;
     false_hit = false;
 
-    if (this -> sub_surface_scattering) {
+    if (actual_mat -> sub_surface_scattering) {
       sss = true;
     } else {
       sss = false;
@@ -452,7 +462,7 @@ __device__ void Material::check_next_path(
     ref.ray = generate_ray(
       hit_point, reflected_ray_dir, normal, fuziness, rand_state);
     cos_theta = dot(ref.ray.dir, normal);
-    ref.filter = this -> _get_texture_specular(uv_vector) * cos_theta;
+    ref.filter = actual_mat -> _get_texture_specular(uv_vector) * cos_theta;
     if (cos_theta <= 0) {
       refracted = false;
       reflected = false;
