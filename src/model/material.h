@@ -173,9 +173,9 @@ __device__ bool Material::_check_if_false_hit(
     highest_prioritised_material);
 
   if (this -> priority > highest_prioritised_material_priority) {
-    return false;
-  } else {
     return true;
+  } else {
+    return false;
   }
 }
 

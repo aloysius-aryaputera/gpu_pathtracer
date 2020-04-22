@@ -62,17 +62,17 @@ __device__ int Object::pick_primitive_idx_for_sampling(
 ) {
   curandState local_rand_state = rand_state[sampling_idx];
   float random_number = curand_uniform(&rand_state[sampling_idx]);
-  float accumulated_area = 0;
   int idx = 0;
+  float accumulated_area = this -> accumulated_triangle_area[idx];
 
   random_number *= this -> accumulated_triangle_area[
     (this -> num_primitives) - 1];
 
   while(
-    random_number > accumulated_area && idx < (this -> num_primitives)
+    random_number > accumulated_area && idx < (this -> num_primitives) - 1
   ) {
-    accumulated_area = this -> accumulated_triangle_area[idx];
     idx++;
+    accumulated_area = this -> accumulated_triangle_area[idx];
   }
 
   return idx + this -> primitives_offset_idx;
