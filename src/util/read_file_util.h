@@ -136,7 +136,7 @@ void extract_num_elements(
         str = reduce(str);
         str = clean_string_end(str);
         std::vector <std::string> chunks = split(str, ' ');
-        if (chunks[0] == "o") {
+        if (chunks[0] == "usemtl") {
           num_objects += 1;
         } else if (chunks[0] == "v") {
           num_vertices += 1;
@@ -519,7 +519,7 @@ void extract_triangle_data(
           } else {
             current_material_idx = 0;
           }
-        } else if (chunks[0] == "o") {
+        // } else if (chunks[0] == "o") {
           object_idx++;
           *(object_primitive_offset_idx + object_idx) = triangle_idx;
           *(object_num_primitives + object_idx) = 0;
