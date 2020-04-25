@@ -2,11 +2,11 @@
 
 ![](images/20200227_f1.jpg)
 
-![](images/20200323_cars.jpg)
+![](images/20200419_cars.jpg)
 
 ![](images/20200319_ship.jpg)
 
-![](images/20200321_glass.jpg)
+![](images/20200424_glass.jpg)
 
 ![](images/20200311_dragon.jpg)
 
@@ -26,6 +26,7 @@
 * The vase of flower was by [IvanMasanin](https://www.turbosquid.com/Search/Artists/IvanMasanin).
 * The apple was by [Giiman](https://www.turbosquid.com/Search/Artists/Giimann).
 * The plate was by [Grinya Lesnoy](https://free3d.com/user/lesovic).
+* The minion was by [samaned](https://sketchfab.com/samaned).
 
 ## References
 

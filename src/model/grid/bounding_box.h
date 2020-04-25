@@ -6,8 +6,9 @@
 
 #include "../../param.h"
 #include "../../util/bvh_util.h"
-#include "../ray.h"
+#include "../ray/ray.h"
 #include "../vector_and_matrix/vec3.h"
+#include "bounding_sphere.h"
 
 class BoundingBox {
   private:
@@ -31,8 +32,13 @@ class BoundingBox {
       float z_max_
     );
     __device__ bool is_intersection(Ray ray, float &t);
+    __device__ bool is_intersection(BoundingSphere bounding_sphere);
     __device__ bool is_inside(vec3 position);
     __device__ void compute_normalized_center(BoundingBox *world_bounding_box);
+    __device__ void compute_normalized_center(
+      float x_min, float x_max, float y_min, float y_max,
+      float z_min, float z_max
+    );
     __device__ void compute_bb_morton_3d();
     __device__ void print_bounding_box();
 
@@ -77,6 +83,15 @@ __device__ void BoundingBox::compute_normalized_center(
     world_bounding_box -> length_y;
   this -> norm_z_center = (this -> z_center - world_bounding_box -> z_min) / \
     world_bounding_box -> length_z;
+}
+
+__device__ void BoundingBox::compute_normalized_center(
+  float x_min, float x_max, float y_min, float y_max,
+  float z_min, float z_max
+) {
+  this -> norm_x_center = (this -> x_center - x_min) / (x_max - x_min);
+  this -> norm_y_center = (this -> y_center - y_min) / (y_max - y_min);
+  this -> norm_z_center = (this -> z_center - z_min) / (z_max - z_min);
 }
 
 __device__ BoundingBox::BoundingBox() {
@@ -194,6 +209,24 @@ __device__ bool BoundingBox::is_intersection(Ray ray, float &t) {
     }
   }
   return false;
+}
+
+__device__ bool BoundingBox::is_intersection(BoundingSphere bounding_sphere) {
+  float x_dist = abs(this -> x_center - bounding_sphere.center.x());
+  float y_dist = abs(this -> y_center - bounding_sphere.center.y());
+  float z_dist = abs(this -> z_center - bounding_sphere.center.z());
+  float half_x_ext = this -> x_max - this -> x_center;
+  float half_y_ext = this -> y_max - this -> y_center;
+  float half_z_ext = this -> z_max - this -> z_center;
+  if (
+    x_dist <= (half_x_ext + bounding_sphere.r) &&
+    y_dist <= (half_y_ext + bounding_sphere.r) &&
+    z_dist <= (half_z_ext + bounding_sphere.r)
+  ) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 __device__ bool BoundingBox::is_inside(vec3 position) {

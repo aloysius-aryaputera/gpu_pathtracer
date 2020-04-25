@@ -9,7 +9,9 @@
 
 #include "external/libjpeg_cpp/jpeg.h"
 
-#include "model/bvh/bvh_build.h"
+#include "model/bvh/bvh.h"
+#include "model/bvh/bvh_building.h"
+#include "model/bvh/bvh_building_pts.h"
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
 #include "model/geometry/sphere.h"
@@ -18,10 +20,15 @@
 #include "model/grid/cell.h"
 #include "model/grid/grid.h"
 #include "model/material.h"
-#include "model/ray.h"
+#include "model/object/object.h"
+#include "model/object/object_operations.h"
+#include "model/point/point.h"
+#include "model/point/point_operations.h"
+#include "model/ray/ray.h"
 #include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
+#include "util/general.h"
 #include "util/image_util.h"
 #include "util/read_file_util.h"
 #include "util/read_image_util.h"
@@ -47,19 +54,6 @@ __global__ void create_scene(
   }
 }
 
-__global__ void render_init(
-  int im_width, int im_height, curandState *rand_state
-) {
-  int j = threadIdx.x + blockIdx.x * blockDim.x;
-  int i = threadIdx.y + blockIdx.y * blockDim.y;
-  if ((j >= im_width) || (i >= im_height)) {
-    return;
-  }
-  int pixel_index = i * im_width + j;
-  //Each thread gets same seed, a different sequence number, no offset
-  curand_init(1984, pixel_index, 0, &rand_state[pixel_index]);
-}
-
 __global__ void free_world(
   Scene** scene, Grid **grid, Primitive **geom_array, Camera **camera, int n
 ) {
@@ -69,27 +63,6 @@ __global__ void free_world(
     delete *camera;
     delete *grid;
     delete *scene;
-}
-
-__global__ void test(Primitive **object_array, int n) {
-  printf("%u\n", object_array[0] -> get_bounding_box() -> morton_code);
-  printf("%d\n", object_array[0] -> get_bounding_box() -> morton_code < object_array[1] -> get_bounding_box() -> morton_code);
-  printf("%u\n", object_array[1] -> get_bounding_box() -> morton_code);
-  printf("%d\n", object_array[1] -> get_bounding_box() -> morton_code < object_array[2] -> get_bounding_box() -> morton_code);
-  printf("%u\n", object_array[2] -> get_bounding_box() -> morton_code);
-  printf("%u\n", object_array[n / 2] -> get_bounding_box() -> morton_code);
-  printf("%u\n", object_array[n - 5] -> get_bounding_box() -> morton_code);
-  printf("%d\n", object_array[n - 5] -> get_bounding_box() -> morton_code < object_array[n - 3] -> get_bounding_box() -> morton_code);
-  printf("%u\n", object_array[n - 3] -> get_bounding_box() -> morton_code);
-  printf("%d\n", object_array[n - 3] -> get_bounding_box() -> morton_code < object_array[n - 1] -> get_bounding_box() -> morton_code);
-  printf("%u\n", object_array[n - 1] -> get_bounding_box() -> morton_code);
-}
-
-__global__ void my_clz(unsigned int x) {
-  int result = __clz(x);
-  printf("clz = %d\n", result);
-  printf("clz_2 = %d\n", __clz(41));
-  printf("******************************************\n");
 }
 
 int main(int argc, char **argv) {
@@ -128,25 +101,34 @@ int main(int argc, char **argv) {
   float sky_emission_g = std::stof(argv[22]);
   float sky_emission_b = std::stof(argv[23]);
 
+  int sss_pts_per_object = std::stoi(argv[24]);
+
   int tx = 8, ty = 8;
 
   BoundingBox **world_bounding_box;
   Primitive **my_geom;
+  Object **my_objects;
   unsigned int *morton_code_list;
   Material **my_material;
   Camera **my_camera;
+  Point **sss_pts;
   vec3 *image_output;
 
   int num_pixels = im_width * im_height;
   int max_num_materials = 100;
-  int num_vertices, num_faces, num_vt, num_vn;
+  int num_objects, num_vertices, num_faces, num_vt, num_vn;
+  int *num_sss_objects;
   size_t image_size = num_pixels * sizeof(vec3);
-  curandState *rand_state;
-  size_t rand_state_size = num_pixels * sizeof(curandState);
+  curandState *rand_state_sss, *rand_state_image;
+  size_t rand_state_image_size = num_pixels * sizeof(curandState);
+
+  bool *sss_object_marker_array;
+  int *pt_offset_array, *num_pt_array;
 
   float *ka_x, *ka_y, *ka_z, *kd_x, *kd_y, *kd_z;
   float *ks_x, *ks_y, *ks_z, *ke_x, *ke_y, *ke_z, *n_s, *n_i, *t_r;
   float *tf_x, *tf_y, *tf_z;
+  float *path_length;
   float *material_image_r, *material_image_g, *material_image_b;
   int *num_materials;
   int *material_image_height_diffuse, *material_image_width_diffuse, \
@@ -249,7 +231,7 @@ int main(int argc, char **argv) {
   print_start_process(process, start);
   extract_num_elements(
     input_folder_path, obj_filename,
-    num_vertices, num_vt, num_vn, num_faces
+    num_objects, num_vertices, num_vt, num_vn, num_faces
   );
   print_end_process(process, start);
 
@@ -287,6 +269,9 @@ int main(int argc, char **argv) {
     (void **)&tf_y, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged(
     (void **)&tf_z, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&path_length, max_num_materials * sizeof(float)));
 
   checkCudaErrors(cudaMallocManaged(
     (void **)&t_r, max_num_materials * sizeof(float)));
@@ -353,6 +338,7 @@ int main(int argc, char **argv) {
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
     tf_x, tf_y, tf_z,
+    path_length,
     t_r, n_s, n_i,
     material_priority,
     material_image_height_diffuse, material_image_width_diffuse,
@@ -373,33 +359,66 @@ int main(int argc, char **argv) {
     *norm_1_idx, *norm_2_idx, *norm_3_idx, \
     *tex_1_idx, *tex_2_idx, *tex_3_idx;
   int *num_triangles, *material_idx;
+  int *object_num_primitives, *object_primitive_offset_idx;
+  int *triangle_object_idx;
+  float *triangle_area, *accumulated_triangle_area;
 
-  checkCudaErrors(cudaMallocManaged((void **)&num_triangles, sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&num_triangles, sizeof(int)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&material_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&object_num_primitives, num_objects * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&object_primitive_offset_idx, num_objects * sizeof(int)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&x, max(1, num_vertices) * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&y, max(1, num_vertices) * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&z, max(1, num_vertices) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&triangle_object_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&triangle_area, num_faces * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&accumulated_triangle_area, num_faces * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&x_norm, max(1, num_vn) * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&y_norm, max(1, num_vn) * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&z_norm, max(1, num_vn) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&x, max(1, num_vertices) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&y, max(1, num_vertices) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&z, max(1, num_vertices) * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&x_tex, max(1, num_vt) * sizeof(float)));
-  checkCudaErrors(cudaMallocManaged((void **)&y_tex, max(1, num_vt) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&x_norm, max(1, num_vn) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&y_norm, max(1, num_vn) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&z_norm, max(1, num_vn) * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&point_1_idx, num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&point_2_idx, num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&point_3_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&x_tex, max(1, num_vt) * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&y_tex, max(1, num_vt) * sizeof(float)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&norm_1_idx, num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&norm_2_idx, num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&norm_3_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&point_1_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&point_2_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&point_3_idx, num_faces * sizeof(int)));
 
-  checkCudaErrors(cudaMallocManaged((void **)&tex_1_idx, num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&tex_2_idx, num_faces * sizeof(int)));
-  checkCudaErrors(cudaMallocManaged((void **)&tex_3_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&norm_1_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&norm_2_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&norm_3_idx, num_faces * sizeof(int)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&tex_1_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&tex_2_idx, num_faces * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&tex_3_idx, num_faces * sizeof(int)));
 
   start = clock();
   process = "Reading OBJ file";
@@ -416,7 +435,10 @@ int main(int argc, char **argv) {
     material_name,
     material_idx,
     num_triangles,
-    num_materials
+    num_materials,
+    triangle_object_idx,
+    object_num_primitives,
+    object_primitive_offset_idx
   );
   print_end_process(process, start);
 
@@ -450,6 +472,7 @@ int main(int argc, char **argv) {
     ks_x, ks_y, ks_z,
     ke_x, ke_y, ke_z,
     tf_x, tf_y, tf_z,
+    path_length,
     t_r, n_s, n_i,
     material_priority,
     material_image_height_diffuse,
@@ -496,9 +519,25 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
 
   checkCudaErrors(cudaMallocManaged(
+    (void **)&my_objects, num_objects * sizeof(Object *)));
+  checkCudaErrors(cudaMallocManaged(
     (void **)&my_geom, num_triangles[0] * sizeof(Primitive *)));
   checkCudaErrors(cudaMallocManaged(
     (void **)&morton_code_list, num_triangles[0] * sizeof(unsigned int)));
+
+  start = clock();
+  process = "Creating the objects";
+  print_start_process(process, start);
+  create_objects<<<1, num_objects>>>(
+    my_objects, object_num_primitives, object_primitive_offset_idx,
+    triangle_area, accumulated_triangle_area, num_objects
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&sss_object_marker_array, num_objects * sizeof(bool)));
 
   start = clock();
   process = "Creating the world";
@@ -506,7 +545,10 @@ int main(int argc, char **argv) {
   dim3 blocks_world(num_triangles[0] / 1024 + 1);
   dim3 threads_world(1024);
   create_world<<<blocks_world, threads_world>>>(
-    my_geom, my_material,
+    my_geom,
+    triangle_area,
+    my_objects, triangle_object_idx,
+    my_material,
     x, y, z,
     x_norm, y_norm, z_norm,
     x_tex, y_tex,
@@ -514,7 +556,9 @@ int main(int argc, char **argv) {
     norm_1_idx, norm_2_idx, norm_3_idx,
     tex_1_idx, tex_2_idx, tex_3_idx,
     material_idx,
-    num_triangles
+    num_triangles,
+    sss_object_marker_array,
+    sss_pts_per_object
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -535,8 +579,190 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
+  checkCudaErrors(cudaMallocManaged((void **)&num_sss_objects, sizeof(int)));
+  checkCudaErrors(
+    cudaMallocManaged((void **)&pt_offset_array, num_objects * sizeof(int)));
+  checkCudaErrors(
+    cudaMallocManaged((void **)&num_pt_array, num_objects * sizeof(int)));
+
+  start = clock();
+  process = "Computing the number of SSS objects";
+  print_start_process(process, start);
+  compute_num_sss_objects<<<1, 1>>>(
+    num_sss_objects, my_objects, pt_offset_array, num_pt_array,
+    num_objects, sss_pts_per_object
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  int num_sss_points = sss_pts_per_object * num_sss_objects[0];
+
+  checkCudaErrors(cudaMallocManaged
+    ((void **)&sss_pts, max(1, num_sss_points) * sizeof(Point*)));
+
+  start = clock();
+  process = "Allocating " + std::to_string(num_sss_points) + \
+    " points for SSS objects";
+  print_start_process(process, start);
+  allocate_pts_sss<<<1, num_objects>>>(
+    my_objects, sss_pts, pt_offset_array, num_objects);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
   checkCudaErrors(cudaMallocManaged(
     (void **)&world_bounding_box, sizeof(BoundingBox *)));
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&rand_state_sss, max(1, num_sss_points) * sizeof(curandState)));
+
+  start = clock();
+  process = "Generating curand state for SSS points sampling";
+  print_start_process(process, start);
+  init_curand_state<<<max(1, num_sss_points), 1>>>(
+    num_sss_points, rand_state_sss);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  for (int i = 0; i < num_objects; i++) {
+    start = clock();
+    process = "Creating SSS points sampling for object " + std::to_string(i);
+    print_start_process(process, start);
+    create_sss_pts<<<sss_pts_per_object, 1>>>(
+      my_objects, my_geom, sss_pts, pt_offset_array, rand_state_sss,
+      i, sss_pts_per_object
+    );
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+  }
+
+  start = clock();
+  process = "Computing the object boundaries";
+  print_start_process(process, start);
+  compute_object_boundaries_batch<<<num_objects, 1>>>(
+    my_objects, num_objects
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Computing the morton code of every point bounding box";
+  print_start_process(process, start);
+  compute_pts_morton_code_batch<<<blocks_world, threads_world>>>(
+    my_objects, sss_pts, num_sss_points
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  auto sort_points = []  __device__ (Point* pt_1, Point* pt_2) {
+    return pt_1 -> bounding_box -> morton_code < \
+      pt_2 -> bounding_box -> morton_code;
+  };
+
+  for (int i = 0; i < num_objects; i++) {
+    start = clock();
+    process = "Sorting the points based on morton code of object " + \
+      std::to_string(i);
+    print_start_process(process, start);
+    thrust::stable_sort(
+      thrust::device, sss_pts + pt_offset_array[i],
+      sss_pts + pt_offset_array[i] + num_pt_array[i],
+      sort_points);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+  }
+
+  start = clock();
+  process = "Computing sss points offset list";
+  print_start_process(process, start);
+  compute_sss_pts_offset<<<1, 1>>>(my_objects, num_objects);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  Node** sss_pts_node_list, **sss_pts_leaf_list;
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&sss_pts_node_list,
+    max(1, (num_sss_points - num_sss_objects[0])) * sizeof(Node *)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&sss_pts_leaf_list,
+    max(1, num_sss_points) * sizeof(Node *)));
+
+  for (int i = 0; i < num_objects; i++) {
+    start = clock();
+    process = "Building sss points leaves for object " + std::to_string(i);;
+    print_start_process(process, start);
+    build_sss_pts_leaf_list<<<max(1, num_sss_points), 1>>>(
+      sss_pts_leaf_list, sss_pts, my_objects, i, pt_offset_array
+    );
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+  }
+
+  checkCudaErrors(cudaFree(pt_offset_array));
+  checkCudaErrors(cudaFree(num_pt_array));
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+
+  for (int i = 0; i < num_objects; i++) {
+    start = clock();
+    process = "Building sss points nodes for object " + std::to_string(i);;
+    print_start_process(process, start);
+    build_sss_pts_node_list<<<max(1, num_sss_points), 1>>>(
+      sss_pts_node_list, my_objects, i
+    );
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+  }
+
+  unsigned int *sss_morton_code_list;
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&sss_morton_code_list,
+    max(1, num_sss_points) * sizeof(unsigned int)));
+
+  start = clock();
+  process = "Extracting the morton codes of the SSS points";
+  print_start_process(process, start);
+  extract_sss_morton_code_list<<<max(1, num_sss_points), 1>>>(
+    sss_pts, sss_morton_code_list, num_sss_points
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  for (int i = 0; i < num_objects; i++) {
+    start = clock();
+    process = "Setting the sss nodes relationship of object " + std::to_string(i);;
+    print_start_process(process, start);
+    set_pts_sss_node_relationship<<<max(1, num_sss_points), 1>>>(
+      sss_pts_node_list, sss_pts_leaf_list, sss_morton_code_list, my_objects, i
+    );
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+  }
+
+  checkCudaErrors(cudaFree(sss_morton_code_list));
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+
+  start = clock();
+  process = "Compute pts node bounding boxes";
+  print_start_process(process, start);
+  compute_node_bounding_boxes<<<blocks_world, threads_world>>>(
+    sss_pts_leaf_list, sss_pts_node_list, num_sss_points
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
 
   start = clock();
   process = "Computing the world bounding box";
@@ -549,7 +775,7 @@ int main(int argc, char **argv) {
   print_end_process(process, start);
 
   start = clock();
-  process = "Computing the morton code of every bounding box";
+  process = "Computing the morton code of every geometry bounding box";
   print_start_process(process, start);
   compute_morton_code_batch<<<blocks_world, threads_world>>>(
     my_geom, world_bounding_box, num_triangles[0]
@@ -558,7 +784,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  auto ff = []  __device__ (Primitive* obj_1, Primitive* obj_2) {
+  auto sort_geom = []  __device__ (Primitive* obj_1, Primitive* obj_2) {
     return obj_1 -> get_bounding_box() -> morton_code < \
       obj_2 -> get_bounding_box() -> morton_code;
   };
@@ -566,7 +792,8 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Sorting the objects based on morton code";
   print_start_process(process, start);
-  thrust::stable_sort(thrust::device, my_geom, my_geom + num_triangles[0], ff);
+  thrust::stable_sort(
+    thrust::device, my_geom, my_geom + num_triangles[0], sort_geom);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
@@ -608,7 +835,7 @@ int main(int argc, char **argv) {
   print_end_process(process, start);
 
   start = clock();
-  process = "Set node relationship";
+  process = "Setting node relationship";
   print_start_process(process, start);
   set_node_relationship<<<blocks_world, threads_world>>>(
     node_list, leaf_list, morton_code_list, num_triangles[0]
@@ -616,6 +843,10 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
+
+  checkCudaErrors(cudaFree(morton_code_list));
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
 
   start = clock();
   process = "Compute node bounding boxes";
@@ -637,28 +868,72 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  dim3 blocks(im_width / tx + 1, im_height / ty + 1);
-  dim3 threads(tx, ty);
-  checkCudaErrors(cudaMallocManaged((void **)&rand_state, rand_state_size));
+  vec3 sky_emission = vec3(sky_emission_r, sky_emission_g, sky_emission_b);
 
   start = clock();
-  process = "Preparing the rendering process";
+  process = "Doing first pass for SSS objects";
   print_start_process(process, start);
-  render_init<<<blocks, threads>>>(im_width, im_height, rand_state);
+  do_sss_first_pass<<<max(1, num_sss_points), 1>>>(
+    sss_pts, num_sss_points,
+    pathtracing_sample_size,
+    pathtracing_level, sky_emission,
+    bg_height, bg_width,
+    bg_texture_r, bg_texture_g, bg_texture_b, node_list,
+    rand_state_sss
+  );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  vec3 sky_emission = vec3(sky_emission_r, sky_emission_g, sky_emission_b);
   checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
+  dim3 blocks(im_width / tx + 1, im_height / ty + 1);
+  dim3 threads(tx, ty);
+
+  start = clock();
+  process = "Clearing image";
+  print_start_process(process, start);
+  clear_image<<<blocks, threads>>>(image_output, im_width, im_height);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Creating point image";
+  print_start_process(process, start);
+  create_point_image<<<num_sss_points / tx + 1, tx>>>(
+    image_output, my_camera, sss_pts, num_sss_points
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Saving pts image";
+  print_start_process(process, start);
+  save_image(
+    image_output, im_width, im_height, image_output_path + "_pts.ppm");
+  print_end_process(process, start);
+  checkCudaErrors(cudaDeviceSynchronize());
+
+  checkCudaErrors(
+    cudaMallocManaged((void **)&rand_state_image, rand_state_image_size));
+
+  start = clock();
+  process = "Generating curand state for rendering";
+  print_start_process(process, start);
+  init_curand_state<<<num_pixels / 8 + 1, 8>>>(num_pixels, rand_state_image);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
 
   start = clock();
   process = "Rendering";
   print_start_process(process, start);
   render<<<blocks, threads>>>(
-    image_output, my_camera, rand_state, pathtracing_sample_size,
+    image_output, my_camera, rand_state_image, pathtracing_sample_size,
     pathtracing_level, sky_emission, bg_height, bg_width,
-    bg_texture_r, bg_texture_g, bg_texture_b, node_list
+    bg_texture_r, bg_texture_g, bg_texture_b, node_list, my_objects,
+    sss_pts_node_list
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -667,7 +942,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Saving image";
   print_start_process(process, start);
-  save_image(image_output, im_width, im_height, image_output_path);
+  save_image(image_output, im_width, im_height, image_output_path + ".ppm");
   print_end_process(process, start);
   checkCudaErrors(cudaDeviceSynchronize());
 
@@ -680,7 +955,8 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaFree(my_geom));
   checkCudaErrors(cudaFree(my_material));
   checkCudaErrors(cudaFree(num_triangles));
-  checkCudaErrors(cudaFree(rand_state));
+  checkCudaErrors(cudaFree(rand_state_image));
+  checkCudaErrors(cudaFree(rand_state_sss));
   checkCudaErrors(cudaFree(material_image_r));
   checkCudaErrors(cudaFree(material_image_g));
   checkCudaErrors(cudaFree(material_image_b));

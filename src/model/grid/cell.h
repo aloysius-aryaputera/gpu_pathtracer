@@ -6,7 +6,7 @@
 
 #include "../../param.h"
 #include "../geometry/primitive.h"
-#include "../ray.h"
+#include "../ray/ray.h"
 #include "../vector_and_matrix/vec3.h"
 #include "bounding_box.h"
 

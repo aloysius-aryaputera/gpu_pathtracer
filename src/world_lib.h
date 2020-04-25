@@ -11,7 +11,8 @@
 #include "model/grid/cell.h"
 #include "model/grid/grid.h"
 #include "model/material.h"
-#include "model/ray.h"
+#include "model/object/object.h"
+#include "model/ray/ray.h"
 #include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
@@ -20,6 +21,9 @@
 
 __global__ void create_world(
   Primitive** geom_array,
+  float *triangle_area,
+  Object** object_array,
+  int *triangle_object_idx,
   Material** material_array,
   float *x, float *y, float *z,
   float *x_norm, float *y_norm, float *z_norm,
@@ -28,7 +32,15 @@ __global__ void create_world(
   int *norm_1_idx, int *norm_2_idx, int *norm_3_idx,
   int *tex_1_idx, int *tex_2_idx, int *tex_3_idx,
   int *material_idx,
-  int* num_triangles
+  int* num_triangles,
+  bool* sss_object_marker_array,
+  int sss_pts_per_object
+);
+
+__global__ void create_objects(
+  Object** object_array, int* object_num_primitives,
+  int *object_primitive_offset_idx, float *triangle_area,
+  float *accumulated_triangle_area, int num_objects
 );
 
 __global__ void create_material(
@@ -38,6 +50,7 @@ __global__ void create_material(
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
+  float *path_length,
   float *t_r, float *n_s, float *n_i,
   int *material_priority,
   int *material_image_height_diffuse,
@@ -89,6 +102,7 @@ __global__ void create_material(
   float *ks_x, float *ks_y, float *ks_z,
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
+  float *path_length,
   float *t_r, float *n_s, float *n_i,
   int *material_priority,
   int *material_image_height_diffuse,
@@ -118,6 +132,7 @@ __global__ void create_material(
     vec3(ks_x[i], ks_y[i], ks_z[i]),
     vec3(ke_x[i], ke_y[i], ke_z[i]),
     vec3(tf_x[i], tf_y[i], tf_z[i]),
+    path_length[i],
     t_r[i], n_s[i], n_i[i],
     material_priority[i],
     material_image_height_diffuse[i],
@@ -144,8 +159,28 @@ __global__ void create_material(
 
 }
 
+__global__ void create_objects(
+  Object** object_array, int* object_num_primitives,
+  int *object_primitive_offset_idx, float* triangle_area,
+  float *accumulated_triangle_area, int num_objects
+) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (idx >= num_objects) return;
+
+  *(object_array + idx) = new Object(
+    object_primitive_offset_idx[idx], object_num_primitives[idx],
+    triangle_area + object_primitive_offset_idx[idx],
+    accumulated_triangle_area + object_primitive_offset_idx[idx]
+  );
+
+}
+
 __global__ void create_world(
   Primitive** geom_array,
+  float *triangle_area,
+  Object** object_array,
+  int *triangle_object_idx,
   Material** material_array,
   float *x, float *y, float *z,
   float *x_norm, float *y_norm, float *z_norm,
@@ -154,10 +189,11 @@ __global__ void create_world(
   int *norm_1_idx, int *norm_2_idx, int *norm_3_idx,
   int *tex_1_idx, int *tex_2_idx, int *tex_3_idx,
   int *material_idx,
-  int* num_triangles
+  int* num_triangles,
+  bool* sss_object_marker_array,
+  int sss_pts_per_object
 ) {
-  int i = threadIdx.x + blockIdx.x * blockDim.x;
-  int idx = i;
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (idx >= num_triangles[0]) return;
 
@@ -167,6 +203,8 @@ __global__ void create_world(
     vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]),
 
     material_array[material_idx[idx]],
+    // object_array[triangle_object_idx[idx]],
+    triangle_object_idx[idx],
 
     vec3(x_norm[norm_1_idx[idx]], y_norm[norm_1_idx[idx]], z_norm[norm_1_idx[idx]]),
     vec3(x_norm[norm_2_idx[idx]], y_norm[norm_2_idx[idx]], z_norm[norm_2_idx[idx]]),
@@ -176,5 +214,17 @@ __global__ void create_world(
     vec3(x_tex[tex_2_idx[idx]], y_tex[tex_2_idx[idx]], 0),
     vec3(x_tex[tex_3_idx[idx]], y_tex[tex_3_idx[idx]], 0)
   );
+
+  triangle_area[idx] = (*(geom_array + idx)) -> get_area();
+
+  if (geom_array[idx] -> is_sub_surface_scattering())
+  {
+    object_array[triangle_object_idx[idx]] -> set_as_sub_surface_scattering(
+      sss_pts_per_object
+    );
+    sss_object_marker_array[triangle_object_idx[idx]] = true;
+  } else {
+    sss_object_marker_array[triangle_object_idx[idx]] = false;
+  }
 
 }

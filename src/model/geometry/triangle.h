@@ -2,12 +2,14 @@
 #ifndef TRIANGLE_H
 #define TRIANGLE_H
 
+#include <curand_kernel.h>
 #include <math.h>
 
 #include "../../param.h"
 #include "../grid/bounding_box.h"
 #include "../material.h"
-#include "../ray.h"
+#include "../object/object.h"
+#include "../ray/ray.h"
 #include "../vector_and_matrix/vec3.h"
 #include "primitive.h"
 
@@ -16,29 +18,67 @@ class Triangle: public Primitive {
     __host__ __device__ float _compute_tolerance();
     __device__ void _compute_bounding_box();
 
-    float area, inv_tolerance, tolerance;
+    float inv_tolerance, tolerance;
     vec3 point_1, point_2, point_3, norm_1, norm_2, norm_3, normal;
     vec3 tex_1, tex_2, tex_3;
     Material *material;
+    bool sub_surface_scattering;
+    float area;
 
   public:
     __host__ __device__ Triangle() {};
     __device__ Triangle(
       vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_,
+      // Object *object_,
+      int object_idx,
       vec3 norm_1_, vec3 norm_2_, vec3 norm_3_, vec3 tex_1_, vec3 tex_2_,
       vec3 tex_3_
     );
     __device__ bool hit(Ray ray, float t_max, hit_record& rec);
     __device__ Material* get_material();
     __device__ BoundingBox* get_bounding_box();
-    
+    __device__ bool is_sub_surface_scattering();
+    __device__ hit_record get_random_point_on_surface(curandState *rand_state);
+    __device__ float get_area();
+    __device__ int get_object_idx();
+
     BoundingBox *bounding_box;
+    // Object *object;
+    int object_idx;
 };
-
-
 
 __host__ __device__ float _compute_triangle_area(
   vec3 point_1, vec3 point_2, vec3 point_3);
+
+__device__ int Triangle::get_object_idx() {
+  return this -> object_idx;
+}
+
+__device__ float Triangle::get_area() {
+  return this -> area;
+}
+
+__device__ hit_record Triangle::get_random_point_on_surface(
+  curandState *rand_state
+) {
+  hit_record new_hit_record;
+  float random_number = curand_uniform(&rand_state[0]);
+  float random_number_2 = curand_uniform(&rand_state[0]);
+
+  float u = 1 - powf(random_number, .5);
+  float v = random_number_2 * powf(random_number, .5);
+
+  new_hit_record.point =  u * this -> point_1 + v * this -> point_2 + (
+    1 - u - v) * this -> point_3;
+  new_hit_record.normal = unit_vector(
+    u * this -> norm_1 + v * this -> norm_2 + (1 - u - v) * this -> norm_3);
+  new_hit_record.uv_vector = u * this -> tex_1 + v * this -> tex_2 + (
+    1 - u - v) * this -> tex_3;
+  new_hit_record.object = this;
+
+  return new_hit_record;
+
+}
 
 __device__ void Triangle::_compute_bounding_box() {
   float x_min, x_max, y_min, y_max, z_min, z_max;
@@ -70,6 +110,8 @@ __device__ void Triangle::_compute_bounding_box() {
 
 __device__ Triangle::Triangle(
   vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_,
+  // Object* object_,
+  int object_idx_,
   vec3 norm_1_=vec3(0, 0, 0), vec3 norm_2_=vec3(0, 0, 0),
   vec3 norm_3_=vec3(0, 0, 0), vec3 tex_1_=vec3(0, 0, 0),
   vec3 tex_2_=vec3(0, 0, 0), vec3 tex_3_=vec3(0, 0, 0)
@@ -77,6 +119,7 @@ __device__ Triangle::Triangle(
   this -> point_1 = vec3(point_1_.x(), point_1_.y(), point_1_.z());
   this -> point_2 = vec3(point_2_.x(), point_2_.y(), point_2_.z());
   this -> point_3 = vec3(point_3_.x(), point_3_.y(), point_3_.z());
+  this -> object_idx = object_idx_;
   this -> material = material_;
   this -> tolerance = this -> _compute_tolerance();
   this -> inv_tolerance = 1.0f / this -> tolerance;
@@ -92,6 +135,9 @@ __device__ Triangle::Triangle(
   this -> tex_1 = tex_1_;
   this -> tex_2 = tex_2_;
   this -> tex_3 = tex_3_;
+
+  this -> sub_surface_scattering = \
+    this -> get_material() -> sub_surface_scattering;
 
   if (
     compute_distance(norm_1_, vec3(0, 0, 0)) < this -> tolerance ||
@@ -119,6 +165,10 @@ __host__ __device__ float Triangle::_compute_tolerance() {
     tolerance_ = dist_3;
   }
   return min(SMALL_DOUBLE, tolerance_ / 100);
+}
+
+__device__ bool Triangle::is_sub_surface_scattering() {
+  return this -> sub_surface_scattering;
 }
 
 __device__ Material* Triangle::get_material() {
