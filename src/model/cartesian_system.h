@@ -2,6 +2,7 @@
 #ifndef CARTESIAN_SYSTEM_H
 #define CARTESIAN_SYSTEM_H
 
+#include "../param.h"
 #include "vector_and_matrix/vec3.h"
 
 class CartesianSystem {
@@ -43,11 +44,30 @@ __host__ __device__ CartesianSystem::CartesianSystem(vec3 new_z_axis_) {
 __host__ __device__ CartesianSystem::CartesianSystem(
   vec3 new_z_axis_, vec3 new_x_axis_draft
 ) {
+  new_x_axis_draft = unit_vector(new_x_axis_draft);
   this -> new_z_axis = unit_vector(new_z_axis_);
-  this -> new_y_axis = unit_vector(
-    cross(this -> new_z_axis, new_x_axis_draft));
-  this -> new_x_axis = unit_vector(
-    cross(this -> new_y_axis, this -> new_z_axis));
+  // if (compute_distance(
+  //   this -> new_z_axis, new_x_axis_draft) < SMALL_DOUBLE
+  // ) {
+    if (abs(new_z_axis.x()) > abs(new_z_axis.y())) {
+      this -> new_x_axis = vec3(
+        this -> new_z_axis.z(), 0, -this -> new_z_axis.x()) / \
+        sqrt(this -> new_z_axis.x() * this -> new_z_axis.x() +
+             this -> new_z_axis.z() * this -> new_z_axis.z());
+    } else {
+      this -> new_x_axis = vec3(
+        0, -this -> new_z_axis.z(), this -> new_z_axis.y()) / \
+        sqrt(this -> new_z_axis.y() * this -> new_z_axis.y() +
+             this -> new_z_axis.z() * this -> new_z_axis.z());
+    }
+    this -> new_y_axis = unit_vector(
+      cross(this -> new_z_axis, this -> new_x_axis));
+  // } else {
+  //   this -> new_y_axis = unit_vector(
+  //     cross(this -> new_z_axis, new_x_axis_draft));
+  //   this -> new_x_axis = unit_vector(
+  //     cross(this -> new_y_axis, this -> new_z_axis));
+  // }
 }
 
 __host__ __device__ vec3 CartesianSystem::to_world_system(vec3 input_vector) {

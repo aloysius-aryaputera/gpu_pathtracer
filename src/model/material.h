@@ -526,10 +526,12 @@ __device__ vec3 Material::get_texture_bump(vec3 uv_vector) {
   if (this -> texture_height_bump < 2 || this -> texture_width_bump < 2) {
     return vec3(0.0, 0.0, 0.0);
   } else {
-    return this -> _get_texture(
-      uv_vector, vec3(1.0, 1.0, 1.0), this -> texture_r_bump,
-      this -> texture_g_bump, this -> texture_b_bump,
-      this -> texture_height_bump, this -> texture_width_bump
+    return 2 * (
+      this -> _get_texture(
+        uv_vector, vec3(1.0, 1.0, 1.0), this -> texture_r_bump,
+        this -> texture_g_bump, this -> texture_b_bump,
+        this -> texture_height_bump, this -> texture_width_bump
+      ) - vec3(0.5, 0.5, 0.5)
     );
   }
 }

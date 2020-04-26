@@ -87,11 +87,19 @@ __device__ vec3 Triangle::_compute_u_axis_draft(int point_idx) {
   uv_diff_1 = other_uv_1 - self_uv;
   uv_diff_2 = other_uv_2 - self_uv;
 
-  u_axis_draft = (uv_diff_2.y() - uv_diff_2.x()) / (
-    uv_diff_1.x() * uv_diff_2.y() - uv_diff_2.x() * uv_diff_1.y()
-  ) * e_1;
+  float d = uv_diff_1.x() * uv_diff_2.y() - uv_diff_2.x() * uv_diff_1.y();
 
-  return unit_vector(u_axis_draft);
+  // if (
+  //   abs(d) < SMALL_DOUBLE ||
+  //   abs(uv_diff_2.y() - uv_diff_2.x()) < SMALL_DOUBLE
+  // ) {
+  //   return vec3(1, 0, 0);
+  // } else {
+  //   return unit_vector((uv_diff_2.y() - uv_diff_2.x()) / d * e_1);
+  // }
+
+  return vec3(1, 0, 0);
+
 }
 
 __device__ int Triangle::get_object_idx() {
@@ -317,13 +325,16 @@ __device__ vec3 Triangle::_get_normal(
   vec3 bump = this -> material -> get_texture_bump(uv_vector);
   vec3 u_axis = unit_vector(weight_1 * this -> u_axis_1 + weight_2 * this -> u_axis_2 + \
     weight_3 * this -> u_axis_3);
-  CartesianSystem system = CartesianSystem(new_normal, u_axis);
+  // CartesianSystem system = CartesianSystem(new_normal, u_axis);
+  // CartesianSystem system = CartesianSystem(new_normal, vec3(1, 0, 0));
+  CartesianSystem system = CartesianSystem(new_normal);
   u_axis = system.new_x_axis;
   vec3 v_axis = system.new_y_axis;
   // vec3 v_axis = unit_vector(weight_1 * this -> v_axis_1 + weight_2 * this -> v_axis_2 + \
   //   weight_3 * this -> v_axis_3);
 
   new_normal += (bump.u() * u_axis) + (bump.v() * v_axis);
+  // new_normal += (0 * u_axis) + (0 * v_axis);
 
   return unit_vector(new_normal);
 }
