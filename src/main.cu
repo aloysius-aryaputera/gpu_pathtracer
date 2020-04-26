@@ -14,7 +14,6 @@
 #include "model/bvh/bvh_building_pts.h"
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
-#include "model/geometry/sphere.h"
 #include "model/geometry/triangle.h"
 #include "model/grid/bounding_box.h"
 #include "model/grid/cell.h"
@@ -139,6 +138,8 @@ int main(int argc, char **argv) {
     *material_image_offset_n_s;
   int *material_image_height_emission, *material_image_width_emission, \
     *material_image_offset_emission;
+  int *material_image_height_bump, *material_image_width_bump, \
+    *material_image_offset_bump;
 
   float *bg_texture_r, *bg_texture_g, *bg_texture_b;
   int bg_height, bg_width;
@@ -323,6 +324,16 @@ int main(int argc, char **argv) {
     (void **)&material_image_offset_emission,
     max_num_materials * sizeof(int)));
 
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_height_bump,
+    max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_width_bump,
+    max_num_materials * sizeof(int)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&material_image_offset_bump,
+    max_num_materials * sizeof(int)));
+
   start = clock();
   process = "Extracting material data";
   print_start_process(process, start);
@@ -349,6 +360,8 @@ int main(int argc, char **argv) {
     material_image_offset_emission,
     material_image_height_n_s, material_image_width_n_s,
     material_image_offset_n_s,
+    material_image_height_bump, material_image_width_bump,
+    material_image_offset_bump,
     num_materials,
     material_name
   );
@@ -487,6 +500,9 @@ int main(int argc, char **argv) {
     material_image_height_n_s,
     material_image_width_n_s,
     material_image_offset_n_s,
+    material_image_height_bump,
+    material_image_width_bump,
+    material_image_offset_bump,
     material_image_r,
     material_image_g,
     material_image_b,

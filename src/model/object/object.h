@@ -60,7 +60,6 @@ __device__ void Object::assign_bvh_leaf_zero_idx(int idx) {
 __device__ int Object::pick_primitive_idx_for_sampling(
   curandState *rand_state, int sampling_idx
 ) {
-  curandState local_rand_state = rand_state[sampling_idx];
   float random_number = curand_uniform(&rand_state[sampling_idx]);
   int idx = 0;
   float accumulated_area = this -> accumulated_triangle_area[idx];

@@ -37,6 +37,8 @@ void _extract_single_material_data(
   int *material_image_offset_emission,
   int *material_image_height_n_s, int *material_image_width_n_s,
   int *material_image_offset_n_s,
+  int *material_image_height_bump, int *material_image_width_bump,
+  int *material_image_offset_bump,
   int *num_materials,
   std::vector <std::string> &material_name
 );
@@ -81,6 +83,8 @@ void extract_material_data(
   int *material_image_offset_emission,
   int *material_image_height_n_s, int *material_image_width_n_s,
   int *material_image_offset_n_s,
+  int *material_image_height_bump, int *material_image_width_bump,
+  int *material_image_offset_bump,
   int *num_materials,
   std::vector <std::string> &material_name
 );
@@ -227,6 +231,8 @@ void _extract_single_material_data(
   int *material_image_offset_emission,
   int *material_image_height_n_s, int *material_image_width_n_s,
   int *material_image_offset_n_s,
+  int *material_image_height_bump, int *material_image_width_bump,
+  int *material_image_offset_bump,
   int *num_materials,
   std::vector <std::string> &material_name
 ) {
@@ -282,6 +288,10 @@ void _extract_single_material_data(
     *(material_image_height_n_s + idx) = texture_height_array[0];
     *(material_image_width_n_s + idx) = texture_width_array[0];
     *(material_image_offset_n_s + idx) = texture_offset_array[0];
+
+    *(material_image_height_bump + idx) = texture_height_array[0];
+    *(material_image_width_bump + idx) = texture_width_array[0];
+    *(material_image_offset_bump + idx) = texture_offset_array[0];
   }
 
   std::ifstream myfile (complete_material_filename);
@@ -341,6 +351,10 @@ void _extract_single_material_data(
           *(material_image_height_n_s + idx) = texture_height_array[0];
           *(material_image_width_n_s + idx) = texture_width_array[0];
           *(material_image_offset_n_s + idx) = texture_offset_array[0];
+
+          *(material_image_height_bump + idx) = texture_height_array[0];
+          *(material_image_width_bump + idx) = texture_width_array[0];
+          *(material_image_offset_bump + idx) = texture_offset_array[0];
 
         } else if (chunks[0] == "Ka") {
           *(ka_x + idx) = std::stof(chunks[1]);
@@ -411,6 +425,15 @@ void _extract_single_material_data(
           *(material_image_width_n_s + idx) = texture_width_array[result.second];
           *(material_image_offset_n_s + idx) = texture_offset_array[result.second];
 
+        } else if (chunks[0] == "map_Bump") {
+          texture_file_name = chunks[1];
+          std::pair<bool, int> result = find_in_vector<std::string>(
+            texture_file_name_array, texture_file_name);
+
+          *(material_image_height_bump + idx) = texture_height_array[result.second];
+          *(material_image_width_bump + idx) = texture_width_array[result.second];
+          *(material_image_offset_bump + idx) = texture_offset_array[result.second];
+
         }
       }
     }
@@ -443,6 +466,8 @@ void extract_material_data(
   int *material_image_offset_emission,
   int *material_image_height_n_s, int *material_image_width_n_s,
   int *material_image_offset_n_s,
+  int *material_image_height_bump, int *material_image_width_bump,
+  int *material_image_offset_bump,
   int *num_materials,
   std::vector <std::string> &material_name
 ) {
@@ -470,6 +495,8 @@ void extract_material_data(
       material_image_offset_emission,
       material_image_height_n_s, material_image_width_n_s,
       material_image_offset_n_s,
+      material_image_height_bump, material_image_width_bump,
+      material_image_offset_bump,
       num_materials,
       material_name
     );
