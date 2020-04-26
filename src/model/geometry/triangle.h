@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include "../../param.h"
+#include "../cartesian_system.h"
 #include "../grid/bounding_box.h"
 #include "../material.h"
 #include "../object/object.h"
@@ -19,10 +20,13 @@ class Triangle: public Primitive {
     __device__ void _compute_bounding_box();
     __device__ vec3 _get_normal(
       float weight_1, float weight_2, float weight_3);
+    __device__ vec3 _compute_u_axis_draft(int point_idx);
 
     float inv_tolerance, tolerance;
     vec3 point_1, point_2, point_3, norm_1, norm_2, norm_3, normal;
     vec3 tex_1, tex_2, tex_3;
+    vec3 u_axis_1, u_axis_2, u_axis_3;
+    vec3 v_axis_1, v_axis_2, v_axis_3;
     Material *material;
     bool sub_surface_scattering;
     float area;
@@ -49,6 +53,46 @@ class Triangle: public Primitive {
 
 __host__ __device__ float _compute_triangle_area(
   vec3 point_1, vec3 point_2, vec3 point_3);
+
+__device__ vec3 Triangle::_compute_u_axis_draft(int point_idx) {
+  vec3 self_xyz, other_xyz_1, other_xyz_2;
+  vec3 self_uv, other_uv_1, other_uv_2;
+  vec3 e_1, uv_diff_1, uv_diff_2;
+  vec3 u_axis_draft;
+
+  if (point_idx == 1) {
+    self_xyz = this -> point_1;
+    self_uv = this -> tex_1;
+    other_xyz_1 = this -> point_2;
+    other_uv_1 = this -> tex_2;
+    other_xyz_2 = this -> point_3;
+    other_uv_2 = this -> tex_3;
+  } else if (point_idx == 2) {
+    self_xyz = this -> point_2;
+    self_uv = this -> tex_2;
+    other_xyz_1 = this -> point_3;
+    other_uv_1 = this -> tex_3;
+    other_xyz_2 = this -> point_1;
+    other_uv_2 = this -> tex_1;
+  } else {
+    self_xyz = this -> point_3;
+    self_uv = this -> tex_3;
+    other_xyz_1 = this -> point_1;
+    other_uv_1 = this -> tex_1;
+    other_xyz_2 = this -> point_2;
+    other_uv_2 = this -> tex_2;
+  }
+
+  e_1 = other_xyz_1 - self_xyz;
+  uv_diff_1 = other_uv_1 - self_uv;
+  uv_diff_2 = other_uv_2 - self_uv;
+
+  u_axis_draft = (uv_diff_2.y() - uv_diff_2.x()) / (
+    uv_diff_1.x() * uv_diff_2.y() - uv_diff_2.x() * uv_diff_1.y()
+  ) * e_1;
+
+  return unit_vector(u_axis_draft);
+}
 
 __device__ int Triangle::get_object_idx() {
   return this -> object_idx;
@@ -148,6 +192,22 @@ __device__ Triangle::Triangle(
     this -> norm_3 = this -> normal;
   }
   this -> _compute_bounding_box();
+
+  vec3 u_axis_draft_1 = this -> _compute_u_axis_draft(1);
+  CartesianSystem system_1 = CartesianSystem(this -> norm_1, u_axis_draft_1);
+  this -> u_axis_1 = system_1.new_x_axis;
+  this -> v_axis_1 = system_1.new_y_axis;
+
+  vec3 u_axis_draft_2 = this -> _compute_u_axis_draft(2);
+  CartesianSystem system_2 = CartesianSystem(this -> norm_2, u_axis_draft_2);
+  this -> u_axis_2 = system_2.new_x_axis;
+  this -> v_axis_2 = system_2.new_y_axis;
+
+  vec3 u_axis_draft_3 = this -> _compute_u_axis_draft(3);
+  CartesianSystem system_3 = CartesianSystem(this -> norm_3, u_axis_draft_3);
+  this -> u_axis_3 = system_3.new_x_axis;
+  this -> v_axis_3 = system_3.new_y_axis;
+
 }
 
 __host__ __device__ float Triangle::_compute_tolerance() {
@@ -239,8 +299,8 @@ __device__ bool Triangle::hit(Ray ray, float t_max, hit_record& rec) {
   rec.coming_ray = ray;
   rec.point = b1 * this -> point_1 + b2 * this -> point_2 + \
     b3 * this -> point_3;
-  rec.normal = this -> _get_normal(b1, b2, b3);
   rec.uv_vector = b1 * this -> tex_1 + b2 * this -> tex_2 + b3 * this -> tex_3;
+  rec.normal = this -> _get_normal(b1, b2, b3);
 
   return true;
 }
@@ -248,10 +308,24 @@ __device__ bool Triangle::hit(Ray ray, float t_max, hit_record& rec) {
 __device__ vec3 Triangle::_get_normal(
   float weight_1, float weight_2, float weight_3
 ) {
-  return unit_vector(
+  vec3 uv_vector = weight_1 * this -> tex_1 + weight_2 * this -> tex_2 + \
+    weight_3 * this -> tex_3;
+  vec3 new_normal = unit_vector(
     weight_1 * this -> norm_1 + weight_2 * this -> norm_2 + \
     weight_3 * this -> norm_3
   );
+  vec3 bump = this -> material -> get_texture_bump(uv_vector);
+  vec3 u_axis = unit_vector(weight_1 * this -> u_axis_1 + weight_2 * this -> u_axis_2 + \
+    weight_3 * this -> u_axis_3);
+  CartesianSystem system = CartesianSystem(new_normal, u_axis);
+  u_axis = system.new_x_axis;
+  vec3 v_axis = system.new_y_axis;
+  // vec3 v_axis = unit_vector(weight_1 * this -> v_axis_1 + weight_2 * this -> v_axis_2 + \
+  //   weight_3 * this -> v_axis_3);
+
+  new_normal += (bump.u() * u_axis) + (bump.v() * v_axis);
+
+  return unit_vector(new_normal);
 }
 
 __host__ __device__ float _compute_triangle_area(
