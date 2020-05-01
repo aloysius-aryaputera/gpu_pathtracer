@@ -417,7 +417,7 @@ __device__ bool Grid::do_traversal(Ray ray, hit_record &rec) {
   float inc_j = round(9999 * ray.dir.y() / fabsf(9999 * ray.dir.y()));
   float inc_k = round(9999 * ray.dir.z() / fabsf(9999 * ray.dir.z()));
 
-  float t_x_prev, t_y_prev, t_z_prev;
+  // float t_x_prev, t_y_prev, t_z_prev;
   int count = 0;
 
   while(
@@ -430,17 +430,17 @@ __device__ bool Grid::do_traversal(Ray ray, hit_record &rec) {
       ray, current_cell -> object_array, current_cell -> num_objects, rec);
 
     if (t_x <= t_y && t_x <= t_z && fabsf(ray.dir.x()) > 0) {
-      t_x_prev = t_x;
+      // t_x_prev = t_x;
       t_x += d_t_x;
       i += inc_i;
     } else {
       if (t_y <= t_x && t_y <= t_z && fabsf(ray.dir.y()) > 0) {
-        t_y_prev = t_y;
+        // t_y_prev = t_y;
         t_y += d_t_y;
         j += inc_j;
       } else {
         if (t_z <= t_x && t_z <= t_y && fabsf(ray.dir.z()) > 0) {
-          t_z_prev = t_z;
+          // t_z_prev = t_z;
           t_z += d_t_z;
           k += inc_k;
         } else {

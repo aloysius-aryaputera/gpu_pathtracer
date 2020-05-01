@@ -13,4 +13,9 @@ __global__ void init_curand_state(
   curand_init(1984, i, 0, &rand_state[i]);
 }
 
+__device__ float de_nan(float number) {
+  if (!(number == number)) { number = 0; }
+  return number;
+}
+
 #endif

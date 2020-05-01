@@ -2,11 +2,11 @@
 
 ![](images/20200227_f1.jpg)
 
-![](images/20200419_cars.jpg)
+![](images/20200501_cars.jpg)
 
 ![](images/20200319_ship.jpg)
 
-![](images/20200424_glass.jpg)
+![](images/20200426_glass.jpg)
 
 ![](images/20200311_dragon.jpg)
 
@@ -38,3 +38,4 @@
 * T. Karras, "Maximizing Parallelism in the Construction of BVHs, Octrees, and *k*-d Trees," *High Performance Graphics*, 2012.
 * Y. Li, "Nested Dielectrics", 2019 (https://blog.yiningkarlli.com/2019/05/nested-dielectrics.html).
 * C. Schmidt and B. Budge, "Simple Nested Dielectrics in Ray Traced Images," *Journal of Graphics Tools*, 2002.
+* E. Lengyel, "Chapter 7: Shading", *Foundations of Game Engine Development, Vol. 2*, 2019.

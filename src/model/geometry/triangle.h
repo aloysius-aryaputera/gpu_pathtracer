@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include "../../param.h"
+#include "../cartesian_system.h"
 #include "../grid/bounding_box.h"
 #include "../material.h"
 #include "../object/object.h"
@@ -17,19 +18,26 @@ class Triangle: public Primitive {
   private:
     __host__ __device__ float _compute_tolerance();
     __device__ void _compute_bounding_box();
+    __device__ vec3 _get_normal(
+      float weight_1, float weight_2, float weight_3);
+    __device__ void _compute_tangent();
 
     float inv_tolerance, tolerance;
+    vec3 t, b;
     vec3 point_1, point_2, point_3, norm_1, norm_2, norm_3, normal;
     vec3 tex_1, tex_2, tex_3;
+    vec3 tangent_1, tangent_2, tangent_3;
     Material *material;
     bool sub_surface_scattering;
     float area;
+    int point_1_idx, point_2_idx, point_3_idx;
 
   public:
     __host__ __device__ Triangle() {};
     __device__ Triangle(
-      vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_,
-      // Object *object_,
+      vec3 point_1_, vec3 point_2_, vec3 point_3_,
+      int point_1_idx_, int point_2_idx_, int point_3_idx_,
+      Material* material_,
       int object_idx,
       vec3 norm_1_, vec3 norm_2_, vec3 norm_3_, vec3 tex_1_, vec3 tex_2_,
       vec3 tex_3_
@@ -41,10 +49,16 @@ class Triangle: public Primitive {
     __device__ hit_record get_random_point_on_surface(curandState *rand_state);
     __device__ float get_area();
     __device__ int get_object_idx();
+    __device__ vec3 get_t();
+    __device__ vec3 get_b();
+    __device__ int get_point_1_idx();
+    __device__ int get_point_2_idx();
+    __device__ int get_point_3_idx();
+    __device__ void assign_tangent(vec3 tangent_, int idx);
 
     BoundingBox *bounding_box;
-    // Object *object;
     int object_idx;
+
 };
 
 __host__ __device__ float _compute_triangle_area(
@@ -54,8 +68,55 @@ __device__ int Triangle::get_object_idx() {
   return this -> object_idx;
 }
 
+__device__ int Triangle::get_point_1_idx() {
+  return this -> point_1_idx;
+}
+
+__device__ int Triangle::get_point_2_idx() {
+  return this -> point_2_idx;
+}
+
+__device__ int Triangle::get_point_3_idx() {
+  return this -> point_3_idx;
+}
+
+__device__ void Triangle::assign_tangent(vec3 tangent_, int idx) {
+  tangent_ = unit_vector(tangent_);
+  if (idx == 1) {
+    this -> tangent_1 = unit_vector(
+      tangent_ - dot(this -> norm_1, tangent_) * this -> norm_1);
+  } else if(idx == 2) {
+    this -> tangent_2 = unit_vector(
+      tangent_ - dot(this -> norm_2, tangent_) * this -> norm_2);
+  } else {
+    this -> tangent_3 = unit_vector(
+      tangent_ - dot(this -> norm_3, tangent_) * this -> norm_3);
+  }
+}
+
+__device__ void Triangle::_compute_tangent() {
+  vec3 e1 = this -> point_2 - this -> point_1;
+  vec3 e2 = this -> point_3 - this -> point_1;
+  float x1 = this -> tex_2.u() - this -> tex_1.u();
+  float x2 = this -> tex_3.u() - this -> tex_1.u();
+  float y1 = this -> tex_2.v() - this -> tex_1.v();
+  float y2 = this -> tex_3.v() - this -> tex_1.v();
+  float r = 1.0 / (x1 * y2 - x2 * y1);
+
+  this -> t = (e1 * y2 - e2 * y1) * r;
+  this -> b = (e2 * x1 - e1 * x2) * r;
+}
+
 __device__ float Triangle::get_area() {
   return this -> area;
+}
+
+__device__ vec3 Triangle::get_t() {
+  return this -> t;
+}
+
+__device__ vec3 Triangle::get_b() {
+  return this -> b;
 }
 
 __device__ hit_record Triangle::get_random_point_on_surface(
@@ -109,8 +170,9 @@ __device__ void Triangle::_compute_bounding_box() {
 }
 
 __device__ Triangle::Triangle(
-  vec3 point_1_, vec3 point_2_, vec3 point_3_, Material* material_,
-  // Object* object_,
+  vec3 point_1_, vec3 point_2_, vec3 point_3_,
+  int point_1_idx_, int point_2_idx_, int point_3_idx_,
+  Material* material_,
   int object_idx_,
   vec3 norm_1_=vec3(0, 0, 0), vec3 norm_2_=vec3(0, 0, 0),
   vec3 norm_3_=vec3(0, 0, 0), vec3 tex_1_=vec3(0, 0, 0),
@@ -119,6 +181,9 @@ __device__ Triangle::Triangle(
   this -> point_1 = vec3(point_1_.x(), point_1_.y(), point_1_.z());
   this -> point_2 = vec3(point_2_.x(), point_2_.y(), point_2_.z());
   this -> point_3 = vec3(point_3_.x(), point_3_.y(), point_3_.z());
+  this -> point_1_idx = point_1_idx_;
+  this -> point_2_idx = point_2_idx_;
+  this -> point_3_idx = point_3_idx_;
   this -> object_idx = object_idx_;
   this -> material = material_;
   this -> tolerance = this -> _compute_tolerance();
@@ -149,6 +214,8 @@ __device__ Triangle::Triangle(
     this -> norm_3 = this -> normal;
   }
   this -> _compute_bounding_box();
+  this -> _compute_tangent();
+
 }
 
 __host__ __device__ float Triangle::_compute_tolerance() {
@@ -240,11 +307,43 @@ __device__ bool Triangle::hit(Ray ray, float t_max, hit_record& rec) {
   rec.coming_ray = ray;
   rec.point = b1 * this -> point_1 + b2 * this -> point_2 + \
     b3 * this -> point_3;
-  rec.normal = unit_vector(
-    b1 * this -> norm_1 + b2 * this -> norm_2 + b3 * this -> norm_3);
   rec.uv_vector = b1 * this -> tex_1 + b2 * this -> tex_2 + b3 * this -> tex_3;
+  rec.normal = this -> _get_normal(b1, b2, b3);
 
   return true;
+}
+
+__device__ vec3 Triangle::_get_normal(
+  float weight_1, float weight_2, float weight_3
+) {
+  CartesianSystem system;
+
+  vec3 uv_vector = weight_1 * this -> tex_1 + weight_2 * this -> tex_2 + \
+    weight_3 * this -> tex_3;
+  vec3 new_normal = unit_vector(
+    weight_1 * this -> norm_1 + weight_2 * this -> norm_2 + \
+    weight_3 * this -> norm_3
+  );
+  vec3 bump = this -> material -> get_texture_bump(uv_vector);
+  vec3 tangent = unit_vector(
+    weight_1 * this -> tangent_1 + weight_2 * this -> tangent_2 + \
+    weight_3 * this -> tangent_3
+  );
+
+  if (tangent.vector_is_nan()) {
+    system = CartesianSystem(new_normal);
+  } else {
+    system = CartesianSystem(new_normal, tangent);
+  }
+
+  vec3 u_axis = system.new_x_axis;
+  vec3 v_axis = system.new_y_axis;
+
+  if (bump.length() > 0.0) {
+    new_normal += (bump.u() * u_axis) + (bump.v() * v_axis);
+  }
+
+  return unit_vector(new_normal);
 }
 
 __host__ __device__ float _compute_triangle_area(

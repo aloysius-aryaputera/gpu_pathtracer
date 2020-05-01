@@ -59,11 +59,13 @@ class Material {
     int texture_width_specular, texture_height_specular;
     int texture_width_emission, texture_height_emission;
     int texture_width_n_s, texture_height_n_s;
+    int texture_width_bump, texture_height_bump;
     float t_r, n_s;
     float *texture_r_diffuse, *texture_g_diffuse, *texture_b_diffuse;
     float *texture_r_specular, *texture_g_specular, *texture_b_specular;
     float *texture_r_emission, *texture_g_emission, *texture_b_emission;
     float *texture_r_n_s, *texture_g_n_s, *texture_b_n_s;
+    float *texture_r_bump, *texture_g_bump, *texture_b_bump;
 
   public:
     __host__ __device__ Material() {};
@@ -92,7 +94,12 @@ class Material {
       int texture_width_n_s_,
       float *texture_r_n_s_,
       float *texture_g_n_s_,
-      float *texture_b_n_s_
+      float *texture_b_n_s_,
+      int texture_height_bump_,
+      int texture_width_bump_,
+      float *texture_r_bump_,
+      float *texture_g_bump_,
+      float *texture_b_bump_
     );
     __device__ void check_next_path(
       Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
@@ -103,6 +110,7 @@ class Material {
     );
     __device__ vec3 get_texture_emission(vec3 uv_vector);
     __device__ vec3 get_texture_diffuse(vec3 uv_vector);
+    __device__ vec3 get_texture_bump(vec3 uv_vector);
 
     vec3 emission;
     int priority;
@@ -159,8 +167,6 @@ __device__ bool Material::_check_if_false_hit(
 ) {
   highest_prioritised_material = nullptr;
   second_highest_prioritised_material = nullptr;
-  float highest_prioritised_material_ref_idx = 1.0;
-  float second_highest_prioritised_material_ref_idx = 1.0;
   int highest_prioritised_material_priority = 99999;
 
   find_highest_prioritised_materials(
@@ -189,22 +195,6 @@ __device__ reflection_record Material::_refract(
 ) {
   reflection_record ref;
   float random_number = curand_uniform(&rand_state[0]);
-
-  // if (false_hit) {
-  //   reflected = false;
-  //   refracted = true;
-  //   sss = false;
-  //   ref.ray = Ray(hit_point, v_in);
-  //   ref.filter = vec3(1.0, 1.0, 1.0);
-  //
-  //   if (dot(v_in, normal) <= 0) {
-  //     entering = true;
-  //   } else {
-  //     entering = false;
-  //   }
-  //
-  //   return ref;
-  // }
 
   float highest_prioritised_material_ref_idx = get_material_refraction_index(
     highest_prioritised_material);
@@ -322,7 +312,12 @@ __host__ __device__ Material::Material(
   int texture_width_n_s_,
   float *texture_r_n_s_,
   float *texture_g_n_s_,
-  float *texture_b_n_s_
+  float *texture_b_n_s_,
+  int texture_height_bump_,
+  int texture_width_bump_,
+  float *texture_r_bump_,
+  float *texture_g_bump_,
+  float *texture_b_bump_
 ) {
   this -> ambient = ambient_;
   this -> diffuse = diffuse_;
@@ -358,6 +353,12 @@ __host__ __device__ Material::Material(
   this -> texture_r_n_s = texture_r_n_s_;
   this -> texture_g_n_s = texture_g_n_s_;
   this -> texture_b_n_s = texture_b_n_s_;
+
+  this -> texture_height_bump = texture_height_bump_;
+  this -> texture_width_bump = texture_width_bump_;
+  this -> texture_r_bump = texture_r_bump_;
+  this -> texture_g_bump = texture_g_bump_;
+  this -> texture_b_bump = texture_b_bump_;
 
   this -> diffuse_mag = diffuse_.length();
   this -> specular_mag = specular_.length();
@@ -519,6 +520,20 @@ __device__ vec3 Material::get_texture_diffuse(vec3 uv_vector) {
     this -> texture_g_diffuse, this -> texture_b_diffuse,
     this -> texture_height_diffuse, this -> texture_width_diffuse
   );
+}
+
+__device__ vec3 Material::get_texture_bump(vec3 uv_vector) {
+  if (this -> texture_height_bump < 2 || this -> texture_width_bump < 2) {
+    return vec3(0.0, 0.0, 0.0);
+  } else {
+    return 2 * (
+      this -> _get_texture(
+        uv_vector, vec3(1.0, 1.0, 1.0), this -> texture_r_bump,
+        this -> texture_g_bump, this -> texture_b_bump,
+        this -> texture_height_bump, this -> texture_width_bump
+      ) - vec3(0.5, 0.5, 0.5)
+    );
+  }
 }
 
 __device__ vec3 Material::_get_texture_specular(vec3 uv_vector) {

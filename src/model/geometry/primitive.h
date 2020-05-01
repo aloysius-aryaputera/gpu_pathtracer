@@ -19,6 +19,7 @@ class Primitive {
     Material *material;
     bool sub_surface_scattering;
     float area;
+    vec3 t, b;
 
   public:
     __host__ __device__ Primitive() {}
@@ -46,8 +47,31 @@ class Primitive {
       return this -> object_idx;
     }
 
+    __device__ virtual vec3 get_t() {
+      return this -> t;
+    }
+
+    __device__ virtual vec3 get_b() {
+      return this -> b;
+    }
+
+    __device__ virtual int get_point_1_idx() {
+      return -1;
+    }
+
+    __device__ virtual int get_point_2_idx() {
+      return -1;
+    }
+
+    __device__ virtual int get_point_3_idx() {
+      return -1;
+    }
+
+    __device__ virtual void assign_tangent(vec3 tangent_, int idx) {
+
+    }
+
     BoundingBox *bounding_box;
-    // Object *object;
     int object_idx;
 
 };

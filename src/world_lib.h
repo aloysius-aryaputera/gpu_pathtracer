@@ -6,7 +6,6 @@
 
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
-#include "model/geometry/sphere.h"
 #include "model/geometry/triangle.h"
 #include "model/grid/cell.h"
 #include "model/grid/grid.h"
@@ -65,6 +64,9 @@ __global__ void create_material(
   int *material_image_height_n_s,
   int *material_image_width_n_s,
   int *material_image_offset_n_s,
+  int *material_image_height_bump,
+  int *material_image_width_bump,
+  int *material_image_offset_bump,
   float *material_image_r,
   float *material_image_g,
   float *material_image_b,
@@ -117,6 +119,9 @@ __global__ void create_material(
   int *material_image_height_n_s,
   int *material_image_width_n_s,
   int *material_image_offset_n_s,
+  int *material_image_height_bump,
+  int *material_image_width_bump,
+  int *material_image_offset_bump,
   float *material_image_r,
   float *material_image_g,
   float *material_image_b,
@@ -154,7 +159,12 @@ __global__ void create_material(
     material_image_width_n_s[i],
     material_image_r + material_image_offset_n_s[i],
     material_image_g + material_image_offset_n_s[i],
-    material_image_b + material_image_offset_n_s[i]
+    material_image_b + material_image_offset_n_s[i],
+    material_image_height_bump[i],
+    material_image_width_bump[i],
+    material_image_r + material_image_offset_bump[i],
+    material_image_g + material_image_offset_bump[i],
+    material_image_b + material_image_offset_bump[i]
   );
 
 }
@@ -202,8 +212,11 @@ __global__ void create_world(
     vec3(x[point_2_idx[idx]], y[point_2_idx[idx]], z[point_2_idx[idx]]),
     vec3(x[point_3_idx[idx]], y[point_3_idx[idx]], z[point_3_idx[idx]]),
 
+    point_1_idx[idx],
+    point_2_idx[idx],
+    point_3_idx[idx],
+
     material_array[material_idx[idx]],
-    // object_array[triangle_object_idx[idx]],
     triangle_object_idx[idx],
 
     vec3(x_norm[norm_1_idx[idx]], y_norm[norm_1_idx[idx]], z_norm[norm_1_idx[idx]]),
