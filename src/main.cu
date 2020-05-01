@@ -14,7 +14,9 @@
 #include "model/bvh/bvh_building_pts.h"
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
+#include "model/geometry/primitive.h"
 #include "model/geometry/triangle.h"
+#include "model/geometry/triangle_operations.h"
 #include "model/grid/bounding_box.h"
 #include "model/grid/cell.h"
 #include "model/grid/grid.h"
@@ -140,6 +142,7 @@ int main(int argc, char **argv) {
     *material_image_offset_emission;
   int *material_image_height_bump, *material_image_width_bump, \
     *material_image_offset_bump;
+  vec3 *tangent, *bitangent;
 
   float *bg_texture_r, *bg_texture_g, *bg_texture_b;
   int bg_height, bg_width;
@@ -575,6 +578,31 @@ int main(int argc, char **argv) {
     num_triangles,
     sss_object_marker_array,
     sss_pts_per_object
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&tangent, num_vertices * sizeof(vec3)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&bitangent, num_vertices * sizeof(vec3)));
+
+  start = clock();
+  process = "Summing up tangents and bitangents";
+  print_start_process(process, start);
+  sum_up_tangent_and_bitangent<<<1, 1>>>(
+    tangent, bitangent, my_geom, num_triangles[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Assigning tangents";
+  print_start_process(process, start);
+  assign_tangent<<<num_triangles[0], 1>>>(
+    tangent, my_geom, num_triangles[0]
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
