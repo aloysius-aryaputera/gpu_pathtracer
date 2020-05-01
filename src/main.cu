@@ -642,18 +642,18 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
+  process = "Creating SSS points samplings";
+  start = clock();
+  print_start_process(process, start);
   for (int i = 0; i < num_objects; i++) {
-    start = clock();
-    process = "Creating SSS points sampling for object " + std::to_string(i);
-    print_start_process(process, start);
     create_sss_pts<<<sss_pts_per_object, 1>>>(
       my_objects, my_geom, sss_pts, pt_offset_array, rand_state_sss,
       i, sss_pts_per_object
     );
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-    print_end_process(process, start);
   }
+  print_end_process(process, start);
 
   start = clock();
   process = "Computing the object boundaries";
@@ -680,19 +680,18 @@ int main(int argc, char **argv) {
       pt_2 -> bounding_box -> morton_code;
   };
 
+  process = "Sorting the points based on morton code";
+  start = clock();
+  print_start_process(process, start);
   for (int i = 0; i < num_objects; i++) {
-    start = clock();
-    process = "Sorting the points based on morton code of object " + \
-      std::to_string(i);
-    print_start_process(process, start);
     thrust::stable_sort(
       thrust::device, sss_pts + pt_offset_array[i],
       sss_pts + pt_offset_array[i] + num_pt_array[i],
       sort_points);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-    print_end_process(process, start);
   }
+  print_end_process(process, start);
 
   start = clock();
   process = "Computing sss points offset list";
@@ -710,34 +709,34 @@ int main(int argc, char **argv) {
     (void **)&sss_pts_leaf_list,
     max(1, num_sss_points) * sizeof(Node *)));
 
+  process = "Building sss points leaves";
+  start = clock();
+  print_start_process(process, start);
   for (int i = 0; i < num_objects; i++) {
-    start = clock();
-    process = "Building sss points leaves for object " + std::to_string(i);;
-    print_start_process(process, start);
     build_sss_pts_leaf_list<<<max(1, num_sss_points), 1>>>(
       sss_pts_leaf_list, sss_pts, my_objects, i, pt_offset_array
     );
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-    print_end_process(process, start);
   }
+  print_end_process(process, start);
 
   checkCudaErrors(cudaFree(pt_offset_array));
   checkCudaErrors(cudaFree(num_pt_array));
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
 
+  process = "Building sss points nodes";
+  start = clock();
+  print_start_process(process, start);
   for (int i = 0; i < num_objects; i++) {
-    start = clock();
-    process = "Building sss points nodes for object " + std::to_string(i);;
-    print_start_process(process, start);
     build_sss_pts_node_list<<<max(1, num_sss_points), 1>>>(
       sss_pts_node_list, my_objects, i
     );
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-    print_end_process(process, start);
   }
+  print_end_process(process, start);
 
   unsigned int *sss_morton_code_list;
   checkCudaErrors(cudaMallocManaged(
@@ -754,17 +753,17 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
+  process = "Setting the sss nodes relationship";
+  start = clock();
+  print_start_process(process, start);
   for (int i = 0; i < num_objects; i++) {
-    start = clock();
-    process = "Setting the sss nodes relationship of object " + std::to_string(i);;
-    print_start_process(process, start);
     set_pts_sss_node_relationship<<<max(1, num_sss_points), 1>>>(
       sss_pts_node_list, sss_pts_leaf_list, sss_morton_code_list, my_objects, i
     );
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-    print_end_process(process, start);
   }
+  print_end_process(process, start);
 
   checkCudaErrors(cudaFree(sss_morton_code_list));
   checkCudaErrors(cudaGetLastError());

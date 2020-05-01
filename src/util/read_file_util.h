@@ -271,7 +271,7 @@ void _extract_single_material_data(
     *(n_i + idx) = 0;
     *(t_r + idx) = 0;
 
-    *(material_priority + idx) = num_materials[0] - 1;
+    *(material_priority + idx) = -1;
 
     *(material_image_height_diffuse + idx) = texture_height_array[0];
     *(material_image_width_diffuse + idx) = texture_width_array[0];
@@ -334,7 +334,7 @@ void _extract_single_material_data(
           *(n_i + idx) = 0;
           *(t_r + idx) = 1;
 
-          *(material_priority + idx) = num_materials[0] - 1;
+          *(material_priority + idx) = -1;
 
           *(material_image_height_diffuse + idx) = texture_height_array[0];
           *(material_image_width_diffuse + idx) = texture_width_array[0];
@@ -388,7 +388,7 @@ void _extract_single_material_data(
           *(n_i + idx) = clamp(std::stof(chunks[1]), 1, 1000);
         } else if (chunks[0] == "priority") {
           *(material_priority + idx) = clamp(
-            std::stoi(chunks[1]), 0, num_materials[0]);
+            std::stoi(chunks[1]), -num_materials[0], num_materials[0]);
         } else if (chunks[0] == "map_Kd") {
           texture_file_name = chunks[1];
           std::pair<bool, int> result = find_in_vector<std::string>(

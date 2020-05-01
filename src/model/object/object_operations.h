@@ -47,7 +47,6 @@ __global__ void compute_pts_morton_code_batch(
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_points) return;
-  //if (num_points <= 1) return;
 
   int object_idx = point_array[idx] -> object_idx;
   float x_min = object_array[object_idx] -> x_min;
@@ -117,7 +116,6 @@ __global__ void allocate_pts_sss(
   if (idx > 0) return;
 
   for (int i = 0; i < num_objects; i++) {
-    printf("pt_offset_array[%d] = %d\n", i, pt_offset_array[i]);
     object_array[i] -> allocate_point_array(point_array + pt_offset_array[i]);
   }
 }
@@ -131,8 +129,9 @@ __global__ void create_sss_pts(
   if (!object[object_idx] -> sub_surface_scattering) return;
   if (idx >= num_pts_per_object) return;
 
+  curandState local_rand_state = rand_state[idx];
   int primitive_idx = (object[object_idx]) -> pick_primitive_idx_for_sampling(
-    rand_state, idx);
+    &local_rand_state);
   hit_record pts_record = geom_array[primitive_idx] -> get_random_point_on_surface(
     rand_state);
   vec3 filter = pts_record.object -> get_material() -> get_texture_diffuse(

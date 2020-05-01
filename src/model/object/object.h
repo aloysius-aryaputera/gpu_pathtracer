@@ -4,6 +4,7 @@
 
 #include <curand_kernel.h>
 
+#include "../../util/general.h"
 #include "../bvh/bvh.h"
 #include "../grid/bounding_box.h"
 #include "../point/point.h"
@@ -23,9 +24,7 @@ class Object {
     );
     __device__ void set_as_sub_surface_scattering(int num_pts_);
     __device__ void allocate_point_array(Point** sss_pt_array_);
-    __device__ int pick_primitive_idx_for_sampling(
-      curandState *rand_state, int sampling_idx
-    );
+    __device__ int pick_primitive_idx_for_sampling(curandState *rand_state);
     __device__ void compute_accummulated_triangle_area();
     __device__ void compute_boundaries();
     __device__ void assign_bvh_root_node_idx(int idx);
@@ -58,17 +57,18 @@ __device__ void Object::assign_bvh_leaf_zero_idx(int idx) {
 }
 
 __device__ int Object::pick_primitive_idx_for_sampling(
-  curandState *rand_state, int sampling_idx
+  curandState *rand_state
 ) {
-  float random_number = curand_uniform(&rand_state[sampling_idx]);
+  float random_number = curand_uniform(&rand_state[0]);
+
   int idx = 0;
   float accumulated_area = this -> accumulated_triangle_area[idx];
 
-  random_number *= this -> accumulated_triangle_area[
+  float random_number_2 = random_number * this -> accumulated_triangle_area[
     (this -> num_primitives) - 1];
 
   while(
-    random_number > accumulated_area && idx < (this -> num_primitives) - 1
+    random_number_2 > accumulated_area && idx < (this -> num_primitives) - 1
   ) {
     idx++;
     accumulated_area = this -> accumulated_triangle_area[idx];
@@ -88,8 +88,10 @@ __device__ void Object::set_as_sub_surface_scattering(int num_pts_) {
 
 __device__ void Object::compute_accummulated_triangle_area() {
   float acc = 0;
+  float new_area = 0;
   for (int i = 0; i < this -> num_primitives; i++) {
-    acc += (this -> triangle_area)[i];
+    new_area = de_nan((this -> triangle_area)[i]);
+    acc += new_area;
     (this -> accumulated_triangle_area)[i] = acc;
   }
 }
