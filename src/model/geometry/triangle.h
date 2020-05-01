@@ -81,15 +81,16 @@ __device__ int Triangle::get_point_3_idx() {
 }
 
 __device__ void Triangle::assign_tangent(vec3 tangent_, int idx) {
+  tangent_ = unit_vector(tangent_);
   if (idx == 1) {
-    this -> tangent_1 = tangent_ - dot(
-      this -> norm_1, tangent_) * this -> norm_1;
+    this -> tangent_1 = unit_vector(
+      tangent_ - dot(this -> norm_1, tangent_) * this -> norm_1);
   } else if(idx == 2) {
-    this -> tangent_2 = tangent_ - dot(
-      this -> norm_2, tangent_) * this -> norm_2;
+    this -> tangent_2 = unit_vector(
+      tangent_ - dot(this -> norm_2, tangent_) * this -> norm_2);
   } else {
-    this -> tangent_3 = tangent_ - dot(
-      this -> norm_3, tangent_) * this -> norm_3;
+    this -> tangent_3 = unit_vector(
+      tangent_ - dot(this -> norm_3, tangent_) * this -> norm_3);
   }
 }
 
