@@ -7,7 +7,7 @@
 
 #include "../../param.h"
 #include "../grid/bounding_box.h"
-#include "../material.h"
+#include "../material/material.h"
 #include "../object/object.h"
 #include "../ray/ray.h"
 #include "../vector_and_matrix/vec3.h"
@@ -18,21 +18,29 @@ class Primitive {
   private:
     Material *material;
     bool sub_surface_scattering;
+    bool light_source;
     float area;
-    vec3 t, b;
+    vec3 t, b, normal;
 
   public:
     __host__ __device__ Primitive() {}
     __device__ virtual bool hit(Ray ray, float t_max, hit_record& rec) {
       return false;
     }
+
     __device__ virtual Material* get_material() {
       return this -> material;
     }
+
     __device__ virtual BoundingBox* get_bounding_box() {
       return this -> bounding_box;
     }
+
     __device__ virtual bool is_sub_surface_scattering() {
+      return false;
+    }
+
+    __device__ virtual bool is_light_source() {
       return false;
     }
 
@@ -45,6 +53,10 @@ class Primitive {
 
     __device__ virtual int get_object_idx() {
       return this -> object_idx;
+    }
+
+    __device__ virtual vec3 get_fixed_normal() {
+      return this -> normal;
     }
 
     __device__ virtual vec3 get_t() {

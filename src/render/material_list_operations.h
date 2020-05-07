@@ -2,7 +2,7 @@
 #ifndef MATERIAL_LIST_OPERATIONS_H
 #define MATERIAL_LIST_OPERATIONS_H
 
-#include "../model/material.h"
+#include "../model/material/material.h"
 
 __device__ void add_new_material(
   Material** material_list, int &material_list_length, Material* material

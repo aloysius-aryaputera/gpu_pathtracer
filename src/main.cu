@@ -20,7 +20,7 @@
 #include "model/grid/bounding_box.h"
 #include "model/grid/cell.h"
 #include "model/grid/grid.h"
-#include "model/material.h"
+#include "model/material/material.h"
 #include "model/object/object.h"
 #include "model/object/object_operations.h"
 #include "model/point/point.h"
@@ -29,6 +29,7 @@
 #include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
+#include "render/pathtracing_target_geom_operations.h"
 #include "util/general.h"
 #include "util/image_util.h"
 #include "util/read_file_util.h"
@@ -108,6 +109,8 @@ int main(int argc, char **argv) {
 
   BoundingBox **world_bounding_box;
   Primitive **my_geom;
+  Primitive **target_geom_list;
+  float *weight_target_geom_list;
   Object **my_objects;
   unsigned int *morton_code_list;
   Material **my_material;
@@ -118,10 +121,11 @@ int main(int argc, char **argv) {
   int num_pixels = im_width * im_height;
   int max_num_materials = 100;
   int num_objects, num_vertices, num_faces, num_vt, num_vn;
-  int *num_sss_objects;
+  int *num_sss_objects, *num_target_geom;
   size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state_sss, *rand_state_image;
-  size_t rand_state_image_size = num_pixels * sizeof(curandState);
+  size_t rand_state_image_size = (
+    num_pixels + 99999 + pathtracing_level) * sizeof(curandState);
 
   bool *sss_object_marker_array;
   int *pt_offset_array, *num_pt_array;
@@ -659,13 +663,15 @@ int main(int argc, char **argv) {
     (void **)&world_bounding_box, sizeof(BoundingBox *)));
 
   checkCudaErrors(cudaMallocManaged(
-    (void **)&rand_state_sss, max(1, num_sss_points) * sizeof(curandState)));
+    (void **)&rand_state_sss,
+      (num_sss_points + 99999 + pathtracing_level) * sizeof(curandState)));
 
   start = clock();
   process = "Generating curand state for SSS points sampling";
   print_start_process(process, start);
   init_curand_state<<<max(1, num_sss_points), 1>>>(
-    num_sss_points, rand_state_sss);
+    num_sss_points + 99999 + pathtracing_level,
+    rand_state_sss);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
@@ -913,6 +919,31 @@ int main(int argc, char **argv) {
 
   vec3 sky_emission = vec3(sky_emission_r, sky_emission_g, sky_emission_b);
 
+  checkCudaErrors(cudaMallocManaged((void **)&num_target_geom, sizeof(int)));
+
+  start = clock();
+  process = "Computing the number of target geometries";
+  print_start_process(process, start);
+  compute_num_target_geom<<<1, 1>>>(
+    my_geom, num_triangles[0], num_target_geom
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&target_geom_list, num_target_geom[0] * sizeof(Primitive *)));
+
+  start = clock();
+  process = "Collecting target geometries";
+  print_start_process(process, start);
+  collect_target_geom<<<1, 1>>>(
+    my_geom, num_triangles[0], target_geom_list
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
   start = clock();
   process = "Doing first pass for SSS objects";
   print_start_process(process, start);
@@ -922,7 +953,7 @@ int main(int argc, char **argv) {
     pathtracing_level, sky_emission,
     bg_height, bg_width,
     bg_texture_r, bg_texture_g, bg_texture_b, node_list,
-    rand_state_sss
+    rand_state_sss, target_geom_list, num_target_geom[0]
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -964,7 +995,8 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Generating curand state for rendering";
   print_start_process(process, start);
-  init_curand_state<<<num_pixels / 8 + 1, 8>>>(num_pixels, rand_state_image);
+  init_curand_state<<<num_pixels / 8 + 1, 8>>>(
+    num_pixels + 99999 + pathtracing_level, rand_state_image);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
@@ -976,7 +1008,7 @@ int main(int argc, char **argv) {
     image_output, my_camera, rand_state_image, pathtracing_sample_size,
     pathtracing_level, sky_emission, bg_height, bg_width,
     bg_texture_r, bg_texture_g, bg_texture_b, node_list, my_objects,
-    sss_pts_node_list
+    sss_pts_node_list, target_geom_list, num_target_geom[0]
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());

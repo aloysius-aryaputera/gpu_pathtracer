@@ -4,16 +4,17 @@
 
 #include <curand_kernel.h>
 
-#include "../util/vector_util.h"
-#include "cartesian_system.h"
-#include "ray/ray.h"
-#include "ray/ray_operations.h"
-#include "vector_and_matrix/vec3.h"
+#include "../../util/vector_util.h"
+#include "../cartesian_system.h"
+#include "../ray/ray.h"
+#include "../ray/ray_operations.h"
+#include "../vector_and_matrix/vec3.h"
 
 struct reflection_record
 {
   Ray ray;
   vec3 filter;
+  bool diffuse;
 };
 
 __device__ vec3 reflect(vec3 v, vec3 normal);
@@ -222,6 +223,7 @@ __device__ reflection_record Material::_refract(
       Ray ray_out = Ray(hit_point, v_out);
       ref.ray = ray_out;
       ref.filter = this -> transmission * this -> t_r;
+      ref.diffuse = false;
 
       reflected = false;
       refracted = true;
@@ -233,6 +235,7 @@ __device__ reflection_record Material::_refract(
       vec3 v_out = reflect(v_in, normal);
       ref.ray = Ray(hit_point, v_out);
       ref.filter = this -> transmission * this -> t_r;
+      ref.diffuse = false;
 
       reflected = true;
       refracted = false;
@@ -255,6 +258,7 @@ __device__ reflection_record Material::_refract(
       vec3 v_out = reflect(v_in, -normal);
       ref.ray = Ray(hit_point, v_out);
       ref.filter = this -> transmission * this -> t_r;
+      ref.diffuse = false;
 
       reflected = true;
       refracted = false;
@@ -275,6 +279,7 @@ __device__ reflection_record Material::_refract(
       Ray ray_out = Ray(hit_point, v_out);
       ref.ray = ray_out;
       ref.filter = this -> transmission * this -> t_r;
+      ref.diffuse = false;
 
       reflected = false;
       refracted = true;
@@ -394,6 +399,7 @@ __device__ void Material::check_next_path(
     sss = false;
     ref.ray = Ray(hit_point, v_in);
     ref.filter = vec3(1.0, 1.0, 1.0);
+    ref.diffuse = false;
 
     if (dot(v_in, normal) <= 0) {
       entering = true;
@@ -447,6 +453,7 @@ __device__ void Material::check_next_path(
     ref.ray = generate_ray(hit_point, vec3(0, 0, 0), normal, 1, rand_state);
     cos_theta = dot(ref.ray.dir, normal);
     ref.filter = actual_mat -> get_texture_diffuse(uv_vector) * cos_theta;
+    ref.diffuse = true;
     refracted = false;
     reflected = true;
     false_hit = false;
@@ -464,6 +471,7 @@ __device__ void Material::check_next_path(
       hit_point, reflected_ray_dir, normal, fuziness, rand_state);
     cos_theta = dot(ref.ray.dir, normal);
     ref.filter = actual_mat -> _get_texture_specular(uv_vector) * cos_theta;
+    ref.diffuse = false;
     if (cos_theta <= 0) {
       refracted = false;
       reflected = false;

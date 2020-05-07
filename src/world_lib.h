@@ -9,7 +9,7 @@
 #include "model/geometry/triangle.h"
 #include "model/grid/cell.h"
 #include "model/grid/grid.h"
-#include "model/material.h"
+#include "model/material/material.h"
 #include "model/object/object.h"
 #include "model/ray/ray.h"
 #include "model/scene.h"

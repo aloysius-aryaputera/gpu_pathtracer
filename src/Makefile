@@ -17,7 +17,7 @@ SRCS = main.cu
 INCS = external/libjpeg_cpp/jpeg.h
 
 # all: gpu_path_tracing gpu_path_tracing_debug gpu_path_tracing_2 gpu_path_tracing_debug_2 gpu_path_tracing_3 gpu_path_tracing_debug_3 gpu_path_tracing_4 gpu_path_tracing_debug_4
-all: gpu_path_tracing gpu_path_tracing_debug
+all: gpu_path_tracing_2 gpu_path_tracing_debug_2
 
 gpu_path_tracing: gpu_path_tracing.o
 	$(NVCC) $(NVCCFLAGS) $(GENCODE_FLAGS) -o gpu_path_tracing_60 gpu_path_tracing.o -ljpeg
