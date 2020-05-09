@@ -86,7 +86,7 @@ __device__ vec3 _compute_color(
   bool hit, reflected = false, refracted = false, false_hit = false;
   bool entering = false, sss = false;
   vec3 mask = vec3(1, 1, 1), light = vec3(0, 0, 0), light_tmp = vec3(0, 0, 0);
-  vec3 v3_rand, v3_rand_world;
+  vec3 v3_rand, v3_rand_world, acc_color = vec3(0, 0, 0);
   Ray ray = ray_init;
   reflection_record ref;
   Material* material_list[400];
@@ -144,11 +144,11 @@ __device__ vec3 _compute_color(
           cur_rec.uv_vector
         );
 
-        light += light_tmp;
+        acc_color += mask * light_tmp;
         mask *= (1.0) * ref.filter;
 
         if (mask.r() < 0.005 && mask.g() < 0.005 && mask.b() < 0.005) {
-          return vec3(0, 0, 0);
+          return acc_color;
         }
 
         if (light.r() > 0 && light.g() > 0 && light.b() > 0) {
@@ -164,7 +164,7 @@ __device__ vec3 _compute_color(
         return _get_sky_color(
           sky_emission, ray.dir, bg_height, bg_width, bg_r, bg_g, bg_b);
       } else {
-        light += _get_sky_color(
+        light = _get_sky_color(
           sky_emission, ray.dir, bg_height, bg_width, bg_r, bg_g, bg_b);
         return mask * light;
       }
