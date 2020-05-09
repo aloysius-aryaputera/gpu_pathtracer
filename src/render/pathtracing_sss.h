@@ -21,11 +21,9 @@ __device__ vec3 compute_color_sss(
   Object *object = object_list[rec.object -> get_object_idx()];
   Node** effective_node_list = node_list + object -> bvh_root_node_idx;
   float bounding_sphere_r = rec.object -> get_material() -> path_length;
-  // float weight, sum_weight = 0;
   BoundingSphere bounding_sphere = BoundingSphere(
     rec.point, bounding_sphere_r);
   bool pts_found = false;
-  // int num_pts;
   vec3 filter, color = vec3(0, 0, 0);
 
   pts_found = traverse_bvh_pts(

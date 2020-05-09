@@ -96,7 +96,7 @@ __device__ vec3 _compute_color(
   reflection_record ref;
   Material* material_list[400];
   curandState rand_state_mis, rand_state_mis_geom;
-  float factor = 1, next_factor = 1;
+  float factor = 1;
 
   int material_list_length = 0;
 
@@ -105,11 +105,10 @@ __device__ vec3 _compute_color(
   cur_rec.object = nullptr;
 
   for (int i = 0; i < level; i++) {
-    rand_state_mis = rand_state[i];
-    rand_state_mis_geom = rand_state[i];
+    rand_state_mis = rand_state[0];
+    rand_state_mis_geom = rand_state[0];
 
-    factor = next_factor;
-    next_factor = 1;
+    factor = 1;
 
     hit = traverse_bvh(node_list[0], ray, cur_rec);
 
@@ -126,7 +125,7 @@ __device__ vec3 _compute_color(
       if (ref.diffuse) {
         // Modify ref.ray
         change_ref_ray(
-          cur_rec, ref, target_geom_array, num_target_geom, next_factor,
+          cur_rec, ref, target_geom_array, num_target_geom, factor,
           &rand_state_mis, &rand_state_mis_geom
         );
       }
@@ -215,9 +214,13 @@ void do_sss_first_pass(
   Object **empty_object_list;
   Node **empty_node_list;
   curandState local_rand_state = rand_state[i];
+  float random_number_1, random_number_2;
 
   for(int idx = 0; idx < sample_size; idx++) {
-    init_ray = generate_ray(init_point, vec3(0, 0, 0), normal, 1, rand_state);
+    random_number_1 = curand_uniform(&local_rand_state);
+    random_number_2 = curand_uniform(&local_rand_state);
+    // printf("random_number_1 = %f, random_number_2 = %f\n", random_number_1, random_number_2);
+    init_ray = generate_ray(init_point, vec3(0, 0, 0), normal, 1, &local_rand_state);
     color_tmp = _compute_color(
       init_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
       bg_b, &local_rand_state, node_list, empty_object_list, empty_node_list,
@@ -260,8 +263,12 @@ void render(
   Ray camera_ray = camera[0] -> compute_ray(
     i + .5, j + .5, &local_rand_state), ray;
   fb[pixel_index] = color;
+  float random_number_1, random_number_2;
 
   for(int idx = 0; idx < sample_size; idx++) {
+    random_number_1 = curand_uniform(&local_rand_state);
+    random_number_2 = curand_uniform(&local_rand_state);
+    // printf("random_number_1 = %f, random_number_2 = %f\n", random_number_1, random_number_2);
     color_tmp = _compute_color(
       camera_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
       bg_b, &local_rand_state, node_list, object_list, sss_pts_node_list,

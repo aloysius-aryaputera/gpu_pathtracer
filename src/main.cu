@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 
   int sss_pts_per_object = std::stoi(argv[24]);
 
-  int tx = 8, ty = 8;
+  int tx = 1, ty = 1;
 
   BoundingBox **world_bounding_box;
   Primitive **my_geom;
@@ -565,8 +565,8 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Creating the world";
   print_start_process(process, start);
-  dim3 blocks_world(num_triangles[0] / 1024 + 1);
-  dim3 threads_world(1024);
+  dim3 blocks_world(num_triangles[0] / 1 + 1);
+  dim3 threads_world(1);
   create_world<<<blocks_world, threads_world>>>(
     my_geom,
     triangle_area,
