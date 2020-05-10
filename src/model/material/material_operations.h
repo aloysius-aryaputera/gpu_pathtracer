@@ -75,8 +75,9 @@ __device__ void change_ref_ray(
   float random_number = curand_uniform(&rand_state_mis[0]), pdf, scattering_pdf;
   vec3 new_target_point;
   Ray default_ray = ref.ray;
+  float hittable_pdf_weight = .5;
 
-  if (random_number > .5) {
+  if (random_number > 1 - hittable_pdf_weight) {
     new_target_point = _pick_a_random_point_on_a_target_geom(
       target_geom_array, num_target_geom, rand_state_mis_geom
     );
@@ -84,8 +85,8 @@ __device__ void change_ref_ray(
   }
 
   pdf = _recompute_pdf(
-    rec, ref.ray.p0, ref.ray.dir, target_geom_array, num_target_geom, .5,
-    target_node_list
+    rec, ref.ray.p0, ref.ray.dir, target_geom_array, num_target_geom,
+    hittable_pdf_weight, target_node_list
   );
 
   if (dot(rec.normal, ref.ray.dir) <= 0) {
