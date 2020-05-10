@@ -59,6 +59,7 @@ class Triangle: public Primitive {
     __device__ int get_point_2_idx();
     __device__ int get_point_3_idx();
     __device__ void assign_tangent(vec3 tangent_, int idx);
+    __device__ float get_hittable_pdf(vec3 origin, vec3 dir);
 
     BoundingBox *bounding_box;
     int object_idx;
@@ -68,6 +69,23 @@ class Triangle: public Primitive {
 __host__ __device__ float _compute_triangle_area(
   vec3 point_1, vec3 point_2, vec3 point_3);
 
+__device__ float Triangle::get_hittable_pdf(vec3 origin, vec3 dir) {
+  hit_record rec;
+  bool hit;
+
+  dir = unit_vector(dir);
+  Ray coming_ray = Ray(origin, dir);
+
+  hit = this -> hit(coming_ray, this -> inv_tolerance, rec);
+  if (hit) {
+    float distance_squared = rec.t * rec.t;
+    float cosine_value = fabs(dot(dir, rec.normal));
+    return distance_squared / (cosine_value * this -> area);
+  } else {
+    return 0;
+  }
+}
+
 __device__ bool Triangle::_check_if_light_emitting() {
   vec3 emission_tex_1 = this -> material -> get_texture_emission(
     this -> tex_1);
@@ -75,9 +93,9 @@ __device__ bool Triangle::_check_if_light_emitting() {
     this -> tex_2);
   vec3 emission_tex_3 = this -> material -> get_texture_emission(
     this -> tex_3);
-  return compute_distance(emission_tex_1, vec3(0, 0, 0)) > 0 ||
-    compute_distance(emission_tex_2, vec3(0, 0, 0)) > 0 ||
-    compute_distance(emission_tex_3, vec3(0, 0, 0)) > 0;
+  return compute_distance(emission_tex_1, vec3(0, 0, 0)) > this -> tolerance ||
+    compute_distance(emission_tex_2, vec3(0, 0, 0)) > this -> tolerance ||
+    compute_distance(emission_tex_3, vec3(0, 0, 0)) > this -> tolerance;
 }
 
 __device__ vec3 Triangle::get_fixed_normal() {

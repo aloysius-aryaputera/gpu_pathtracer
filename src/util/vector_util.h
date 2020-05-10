@@ -8,7 +8,24 @@
 
 __device__ vec3 get_random_unit_vector_hemisphere(curandState *rand_state);
 
+__device__ vec3 get_random_unit_vector_hemisphere_cos_pdf(curandState *rand_state);
+
 __device__ vec3 get_random_unit_vector_disk(curandState *rand_state);
+
+__device__ vec3 get_random_unit_vector_hemisphere_cos_pdf(curandState *rand_state) {
+  float r1 = curand_uniform(&rand_state[0]);
+  float r2 = curand_uniform(&rand_state[0]);
+  float z = sqrt(1 - r2);
+  float phi = 2 * M_PI * r1;
+  float x = cos(phi) * sqrt(r2);
+  float y = sin(phi) * sqrt(r2);
+
+  vec3 output_vector = vec3(x, y, z);
+  output_vector.make_unit_vector();
+
+  return output_vector;
+}
+
 
 __device__ vec3 get_random_unit_vector_hemisphere(curandState *rand_state) {
   float sin_theta = curand_uniform(&rand_state[0]);

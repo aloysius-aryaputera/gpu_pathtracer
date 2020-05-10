@@ -450,9 +450,10 @@ __device__ void Material::check_next_path(
   }
 
   if (random_number <= factor) {
-    ref.ray = generate_ray(hit_point, vec3(0, 0, 0), normal, 1, rand_state);
+    ref.ray = generate_ray(hit_point, vec3(0, 0, 0), normal, 1, true, rand_state);
     cos_theta = dot(ref.ray.dir, normal);
-    ref.filter = actual_mat -> get_texture_diffuse(uv_vector) * cos_theta;
+    // ref.filter = actual_mat -> get_texture_diffuse(uv_vector) * cos_theta;
+    ref.filter = actual_mat -> get_texture_diffuse(uv_vector);
     ref.diffuse = true;
     refracted = false;
     reflected = true;
@@ -468,9 +469,10 @@ __device__ void Material::check_next_path(
   } else {
     reflected_ray_dir = reflect(coming_ray.dir, normal);
     ref.ray = generate_ray(
-      hit_point, reflected_ray_dir, normal, fuziness, rand_state);
+      hit_point, reflected_ray_dir, normal, fuziness, true, rand_state);
     cos_theta = dot(ref.ray.dir, normal);
-    ref.filter = actual_mat -> _get_texture_specular(uv_vector) * cos_theta;
+    // ref.filter = actual_mat -> _get_texture_specular(uv_vector) * cos_theta;
+    ref.filter = actual_mat -> _get_texture_specular(uv_vector);
     ref.diffuse = false;
     if (cos_theta <= 0) {
       refracted = false;

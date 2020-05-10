@@ -30,6 +30,7 @@ void render(
   float *bg_r, float *bg_g, float *bg_b,
   Node **node_list,
   Object **object_list, Node **sss_pts_node_list,
+  Node **target_node_list,
   Primitive** target_geom_array, int num_target_geom
 );
 
@@ -44,6 +45,7 @@ void do_sss_first_pass(
   Node **node_list,
   curandState *rand_state,
   Primitive** target_geom_array,
+  Node **target_node_list,
   int num_target_geom
 );
 
@@ -53,6 +55,7 @@ __device__ vec3 _compute_color(
   float *bg_r, float *bg_g, float *bg_b,
   curandState *rand_state,
   Node **node_list, Object **object_list, Node **sss_pts_node_list,
+  Node **target_node_list,
   bool sss_first_pass, Primitive** target_geom_array, int num_target_geom
 );
 
@@ -84,6 +87,7 @@ __device__ vec3 _compute_color(
   float *bg_r, float *bg_g, float *bg_b,
   curandState *rand_state,
   Node **node_list, Object **object_list, Node **sss_pts_node_list,
+  Node **target_node_list,
   bool sss_first_pass, Primitive** target_geom_array, int num_target_geom
 ) {
   hit_record cur_rec;
@@ -126,6 +130,7 @@ __device__ vec3 _compute_color(
         // Modify ref.ray
         change_ref_ray(
           cur_rec, ref, target_geom_array, num_target_geom, factor,
+          target_node_list,
           &rand_state_mis, &rand_state_mis_geom
         );
       }
@@ -199,6 +204,7 @@ void do_sss_first_pass(
   Node **node_list,
   curandState *rand_state,
   Primitive** target_geom_array,
+  Node **target_node_list,
   int num_target_geom
 ) {
 
@@ -214,21 +220,20 @@ void do_sss_first_pass(
   Object **empty_object_list;
   Node **empty_node_list;
   curandState local_rand_state = rand_state[i];
-  float random_number_1, random_number_2;
 
   for(int idx = 0; idx < sample_size; idx++) {
-    random_number_1 = curand_uniform(&local_rand_state);
-    random_number_2 = curand_uniform(&local_rand_state);
-    // printf("random_number_1 = %f, random_number_2 = %f\n", random_number_1, random_number_2);
-    init_ray = generate_ray(init_point, vec3(0, 0, 0), normal, 1, &local_rand_state);
+    init_ray = generate_ray(
+      init_point, vec3(0, 0, 0), normal, 1, true, &local_rand_state);
     color_tmp = _compute_color(
       init_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
       bg_b, &local_rand_state, node_list, empty_object_list, empty_node_list,
+      target_node_list,
       true, target_geom_array, num_target_geom
     );
     color_tmp = de_nan(color_tmp);
-    cos_theta = dot(init_ray.dir, normal);
-    color += color_tmp * cos_theta;
+    // cos_theta = dot(init_ray.dir, normal);
+    // color += color_tmp * cos_theta;
+    color += color_tmp;
   }
   color *= (1.0 / sample_size);
   color *= filter;
@@ -244,6 +249,7 @@ void render(
   vec3 sky_emission, int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
   Node **node_list, Object **object_list, Node **sss_pts_node_list,
+  Node **target_node_list,
   Primitive** target_geom_array, int num_target_geom
 ) {
 
@@ -263,15 +269,12 @@ void render(
   Ray camera_ray = camera[0] -> compute_ray(
     i + .5, j + .5, &local_rand_state), ray;
   fb[pixel_index] = color;
-  float random_number_1, random_number_2;
 
   for(int idx = 0; idx < sample_size; idx++) {
-    random_number_1 = curand_uniform(&local_rand_state);
-    random_number_2 = curand_uniform(&local_rand_state);
-    // printf("random_number_1 = %f, random_number_2 = %f\n", random_number_1, random_number_2);
     color_tmp = _compute_color(
       camera_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
       bg_b, &local_rand_state, node_list, object_list, sss_pts_node_list,
+      target_node_list,
       false, target_geom_array, num_target_geom
     );
     color_tmp = de_nan(color_tmp);

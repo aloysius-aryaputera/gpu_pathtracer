@@ -83,6 +83,10 @@ class Primitive {
 
     }
 
+    __device__ virtual float get_hittable_pdf(vec3 origin, vec3 dir) {
+      return 0;
+    }
+
     BoundingBox *bounding_box;
     int object_idx;
 

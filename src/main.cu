@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 
   int sss_pts_per_object = std::stoi(argv[24]);
 
-  int tx = 1, ty = 1;
+  int tx = 8, ty = 8;
 
   BoundingBox **world_bounding_box;
   Primitive **my_geom;
@@ -945,6 +945,82 @@ int main(int argc, char **argv) {
   print_end_process(process, start);
 
   start = clock();
+  process = "Sorting the target geometries based on morton code";
+  print_start_process(process, start);
+  thrust::stable_sort(
+    thrust::device, target_geom_list, target_geom_list + num_target_geom[0],
+    sort_geom);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  Node** target_node_list, **target_leaf_list;
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&target_node_list, (num_target_geom[0] - 1) * sizeof(Node *)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&target_leaf_list, num_target_geom[0] * sizeof(Node *)));
+
+  start = clock();
+  process = "Building target leaves";
+  print_start_process(process, start);
+  build_leaf_list<<<blocks_world, threads_world>>>(
+    target_leaf_list, target_geom_list, num_target_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Building target nodes";
+  print_start_process(process, start);
+  build_node_list<<<blocks_world, threads_world>>>(
+    target_node_list, num_target_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  unsigned int *target_morton_code_list;
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&target_morton_code_list,
+    max(1, num_target_geom[0]) * sizeof(unsigned int)));
+
+  start = clock();
+  process = "Extracting target morton codes";
+  print_start_process(process, start);
+  extract_morton_code_list<<<blocks_world, threads_world>>>(
+    target_geom_list, target_morton_code_list, num_target_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Setting target node relationship";
+  print_start_process(process, start);
+  set_node_relationship<<<blocks_world, threads_world>>>(
+    target_node_list, target_leaf_list, target_morton_code_list,
+    num_target_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  checkCudaErrors(cudaFree(target_morton_code_list));
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+
+  start = clock();
+  process = "Compute target node bounding boxes";
+  print_start_process(process, start);
+  compute_node_bounding_boxes<<<blocks_world, threads_world>>>(
+    target_leaf_list, target_node_list, num_target_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
   process = "Doing first pass for SSS objects";
   print_start_process(process, start);
   do_sss_first_pass<<<max(1, num_sss_points), 1>>>(
@@ -953,7 +1029,9 @@ int main(int argc, char **argv) {
     pathtracing_level, sky_emission,
     bg_height, bg_width,
     bg_texture_r, bg_texture_g, bg_texture_b, node_list,
-    rand_state_sss, target_geom_list, num_target_geom[0]
+    rand_state_sss, target_geom_list,
+    target_node_list,
+    num_target_geom[0]
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -1008,7 +1086,9 @@ int main(int argc, char **argv) {
     image_output, my_camera, rand_state_image, pathtracing_sample_size,
     pathtracing_level, sky_emission, bg_height, bg_width,
     bg_texture_r, bg_texture_g, bg_texture_b, node_list, my_objects,
-    sss_pts_node_list, target_geom_list, num_target_geom[0]
+    sss_pts_node_list,
+    target_node_list,
+    target_geom_list, num_target_geom[0]
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
