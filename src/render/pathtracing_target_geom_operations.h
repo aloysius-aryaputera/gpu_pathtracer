@@ -10,6 +10,12 @@ __global__ void collect_target_geom(
   Primitive** geom_array, int num_geom, Primitive** target_geom_array
 );
 
+__device__ bool _is_target_geom(Primitive *geom);
+
+__device__ bool _is_target_geom(Primitive *geom) {
+  return geom -> is_light_source() || geom -> get_material() -> t_r > 0;
+}
+
 __global__ void compute_num_target_geom(
   Primitive** geom_array, int num_geom, int *num_target_geom
 ) {
@@ -17,7 +23,7 @@ __global__ void compute_num_target_geom(
   if (idx > 0) return;
 
   for (int i = 0; i < num_geom; i++) {
-    if (geom_array[i] -> is_light_source()) {
+    if (_is_target_geom(geom_array[i])) {
       num_target_geom[0]++;
     }
   }
@@ -34,7 +40,7 @@ __global__ void collect_target_geom(
   int target_geom_idx = 0;
 
   for (int i = 0; i < num_geom; i++) {
-    if (geom_array[i] -> is_light_source()) {
+    if (_is_target_geom(geom_array[i])) {
       target_geom_array[target_geom_idx++] = geom_array[i];
     }
   }

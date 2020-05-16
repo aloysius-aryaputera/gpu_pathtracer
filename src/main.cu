@@ -104,6 +104,7 @@ int main(int argc, char **argv) {
   float sky_emission_b = std::stof(argv[23]);
 
   int sss_pts_per_object = std::stoi(argv[24]);
+  float hittable_pdf_weight = std::stof(argv[25]);
 
   int tx = 8, ty = 8;
 
@@ -1031,7 +1032,8 @@ int main(int argc, char **argv) {
     bg_texture_r, bg_texture_g, bg_texture_b, node_list,
     rand_state_sss, target_geom_list,
     target_node_list,
-    num_target_geom[0]
+    num_target_geom[0],
+    hittable_pdf_weight
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -1088,7 +1090,8 @@ int main(int argc, char **argv) {
     bg_texture_r, bg_texture_g, bg_texture_b, node_list, my_objects,
     sss_pts_node_list,
     target_node_list,
-    target_geom_list, num_target_geom[0]
+    target_geom_list, num_target_geom[0],
+    hittable_pdf_weight
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());

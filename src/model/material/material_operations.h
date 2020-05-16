@@ -49,7 +49,7 @@ __device__ float _recompute_pdf(
   if (dot(rec.normal, dir) <= 0) {
     cos_pdf = 0;
   } else {
-    cos_pdf = dot(rec.normal, dir);
+    cos_pdf = dot(rec.normal, dir) / M_PI;
   }
 
   return hittable_pdf_weight * hittable_pdf + (
@@ -70,12 +70,12 @@ __device__ vec3 _pick_a_random_point_on_a_target_geom(
 __device__ void change_ref_ray(
   hit_record rec, reflection_record &ref, Primitive **target_geom_array,
   int num_target_geom, float &factor, Node **target_node_list,
+  float hittable_pdf_weight,
   curandState *rand_state_mis, curandState *rand_state_mis_geom
 ) {
   float random_number = curand_uniform(&rand_state_mis[0]), pdf, scattering_pdf;
   vec3 new_target_point;
   Ray default_ray = ref.ray;
-  float hittable_pdf_weight = .5;
 
   if (random_number > 1 - hittable_pdf_weight) {
     new_target_point = _pick_a_random_point_on_a_target_geom(

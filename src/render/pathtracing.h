@@ -31,7 +31,8 @@ void render(
   Node **node_list,
   Object **object_list, Node **sss_pts_node_list,
   Node **target_node_list,
-  Primitive** target_geom_array, int num_target_geom
+  Primitive** target_geom_array, int num_target_geom,
+  float hittable_pdf_weight
 );
 
 __global__
@@ -46,7 +47,8 @@ void do_sss_first_pass(
   curandState *rand_state,
   Primitive** target_geom_array,
   Node **target_node_list,
-  int num_target_geom
+  int num_target_geom,
+  float hittable_pdf_weight
 );
 
 __device__ vec3 _compute_color(
@@ -56,7 +58,8 @@ __device__ vec3 _compute_color(
   curandState *rand_state,
   Node **node_list, Object **object_list, Node **sss_pts_node_list,
   Node **target_node_list,
-  bool sss_first_pass, Primitive** target_geom_array, int num_target_geom
+  bool sss_first_pass, Primitive** target_geom_array, int num_target_geom,
+  float hittable_pdf_weight
 );
 
 __device__ vec3 _get_sky_color(
@@ -88,7 +91,8 @@ __device__ vec3 _compute_color(
   curandState *rand_state,
   Node **node_list, Object **object_list, Node **sss_pts_node_list,
   Node **target_node_list,
-  bool sss_first_pass, Primitive** target_geom_array, int num_target_geom
+  bool sss_first_pass, Primitive** target_geom_array, int num_target_geom,
+  float hittable_pdf_weight
 ) {
   hit_record cur_rec;
   bool hit, reflected = false, refracted = false, false_hit = false;
@@ -126,14 +130,15 @@ __device__ vec3 _compute_color(
         ref, rand_state
       );
 
-      if (ref.diffuse) {
-        // Modify ref.ray
-        change_ref_ray(
-          cur_rec, ref, target_geom_array, num_target_geom, factor,
-          target_node_list,
-          &rand_state_mis, &rand_state_mis_geom
-        );
-      }
+      // if (ref.diffuse && !(sss && !sss_first_pass)) {
+      //   // Modify ref.ray
+      //   change_ref_ray(
+      //     cur_rec, ref, target_geom_array, num_target_geom, factor,
+      //     target_node_list,
+      //     hittable_pdf_weight,
+      //     &rand_state_mis, &rand_state_mis_geom
+      //   );
+      // }
 
       if (sss && !sss_first_pass) {
         return compute_color_sss(cur_rec, object_list, sss_pts_node_list);
@@ -205,7 +210,8 @@ void do_sss_first_pass(
   curandState *rand_state,
   Primitive** target_geom_array,
   Node **target_node_list,
-  int num_target_geom
+  int num_target_geom,
+  float hittable_pdf_weight
 ) {
 
   int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -228,7 +234,8 @@ void do_sss_first_pass(
       init_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
       bg_b, &local_rand_state, node_list, empty_object_list, empty_node_list,
       target_node_list,
-      true, target_geom_array, num_target_geom
+      true, target_geom_array, num_target_geom,
+      hittable_pdf_weight
     );
     color_tmp = de_nan(color_tmp);
     // cos_theta = dot(init_ray.dir, normal);
@@ -250,7 +257,8 @@ void render(
   float *bg_r, float *bg_g, float *bg_b,
   Node **node_list, Object **object_list, Node **sss_pts_node_list,
   Node **target_node_list,
-  Primitive** target_geom_array, int num_target_geom
+  Primitive** target_geom_array, int num_target_geom,
+  float hittable_pdf_weight
 ) {
 
   int j = threadIdx.x + blockIdx.x * blockDim.x;
@@ -275,7 +283,8 @@ void render(
       camera_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
       bg_b, &local_rand_state, node_list, object_list, sss_pts_node_list,
       target_node_list,
-      false, target_geom_array, num_target_geom
+      false, target_geom_array, num_target_geom,
+      hittable_pdf_weight
     );
     color_tmp = de_nan(color_tmp);
     color += color_tmp;
