@@ -4,6 +4,20 @@
 #include <iostream>
 #include <string>
 #include <time.h>
+#include <vector>
+
+
+std::vector<std::string> split(const std::string& s, char delimiter)
+{
+   std::vector<std::string> tokens;
+   std::string token;
+   std::istringstream tokenStream(s);
+   while (std::getline(tokenStream, token, delimiter))
+   {
+      tokens.push_back(token);
+   }
+   return tokens;
+}
 
 // https://stackoverflow.com/questions/1798112/removing-leading-and-trailing-spaces-from-a-string
 

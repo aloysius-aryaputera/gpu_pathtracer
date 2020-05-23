@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "read_file_util.h"
+#include "string_util.h"
 
 void extract_image_resource_requirement(
   std::string folder_path,

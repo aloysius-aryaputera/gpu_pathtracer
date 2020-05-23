@@ -34,6 +34,7 @@
 #include "util/image_util.h"
 #include "util/read_file_util.h"
 #include "util/read_image_util.h"
+#include "util/read_master_file_util.h"
 #include "util/string_util.h"
 #include "world_lib.h"
 
@@ -105,6 +106,9 @@ int main(int argc, char **argv) {
 
   int sss_pts_per_object = std::stoi(argv[24]);
   float hittable_pdf_weight = std::stof(argv[25]);
+
+  std::string master_file_path = argv[26];
+  test_master_file(input_folder_path, master_file_path);
 
   int tx = 8, ty = 8;
 
