@@ -28,6 +28,7 @@
 #include "model/point/point_operations.h"
 #include "model/ray/ray.h"
 #include "model/scene.h"
+#include "model/vector_and_matrix/mat3.h"
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
 #include "render/pathtracing_target_geom_operations.h"

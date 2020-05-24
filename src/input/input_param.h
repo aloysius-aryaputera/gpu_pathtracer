@@ -96,6 +96,7 @@ void InputParam::extract_parameters(
     }
     myfile.close();
   }
+  print_horizontal_line('=', 75);
 }
 
 #endif
