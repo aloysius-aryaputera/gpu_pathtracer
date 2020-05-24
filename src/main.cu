@@ -78,39 +78,39 @@ int main(int argc, char **argv) {
   process = "Rendering project";
   print_start_process(process, first_start);
 
-  std::string input_folder_path = argv[1];
-  std::string obj_filename = argv[2];
-  std::string texture_bg_path = argv[3];
-  std::string image_output_path = argv[4];
-
-  int im_width = std::stoi(argv[5]);
-  int im_height = std::stoi(argv[6]);
-  int pathtracing_sample_size = std::stoi(argv[7]);
-  int pathtracing_level = std::stoi(argv[8]);
-  float eye_x = std::stof(argv[9]);
-  float eye_y = std::stof(argv[10]);
-  float eye_z = std::stof(argv[11]);
-  float center_x = std::stof(argv[12]);
-  float center_y = std::stof(argv[13]);
-  float center_z = std::stof(argv[14]);
-  float up_x = std::stof(argv[15]);
-  float up_y = std::stof(argv[16]);
-  float up_z = std::stof(argv[17]);
-  float fovy = std::stof(argv[18]);
-  float aperture = std::stof(argv[19]);
-  float focus_dist = std::stof(argv[20]);
-
-  float sky_emission_r = std::stof(argv[21]);
-  float sky_emission_g = std::stof(argv[22]);
-  float sky_emission_b = std::stof(argv[23]);
-
-  int sss_pts_per_object = std::stoi(argv[24]);
-  float hittable_pdf_weight = std::stof(argv[25]);
-
-  std::string master_file_path = argv[26];
+  std::string master_file_path = argv[1];
+  std::string image_output_path = argv[2];
 
   InputParam input_param = InputParam();
-  input_param.extract_parameters(input_folder_path + master_file_path);
+  input_param.extract_parameters(master_file_path);
+
+  std::string input_folder_path = input_param.input_folder_path;
+  std::string obj_filename = input_param.obj_filename;
+  std::string texture_bg_path = input_param.texture_bg_path;
+
+  int im_width = input_param.image_width;
+  int im_height = input_param.image_height;
+  int pathtracing_sample_size = input_param.pathtracing_sample_size;
+  int pathtracing_level = input_param.pathtracing_level;
+  float eye_x = input_param.eye_x;
+  float eye_y = input_param.eye_y;
+  float eye_z = input_param.eye_z;
+  float center_x = input_param.center_x;
+  float center_y = input_param.center_y;
+  float center_z = input_param.center_z;
+  float up_x = input_param.up_x;
+  float up_y = input_param.up_y;
+  float up_z = input_param.up_z;
+  float fovy = input_param.fovy;
+  float aperture = input_param.aperture;
+  float focus_dist = input_param.focus_dist;
+
+  float sky_emission_r = input_param.sky_emission_r;
+  float sky_emission_g = input_param.sky_emission_g;
+  float sky_emission_b = input_param.sky_emission_b;
+
+  int sss_pts_per_object = input_param.sss_pts_per_object;
+  float hittable_pdf_weight = input_param.hittable_pdf_weight;
 
   int tx = 8, ty = 8;
 
@@ -157,16 +157,6 @@ int main(int argc, char **argv) {
 
   float *bg_texture_r, *bg_texture_g, *bg_texture_b;
   int bg_height, bg_width;
-
-  ///////////////////////////////////////////////////////////////////////////
-  // For offline testing
-  ///////////////////////////////////////////////////////////////////////////
-  // float ka_x[100], ka_y[100], ka_z[100], kd_x[100], kd_y[100], kd_z[100];
-  // float ks_x[100], ks_y[100], ks_z[100], ke_x[100], ke_y[100], ke_z[100];
-  // float material_image_r[1000], material_image_g[1000], material_image_b[1000];
-  // int num_materials[1], material_image_height[100], material_image_width[100], material_image_offset[100];
-  // int len_texture[1];
-  ///////////////////////////////////////////////////////////////////////////
 
   start = clock();
   process = "Extracting background texture";

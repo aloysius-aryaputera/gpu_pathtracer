@@ -89,6 +89,8 @@ void InputParam::extract_parameters(
 	  this -> sky_emission_b = std::stof(chunks[1]);
 	} else if (chunks[0] == "sss_pts_per_object") {
 	  this -> sss_pts_per_object = std::stoi(chunks[1]);
+	} else if (chunks[0] == "hittable_pdf_weight") {
+	  this -> hittable_pdf_weight = std::stof(chunks[1]);
 	}
       }
     }
