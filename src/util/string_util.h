@@ -2,13 +2,22 @@
 #define STRING_UTIL_H
 
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <time.h>
 #include <vector>
 
+void print_end_process(std::string process, clock_t start);
+void print_start_process(std::string process, clock_t &start);
+std::string clean_string_end(std::string str);
+std::string trim(const std::string& str,
+                 const std::string& whitespace = " \t");
+std::vector<std::string> split(const std::string& s, char delimiter);
+std::string reduce(const std::string& str,
+                   const std::string& fill = " ",
+                   const std::string& whitespace = " \t");
 
-std::vector<std::string> split(const std::string& s, char delimiter)
-{
+std::vector<std::string> split(const std::string& s, char delimiter) {
    std::vector<std::string> tokens;
    std::string token;
    std::istringstream tokenStream(s);
@@ -22,8 +31,7 @@ std::vector<std::string> split(const std::string& s, char delimiter)
 // https://stackoverflow.com/questions/1798112/removing-leading-and-trailing-spaces-from-a-string
 
 std::string trim(const std::string& str,
-                 const std::string& whitespace = " \t")
-{
+                 const std::string& whitespace) {
     const auto strBegin = str.find_first_not_of(whitespace);
     if (strBegin == std::string::npos)
         return ""; // no content
@@ -35,9 +43,8 @@ std::string trim(const std::string& str,
 }
 
 std::string reduce(const std::string& str,
-                   const std::string& fill = " ",
-                   const std::string& whitespace = " \t")
-{
+                   const std::string& fill,
+                   const std::string& whitespace) {
     // trim first
     auto result = trim(str, whitespace);
 

@@ -9,6 +9,7 @@
 
 #include "external/libjpeg_cpp/jpeg.h"
 
+#include "input/input_param.h"
 #include "model/bvh/bvh.h"
 #include "model/bvh/bvh_building.h"
 #include "model/bvh/bvh_building_pts.h"
@@ -34,7 +35,6 @@
 #include "util/image_util.h"
 #include "util/read_file_util.h"
 #include "util/read_image_util.h"
-#include "util/read_master_file_util.h"
 #include "util/string_util.h"
 #include "world_lib.h"
 
@@ -108,7 +108,9 @@ int main(int argc, char **argv) {
   float hittable_pdf_weight = std::stof(argv[25]);
 
   std::string master_file_path = argv[26];
-  test_master_file(input_folder_path, master_file_path);
+
+  InputParam input_param = InputParam();
+  input_param.extract_parameters(input_folder_path + master_file_path);
 
   int tx = 8, ty = 8;
 
