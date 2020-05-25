@@ -10,6 +10,8 @@
 #include "external/libjpeg_cpp/jpeg.h"
 
 #include "input/input_param.h"
+#include "input/read_file_util.h"
+#include "input/read_image_util.h"
 #include "model/bvh/bvh.h"
 #include "model/bvh/bvh_building.h"
 #include "model/bvh/bvh_building_pts.h"
@@ -19,23 +21,19 @@
 #include "model/geometry/triangle.h"
 #include "model/geometry/triangle_operations.h"
 #include "model/grid/bounding_box.h"
-#include "model/grid/cell.h"
-#include "model/grid/grid.h"
+#include "model/grid/bounding_box_operations.h"
 #include "model/material/material.h"
 #include "model/object/object.h"
 #include "model/object/object_operations.h"
 #include "model/point/point.h"
 #include "model/point/point_operations.h"
 #include "model/ray/ray.h"
-#include "model/scene.h"
 #include "model/vector_and_matrix/mat3.h"
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
 #include "render/pathtracing_target_geom_operations.h"
 #include "util/general.h"
 #include "util/image_util.h"
-#include "util/read_file_util.h"
-#include "util/read_image_util.h"
 #include "util/string_util.h"
 #include "world_lib.h"
 
@@ -48,25 +46,6 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
         cudaDeviceReset();
         exit(99);
     }
-}
-
-__global__ void create_scene(
-  Scene** scene, Camera** camera, Grid** grid, int *num_objects
-) {
-  if (threadIdx.x == 0 && blockIdx.x == 0) {
-    *(scene) = new Scene(camera[0], grid[0], num_objects[0]);
-  }
-}
-
-__global__ void free_world(
-  Scene** scene, Grid **grid, Primitive **geom_array, Camera **camera, int n
-) {
-    for (int i = 0; i < n; i++){
-      delete *(geom_array + i);
-    }
-    delete *camera;
-    delete *grid;
-    delete *scene;
 }
 
 int main(int argc, char **argv) {

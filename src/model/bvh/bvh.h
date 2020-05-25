@@ -5,6 +5,7 @@
 #include "../../util/bvh_util.h"
 #include "../geometry/primitive.h"
 #include "../grid/bounding_box.h"
+#include "../grid/bounding_cone.h"
 #include "../point/point.h"
 #include "../ray/ray.h"
 
@@ -23,6 +24,7 @@ class Node {
     Node *left, *right, *parent;
     bool visited, is_leaf;
     BoundingBox *bounding_box;
+		BoundingCone *bounding_cone;
     Primitive *object;
     Point *point;
     int idx;

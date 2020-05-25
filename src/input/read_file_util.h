@@ -12,7 +12,7 @@
 
 #include "../model/geometry/triangle.h"
 #include "../model/vector_and_matrix/vec3.h"
-#include "string_util.h"
+#include "../util/string_util.h"
 
 void _extract_single_material_data(
   std::string folder_path,

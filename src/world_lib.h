@@ -4,19 +4,16 @@
 #include <stdlib.h>
 #include <string>
 
+#include "input/read_file_util.h"
 #include "model/camera.h"
 #include "model/data_structure/local_vector.h"
 #include "model/geometry/triangle.h"
-#include "model/grid/cell.h"
-#include "model/grid/grid.h"
 #include "model/material/material.h"
 #include "model/object/object.h"
 #include "model/ray/ray.h"
-#include "model/scene.h"
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
 #include "util/image_util.h"
-#include "util/read_file_util.h"
 
 __global__ void create_world(
   Primitive** geom_array,
