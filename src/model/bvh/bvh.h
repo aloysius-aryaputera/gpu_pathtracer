@@ -14,7 +14,8 @@ class Node {
     __host__ __device__ Node();
     __device__ Node(int idx_);
     __device__ Primitive* get_object();
-    __device__ void assign_object(Primitive* object_);
+    __device__ void assign_object(
+			Primitive* object_, bool bounding_cone_required=false);
     __device__ void assign_point(Point* point_);
     __device__ void set_left_child(Node* left_);
     __device__ void set_right_child(Node* right_);
@@ -46,9 +47,16 @@ __device__ Primitive* Node::get_object() {
   return this -> object;
 }
 
-__device__ void Node::assign_object(Primitive* object_) {
+__device__ void Node::assign_object(
+	Primitive* object_, bool bounding_cone_required
+) {
   this -> object = object_;
   this -> bounding_box = object_ -> get_bounding_box();
+  if (bounding_cone_required) {
+		this -> bounding_cone = new BoundingCone(
+			this -> object -> get_fixed_normal(), 0, M_PI / 2.0
+		);
+	}
   this -> is_leaf = true;
 }
 

@@ -16,7 +16,7 @@ __device__ bool traverse_bvh_pts(
   Node* bvh_root, BoundingSphere bounding_sphere, //Point** point_array,
   vec3 &color
 ) {
-  Node* stack[400];
+  Node* stack[4000];
   Node *child_l, *child_r;
   Point *point;
   bool intersection_l, intersection_r, traverse_l, traverse_r;
@@ -96,7 +96,7 @@ __device__ bool traverse_bvh_pts(
       }
     }
 
-  } while(idx_stack_top > 0 && idx_stack_top < 400 && node != nullptr);
+  } while(idx_stack_top > 0 && idx_stack_top < 4000 && node != nullptr);
 
   if (pts_found)
     color /= sum_weight;

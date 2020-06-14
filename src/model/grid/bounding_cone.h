@@ -6,14 +6,22 @@
 
 class BoundingCone {
   public:
-    __host__ __device__ BoundingCone() {}
+    __host__ __device__ BoundingCone();
     __host__ __device__ BoundingCone(
+			vec3 axis_, float theta_0_, float theta_e_
+		);
+    __host__ __device__ void initialize(
 			vec3 axis_, float theta_0_, float theta_e_
 		);
 
 		float theta_0, theta_e;
 		vec3 axis;
+		bool initialized;
 };
+
+__host__ __device__ BoundingCone::BoundingCone() {
+	this -> initialized = false;
+}
 
 __host__ __device__ BoundingCone::BoundingCone(
 	vec3 axis_, float theta_0_, float theta_e_
@@ -21,6 +29,16 @@ __host__ __device__ BoundingCone::BoundingCone(
 	this -> axis = axis_;
 	this -> theta_0 = theta_0_;
 	this -> theta_e = theta_e_;
+	this -> initialized = true;
+}
+
+__host__ __device__ void BoundingCone::initialize(
+	vec3 axis_, float theta_0_, float theta_e_
+) {
+	this -> axis = axis_;
+	this -> theta_0 = theta_0_;
+	this -> theta_e = theta_e_;
+	this -> initialized = true;
 }
 
 __device__ void cone_union(

@@ -130,15 +130,15 @@ __device__ vec3 _compute_color(
         ref, rand_state
       );
 
-      // if (ref.diffuse && !(sss && !sss_first_pass)) {
-      //   // Modify ref.ray
-      //   change_ref_ray(
-      //     cur_rec, ref, target_geom_array, num_target_geom, factor,
-      //     target_node_list,
-      //     hittable_pdf_weight,
-      //     &rand_state_mis, &rand_state_mis_geom
-      //   );
-      // }
+      if (ref.diffuse && !(sss && !sss_first_pass)) {
+        // Modify ref.ray
+        change_ref_ray(
+          cur_rec, ref, target_geom_array, num_target_geom, factor,
+          target_node_list,
+          hittable_pdf_weight,
+          &rand_state_mis, &rand_state_mis_geom
+        );
+      }
 
       if (sss && !sss_first_pass) {
         return compute_color_sss(cur_rec, object_list, sss_pts_node_list);
@@ -238,8 +238,6 @@ void do_sss_first_pass(
       hittable_pdf_weight
     );
     color_tmp = de_nan(color_tmp);
-    // cos_theta = dot(init_ray.dir, normal);
-    // color += color_tmp * cos_theta;
     color += color_tmp;
   }
   color *= (1.0 / sample_size);

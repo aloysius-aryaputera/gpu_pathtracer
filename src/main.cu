@@ -38,14 +38,17 @@
 #include "world_lib.h"
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
-void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line) {
-    if (result) {
-        std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
-        file << ":" << line << " '" << func << "' \n";
-        // Make sure we call CUDA Device Reset before exiting
-        cudaDeviceReset();
-        exit(99);
-    }
+void check_cuda(
+  cudaError_t result, char const *const func, const char *const file, 
+	int const line
+) {
+  if (result) {
+    std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
+    file << ":" << line << " '" << func << "' \n";
+    // Make sure we call CUDA Device Reset before exiting
+    cudaDeviceReset();
+    exit(99);
+  }
 }
 
 int main(int argc, char **argv) {
@@ -92,7 +95,7 @@ int main(int argc, char **argv) {
   int sss_pts_per_object = input_param.sss_pts_per_object;
   float hittable_pdf_weight = input_param.hittable_pdf_weight;
 
-  int tx = 8, ty = 8;
+  int tx = 1, ty = 1;
 
   BoundingBox **world_bounding_box;
   Primitive **my_geom;
@@ -941,7 +944,7 @@ int main(int argc, char **argv) {
   process = "Building target leaves";
   print_start_process(process, start);
   build_leaf_list<<<blocks_world, threads_world>>>(
-    target_leaf_list, target_geom_list, num_target_geom[0]
+    target_leaf_list, target_geom_list, num_target_geom[0], true
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -951,7 +954,7 @@ int main(int argc, char **argv) {
   process = "Building target nodes";
   print_start_process(process, start);
   build_node_list<<<blocks_world, threads_world>>>(
-    target_node_list, num_target_geom[0]
+    target_node_list, num_target_geom[0], true
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -991,6 +994,16 @@ int main(int argc, char **argv) {
   process = "Compute target node bounding boxes";
   print_start_process(process, start);
   compute_node_bounding_boxes<<<blocks_world, threads_world>>>(
+    target_leaf_list, target_node_list, num_target_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Compute target node bounding cones";
+  print_start_process(process, start);
+  compute_node_bounding_cones<<<blocks_world, threads_world>>>(
     target_leaf_list, target_node_list, num_target_geom[0]
   );
   checkCudaErrors(cudaGetLastError());
