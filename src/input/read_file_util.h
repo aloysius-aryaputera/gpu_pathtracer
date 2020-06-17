@@ -27,7 +27,7 @@ void _extract_single_material_data(
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
   float *path_length,
-  float *t_r, float *n_s, float *n_i,
+  float *t_r, float *n_s, float *n_i, float *bm,
   int *material_priority,
   int *material_image_height_diffuse, int *material_image_width_diffuse,
   int *material_image_offset_diffuse,
@@ -73,7 +73,7 @@ void extract_material_data(
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
   float *path_length,
-  float *t_r, float *n_s, float *n_i,
+  float *t_r, float *n_s, float *n_i, float *bm,
   int *material_priority,
   int *material_image_height_diffuse, int *material_image_width_diffuse,
   int *material_image_offset_diffuse,
@@ -209,7 +209,7 @@ void _extract_single_material_data(
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
   float *path_length,
-  float *t_r, float *n_s, float *n_i,
+  float *t_r, float *n_s, float *n_i, float *bm,
   int *material_priority,
   int *material_image_height_diffuse, int *material_image_width_diffuse,
   int *material_image_offset_diffuse,
@@ -258,6 +258,7 @@ void _extract_single_material_data(
     *(n_s + idx) = 0;
     *(n_i + idx) = 0;
     *(t_r + idx) = 0;
+		*(bm + idx) = 1;
 
     *(material_priority + idx) = -1;
 
@@ -321,6 +322,7 @@ void _extract_single_material_data(
           *(n_s + idx) = 0;
           *(n_i + idx) = 0;
           *(t_r + idx) = 1;
+					*(bm + idx) = 1;
 
           *(material_priority + idx) = -1;
 
@@ -382,45 +384,66 @@ void _extract_single_material_data(
           std::pair<bool, int> result = find_in_vector<std::string>(
             texture_file_name_array, texture_file_name);
 
-          *(material_image_height_diffuse + idx) = texture_height_array[result.second];
-          *(material_image_width_diffuse + idx) = texture_width_array[result.second];
-          *(material_image_offset_diffuse + idx) = texture_offset_array[result.second];
+          *(material_image_height_diffuse + idx) = texture_height_array[
+						result.second];
+          *(material_image_width_diffuse + idx) = texture_width_array[
+						result.second];
+          *(material_image_offset_diffuse + idx) = texture_offset_array[
+						result.second];
 
         } else if (chunks[0] == "map_Ks") {
           texture_file_name = chunks[1];
           std::pair<bool, int> result = find_in_vector<std::string>(
             texture_file_name_array, texture_file_name);
 
-          *(material_image_height_specular + idx) = texture_height_array[result.second];
-          *(material_image_width_specular + idx) = texture_width_array[result.second];
-          *(material_image_offset_specular + idx) = texture_offset_array[result.second];
+          *(material_image_height_specular + idx) = texture_height_array[
+						result.second];
+          *(material_image_width_specular + idx) = texture_width_array[
+						result.second];
+          *(material_image_offset_specular + idx) = texture_offset_array[
+						result.second];
 
         } else if (chunks[0] == "map_Ke") {
           texture_file_name = chunks[1];
           std::pair<bool, int> result = find_in_vector<std::string>(
             texture_file_name_array, texture_file_name);
 
-          *(material_image_height_emission + idx) = texture_height_array[result.second];
-          *(material_image_width_emission + idx) = texture_width_array[result.second];
-          *(material_image_offset_emission + idx) = texture_offset_array[result.second];
+          *(material_image_height_emission + idx) = texture_height_array[
+						result.second];
+          *(material_image_width_emission + idx) = texture_width_array[
+						result.second];
+          *(material_image_offset_emission + idx) = texture_offset_array[
+						result.second];
 
         } else if (chunks[0] == "map_Ns") {
           texture_file_name = chunks[1];
           std::pair<bool, int> result = find_in_vector<std::string>(
             texture_file_name_array, texture_file_name);
 
-          *(material_image_height_n_s + idx) = texture_height_array[result.second];
-          *(material_image_width_n_s + idx) = texture_width_array[result.second];
-          *(material_image_offset_n_s + idx) = texture_offset_array[result.second];
+          *(material_image_height_n_s + idx) = texture_height_array[
+						result.second];
+          *(material_image_width_n_s + idx) = texture_width_array[
+						result.second];
+          *(material_image_offset_n_s + idx) = texture_offset_array[
+						result.second];
 
         } else if (chunks[0] == "map_Bump") {
-          texture_file_name = chunks[1];
+          for (int i = 1; i < chunks.size(); i+= 2) {
+						if (chunks[i] == "-bm") {
+						  *(bm + idx) = std::stof(chunks[i + 1]);
+						}
+					}
+
+          texture_file_name = chunks[chunks.size() - 1];
           std::pair<bool, int> result = find_in_vector<std::string>(
             texture_file_name_array, texture_file_name);
 
-          *(material_image_height_bump + idx) = texture_height_array[result.second];
-          *(material_image_width_bump + idx) = texture_width_array[result.second];
-          *(material_image_offset_bump + idx) = texture_offset_array[result.second];
+          *(material_image_height_bump + idx) = texture_height_array[
+						result.second];
+          *(material_image_width_bump + idx) = texture_width_array[
+						result.second];
+          *(material_image_offset_bump + idx) = texture_offset_array[
+						result.second];
 
         }
       }
@@ -444,7 +467,7 @@ void extract_material_data(
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
   float *path_length,
-  float *t_r, float *n_s, float *n_i,
+  float *t_r, float *n_s, float *n_i, float *bm,
   int *material_priority,
   int *material_image_height_diffuse, int *material_image_width_diffuse,
   int *material_image_offset_diffuse,
@@ -473,7 +496,7 @@ void extract_material_data(
       ke_x, ke_y, ke_z,
       tf_x, tf_y, tf_z,
       path_length,
-      t_r, n_s, n_i,
+      t_r, n_s, n_i, bm,
       material_priority,
       material_image_height_diffuse, material_image_width_diffuse,
       material_image_offset_diffuse,
@@ -534,8 +557,8 @@ void extract_triangle_data(
           } else {
             current_material_idx = 0;
           }
-        // } else if (chunks[0] == "o") {
-          object_idx++;
+          
+					object_idx++;
           *(object_primitive_offset_idx + object_idx) = triangle_idx;
           *(object_num_primitives + object_idx) = 0;
         } else if (chunks[0] == "v") {

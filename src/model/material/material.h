@@ -61,7 +61,7 @@ class Material {
     int texture_width_emission, texture_height_emission;
     int texture_width_n_s, texture_height_n_s;
     int texture_width_bump, texture_height_bump;
-    float n_s;
+    float n_s, bm;
     float *texture_r_diffuse, *texture_g_diffuse, *texture_b_diffuse;
     float *texture_r_specular, *texture_g_specular, *texture_b_specular;
     float *texture_r_emission, *texture_g_emission, *texture_b_emission;
@@ -74,7 +74,7 @@ class Material {
       vec3 ambient_, vec3 diffuse_, vec3 specular_, vec3 emission_,
       vec3 transmission_,
       float path_length_,
-      float t_r_, float n_s_, float n_i_,
+      float t_r_, float n_s_, float n_i_, float bm_,
       int priority_,
       int texture_height_diffuse_,
       int texture_width_diffuse_,
@@ -297,6 +297,7 @@ __host__ __device__ Material::Material(
   float t_r_,
   float n_s_,
   float n_i_,
+	float bm_,
   int priority_,
   int texture_height_diffuse_,
   int texture_width_diffuse_,
@@ -333,6 +334,7 @@ __host__ __device__ Material::Material(
   this -> n_s = n_s_;
   this -> n_i = n_i_;
   this -> t_r = t_r_;
+	this -> bm = bm_;
   this -> priority = priority_;
 
   this -> texture_height_diffuse = texture_height_diffuse_;
@@ -536,7 +538,7 @@ __device__ vec3 Material::get_texture_bump(vec3 uv_vector) {
   if (this -> texture_height_bump < 2 || this -> texture_width_bump < 2) {
     return vec3(0.0, 0.0, 0.0);
   } else {
-    return 2 * (
+    return 2 * this -> bm * (
       this -> _get_texture(
         uv_vector, vec3(1.0, 1.0, 1.0), this -> texture_r_bump,
         this -> texture_g_bump, this -> texture_b_bump,

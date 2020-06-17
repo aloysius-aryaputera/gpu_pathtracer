@@ -4,16 +4,16 @@
 #include <stdlib.h>
 #include <string>
 
-#include "input/read_file_util.h"
-#include "model/camera.h"
-#include "model/data_structure/local_vector.h"
-#include "model/geometry/triangle.h"
-#include "model/material/material.h"
-#include "model/object/object.h"
-#include "model/ray/ray.h"
-#include "model/vector_and_matrix/vec3.h"
-#include "render/pathtracing.h"
-#include "util/image_util.h"
+#include "../input/read_file_util.h"
+#include "../model/camera.h"
+#include "../model/data_structure/local_vector.h"
+#include "../model/geometry/triangle.h"
+#include "../model/material/material.h"
+#include "../model/object/object.h"
+#include "../model/ray/ray.h"
+#include "../model/vector_and_matrix/vec3.h"
+#include "../render/pathtracing.h"
+#include "../util/image_util.h"
 
 __global__ void create_world(
   Primitive** geom_array,
@@ -102,7 +102,7 @@ __global__ void create_material(
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
   float *path_length,
-  float *t_r, float *n_s, float *n_i,
+  float *t_r, float *n_s, float *n_i, float *bm,
   int *material_priority,
   int *material_image_height_diffuse,
   int *material_image_width_diffuse,
@@ -135,7 +135,7 @@ __global__ void create_material(
     vec3(ke_x[i], ke_y[i], ke_z[i]),
     vec3(tf_x[i], tf_y[i], tf_z[i]),
     path_length[i],
-    t_r[i], n_s[i], n_i[i],
+    t_r[i], n_s[i], n_i[i], bm[i],
     material_priority[i],
     material_image_height_diffuse[i],
     material_image_width_diffuse[i],

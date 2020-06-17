@@ -12,6 +12,7 @@
 #include "input/input_param.h"
 #include "input/read_file_util.h"
 #include "input/read_image_util.h"
+#include "lib/world.h"
 #include "model/bvh/bvh.h"
 #include "model/bvh/bvh_building.h"
 #include "model/bvh/bvh_building_pts.h"
@@ -35,7 +36,6 @@
 #include "util/general.h"
 #include "util/image_util.h"
 #include "util/string_util.h"
-#include "world_lib.h"
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 void check_cuda(
@@ -124,6 +124,7 @@ int main(int argc, char **argv) {
   float *tf_x, *tf_y, *tf_z;
   float *path_length;
   float *material_image_r, *material_image_g, *material_image_b;
+	float *bm;
   int *num_materials;
   int *material_image_height_diffuse, *material_image_width_diffuse, \
     *material_image_offset_diffuse, *material_priority;
@@ -261,6 +262,9 @@ int main(int argc, char **argv) {
     (void **)&path_length, max_num_materials * sizeof(float)));
 
   checkCudaErrors(cudaMallocManaged(
+    (void **)&bm, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged(
     (void **)&t_r, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged(
     (void **)&n_s, max_num_materials * sizeof(float)));
@@ -336,7 +340,7 @@ int main(int argc, char **argv) {
     ke_x, ke_y, ke_z,
     tf_x, tf_y, tf_z,
     path_length,
-    t_r, n_s, n_i,
+    t_r, n_s, n_i, bm,
     material_priority,
     material_image_height_diffuse, material_image_width_diffuse,
     material_image_offset_diffuse,
@@ -472,7 +476,7 @@ int main(int argc, char **argv) {
     ke_x, ke_y, ke_z,
     tf_x, tf_y, tf_z,
     path_length,
-    t_r, n_s, n_i,
+    t_r, n_s, n_i, bm,
     material_priority,
     material_image_height_diffuse,
     material_image_width_diffuse,
