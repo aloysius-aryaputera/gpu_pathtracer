@@ -222,7 +222,6 @@ void do_sss_first_pass(
   vec3 normal = point_list[i] -> normal;
   vec3 color_tmp, color = vec3(0, 0, 0);
   Ray init_ray;
-  float cos_theta;
   Object **empty_object_list;
   Node **empty_node_list;
   curandState local_rand_state = rand_state[i];

@@ -16,7 +16,7 @@ __device__ bool traverse_bvh_pts(
   Node* bvh_root, BoundingSphere bounding_sphere, //Point** point_array,
   vec3 &color
 ) {
-  Node* stack[4000];
+  Node* stack[400];
   Node *child_l, *child_r;
   Point *point;
   bool intersection_l, intersection_r, traverse_l, traverse_r;
@@ -38,6 +38,18 @@ __device__ bool traverse_bvh_pts(
 
     intersection_l = child_l -> bounding_box -> is_intersection(bounding_sphere);
     intersection_r = child_r -> bounding_box -> is_intersection(bounding_sphere);
+
+    //if (intersection_l || intersection_r) printf("Intersection found!\n");
+
+		//printf(
+		//		"child_l = (%f, %f, %f), child_r = (%f, %f, %f)\n",
+		//		child_l -> bounding_box -> x_center,
+		//		child_l -> bounding_box -> y_center,
+		//		child_l -> bounding_box -> z_center,
+		//		child_r -> bounding_box -> x_center,
+		//		child_r -> bounding_box -> y_center,
+		//		child_r -> bounding_box -> z_center
+		//);
 
     if (intersection_l && child_l -> is_leaf) {
       is_inside = bounding_sphere.is_inside(child_l -> point -> location);
@@ -96,10 +108,12 @@ __device__ bool traverse_bvh_pts(
       }
     }
 
-  } while(idx_stack_top > 0 && idx_stack_top < 4000 && node != nullptr);
+  } while(idx_stack_top > 0 && idx_stack_top < 400 && node != nullptr);
 
-  if (pts_found)
+  if (pts_found) {
+		//printf("pts_found!\n");
     color /= sum_weight;
+	}
 
   return pts_found;
 }

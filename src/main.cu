@@ -100,7 +100,6 @@ int main(int argc, char **argv) {
   BoundingBox **world_bounding_box;
   Primitive **my_geom;
   Primitive **target_geom_list;
-  float *weight_target_geom_list;
   Object **my_objects;
   unsigned int *morton_code_list;
   Material **my_material;
@@ -786,7 +785,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Compute pts node bounding boxes";
   print_start_process(process, start);
-  compute_node_bounding_boxes<<<blocks_world, threads_world>>>(
+  compute_node_bounding_boxes<<<max(1, num_sss_points), 1>>>(
     sss_pts_leaf_list, sss_pts_node_list, num_sss_points
   );
   checkCudaErrors(cudaGetLastError());
@@ -943,7 +942,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Building target leaves";
   print_start_process(process, start);
-  build_leaf_list<<<blocks_world, threads_world>>>(
+  build_leaf_list<<<max(1, num_target_geom[0]), 1>>>(
     target_leaf_list, target_geom_list, num_target_geom[0], true
   );
   checkCudaErrors(cudaGetLastError());
@@ -953,7 +952,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Building target nodes";
   print_start_process(process, start);
-  build_node_list<<<blocks_world, threads_world>>>(
+  build_node_list<<<max(1, num_target_geom[0]), 1>>>(
     target_node_list, num_target_geom[0], true
   );
   checkCudaErrors(cudaGetLastError());
@@ -968,7 +967,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Extracting target morton codes";
   print_start_process(process, start);
-  extract_morton_code_list<<<blocks_world, threads_world>>>(
+  extract_morton_code_list<<<max(1, num_target_geom[0]), 1>>>(
     target_geom_list, target_morton_code_list, num_target_geom[0]
   );
   checkCudaErrors(cudaGetLastError());
@@ -978,7 +977,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Setting target node relationship";
   print_start_process(process, start);
-  set_node_relationship<<<blocks_world, threads_world>>>(
+  set_node_relationship<<<max(1, num_target_geom[0]), 1>>>(
     target_node_list, target_leaf_list, target_morton_code_list,
     num_target_geom[0]
   );
@@ -993,7 +992,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Compute target node bounding boxes";
   print_start_process(process, start);
-  compute_node_bounding_boxes<<<blocks_world, threads_world>>>(
+  compute_node_bounding_boxes<<<max(1, num_target_geom[0]), 1>>>(
     target_leaf_list, target_node_list, num_target_geom[0]
   );
   checkCudaErrors(cudaGetLastError());
@@ -1003,7 +1002,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Compute target node bounding cones";
   print_start_process(process, start);
-  compute_node_bounding_cones<<<blocks_world, threads_world>>>(
+  compute_node_bounding_cones<<<max(1, num_target_geom[0]), 1>>>(
     target_leaf_list, target_node_list, num_target_geom[0]
   );
   checkCudaErrors(cudaGetLastError());
@@ -1028,7 +1027,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
+	checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
   dim3 blocks(im_width / tx + 1, im_height / ty + 1);
   dim3 threads(tx, ty);
 

@@ -32,6 +32,7 @@ __device__ vec3 compute_color_sss(
   );
 
   if (pts_found) {
+		//printf("pts_found!");
     filter = rec.object -> get_material() -> get_texture_diffuse(
       rec.uv_vector);
     return color * filter;
