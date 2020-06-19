@@ -38,7 +38,6 @@ class Material {
       vec3 uv_vector, vec3 filter, float* texture_r, float* texture_g,
       float* texture_b, int texture_height, int texture_width
     );
-    __device__ vec3 _get_texture_specular(vec3 uv_vector);
     __device__ float _get_texture_n_s(vec3 uv_vector);
     __device__ reflection_record _refract(
       vec3 hit_point, vec3 v_in, vec3 normal,
@@ -112,6 +111,7 @@ class Material {
     __device__ vec3 get_texture_emission(vec3 uv_vector);
     __device__ vec3 get_texture_diffuse(vec3 uv_vector);
     __device__ vec3 get_texture_bump(vec3 uv_vector);
+    __device__ vec3 get_texture_specular(vec3 uv_vector);
 
     vec3 emission;
     int priority;
@@ -440,9 +440,14 @@ __device__ void Material::check_next_path(
     actual_mat = this;
   }
 
-  float factor = \
-    actual_mat -> diffuse_mag / (
-      actual_mat -> diffuse_mag + actual_mat -> specular_mag);
+  //float factor = \
+  //  actual_mat -> diffuse_mag / (
+  //    actual_mat -> diffuse_mag + actual_mat -> specular_mag);
+	float factor = \
+		actual_mat -> get_texture_diffuse(uv_vector).length() / (
+		  actual_mat -> get_texture_diffuse(uv_vector).length() + 
+	    actual_mat -> get_texture_specular(uv_vector).length()		
+		);
   float fuziness, local_n_s = this -> _get_texture_n_s(uv_vector);
 
   if (local_n_s == 0) {
@@ -474,7 +479,7 @@ __device__ void Material::check_next_path(
       hit_point, reflected_ray_dir, normal, fuziness, true, rand_state);
     cos_theta = dot(ref.ray.dir, normal);
     // ref.filter = actual_mat -> _get_texture_specular(uv_vector) * cos_theta;
-    ref.filter = actual_mat -> _get_texture_specular(uv_vector);
+    ref.filter = actual_mat -> get_texture_specular(uv_vector);
     ref.diffuse = false;
     if (cos_theta <= 0) {
       refracted = false;
@@ -548,7 +553,7 @@ __device__ vec3 Material::get_texture_bump(vec3 uv_vector) {
   }
 }
 
-__device__ vec3 Material::_get_texture_specular(vec3 uv_vector) {
+__device__ vec3 Material::get_texture_specular(vec3 uv_vector) {
   return this -> _get_texture(
     uv_vector, this -> specular, this -> texture_r_specular,
     this -> texture_g_specular, this -> texture_b_specular,
