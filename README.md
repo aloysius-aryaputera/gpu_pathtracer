@@ -1,6 +1,7 @@
 # GPU Pathtracer
 
-![](images/20200227_f1.jpg)
+| <img src="images/20200620_importance_sampling.jpg" width="300"> | <img src="images/20200620_without_importance_sampling.jpg" width="300"> |
+| with importance sampling (sampling per pixel = 256, depth = 128) | without importance sampling (sampling per pixel = 256, depth = 128) |
 
 ![](images/20200501_cars.jpg)
 
