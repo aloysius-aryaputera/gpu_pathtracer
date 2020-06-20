@@ -103,7 +103,6 @@ __device__ vec3 _compute_color(
   Ray ray = ray_init;
   reflection_record ref;
   Material* material_list[400];
-  curandState rand_state_mis, rand_state_mis_geom;
   float factor = 1;
 
   int material_list_length = 0;
@@ -113,8 +112,6 @@ __device__ vec3 _compute_color(
   cur_rec.object = nullptr;
 
   for (int i = 0; i < level; i++) {
-    rand_state_mis = rand_state[0];
-    rand_state_mis_geom = rand_state[0];
 
     factor = 1;
 
@@ -136,7 +133,7 @@ __device__ vec3 _compute_color(
           cur_rec, ref, target_geom_array, num_target_geom, factor,
           target_node_list,
           hittable_pdf_weight,
-          &rand_state_mis, &rand_state_mis_geom
+          rand_state
         );
       }
 
@@ -288,7 +285,6 @@ void render(
   }
   color *= (1.0 / sample_size);
 
-  rand_state[pixel_index] = local_rand_state;
   fb[pixel_index] = color;
 
   if (j == 0 && (i % (camera[0] -> height / 100) == 0)) {

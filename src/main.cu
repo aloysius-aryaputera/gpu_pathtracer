@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
   int sss_pts_per_object = input_param.sss_pts_per_object;
   float hittable_pdf_weight = input_param.hittable_pdf_weight;
 
-  int tx = 1, ty = 1;
+  int tx = 8, ty = 8;
 
   BoundingBox **world_bounding_box;
   Primitive **my_geom;
@@ -113,8 +113,7 @@ int main(int argc, char **argv) {
   int *num_sss_objects, *num_target_geom;
   size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state_sss, *rand_state_image;
-  size_t rand_state_image_size = (
-    num_pixels + 99999 + pathtracing_level) * sizeof(curandState);
+  size_t rand_state_image_size = num_pixels * sizeof(curandState);
 
   bool *sss_object_marker_array;
   int *pt_offset_array, *num_pt_array;
@@ -646,15 +645,13 @@ int main(int argc, char **argv) {
     (void **)&world_bounding_box, sizeof(BoundingBox *)));
 
   checkCudaErrors(cudaMallocManaged(
-    (void **)&rand_state_sss,
-      (num_sss_points + 99999 + pathtracing_level) * sizeof(curandState)));
+    (void **)&rand_state_sss, max(1, num_sss_points) * sizeof(curandState)));
 
   start = clock();
   process = "Generating curand state for SSS points sampling";
   print_start_process(process, start);
   init_curand_state<<<max(1, num_sss_points), 1>>>(
-    num_sss_points + 99999 + pathtracing_level,
-    rand_state_sss);
+    num_sss_points, rand_state_sss);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
@@ -1067,8 +1064,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Generating curand state for rendering";
   print_start_process(process, start);
-  init_curand_state<<<num_pixels / 8 + 1, 8>>>(
-    num_pixels + 99999 + pathtracing_level, rand_state_image);
+  init_curand_state<<<num_pixels / 8 + 1, 8>>>(num_pixels, rand_state_image);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);

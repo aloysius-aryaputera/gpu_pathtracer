@@ -11,13 +11,11 @@
 __device__ void change_ref_ray(
   hit_record rec, reflection_record &ref, Primitive **target_geom_array,
   int num_target_geom, float &factor, Node **target_node_list,
-  curandState *rand_state_mis, curandState *rand_state_mis_geom
+  curandState *rand_state_mis
 );
 
 __device__ vec3 _pick_a_random_point_on_a_target_geom(
-  Primitive **target_geom_array, int num_target_geom,
-  float random_number,
-  curandState *rand_state_mis_geom
+  Primitive **target_geom_array, int num_target_geom, curandState *rand_state
 );
 
 __device__ float _recompute_pdf(
@@ -58,40 +56,30 @@ __device__ float _recompute_pdf(
 }
 
 __device__ vec3 _pick_a_random_point_on_a_target_geom(
-  Primitive **target_geom_array, int num_target_geom,
-  float random_number,
-  curandState *rand_state_mis_geom
+  Primitive **target_geom_array, int num_target_geom, curandState *rand_state
 ) {
-  //float random_number = curand_uniform(&rand_state_mis_geom[0]);
-  //float random_number_2 = curand_uniform(&rand_state_mis_geom[1]);
-  //printf(
-  //  "random_number = %f, random_number_2 = %f\n", 
-  //  random_number, random_number_2
-  //);
+	float random_number = curand_uniform(rand_state);
   int selected_idx = int(random_number * (num_target_geom - 1));
   hit_record random_hit_record = target_geom_array[selected_idx] ->
-    get_random_point_on_surface(&rand_state_mis_geom[1]);
+    get_random_point_on_surface(rand_state);
   return random_hit_record.point;
 }
 
 __device__ void change_ref_ray(
   hit_record rec, reflection_record &ref, Primitive **target_geom_array,
   int num_target_geom, float &factor, Node **target_node_list,
-  float hittable_pdf_weight,
-  curandState *rand_state_mis, curandState *rand_state_mis_geom
+  float hittable_pdf_weight, curandState *rand_state_mis
 ) {
-  float random_number_1 = curand_uniform(&rand_state_mis[0]);
-  float random_number_2 = curand_uniform(&rand_state_mis[0]);
+  float random_number = curand_uniform(rand_state_mis);
   float pdf, scattering_pdf;
   vec3 new_target_point;
   Ray default_ray = ref.ray;
 
   //printf("random_number = %f\n", random_number);
 
-  if (random_number_1 > 1 - hittable_pdf_weight) {
+  if (random_number > 1 - hittable_pdf_weight) {
     new_target_point = _pick_a_random_point_on_a_target_geom(
-      target_geom_array, num_target_geom, random_number_2,
-      rand_state_mis_geom
+      target_geom_array, num_target_geom, rand_state_mis
     );
     ref.ray = Ray(default_ray.p0, new_target_point - default_ray.p0);
   }
