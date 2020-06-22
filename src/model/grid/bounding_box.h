@@ -41,6 +41,11 @@ class BoundingBox {
     );
     __device__ void compute_bb_morton_3d();
     __device__ void print_bounding_box();
+    __device__ float compute_incident_angle(vec3 point, vec3 normal);
+    __device__ float compute_covering_cone_angle(vec3 point);
+    __device__ float compute_minimum_angle_to_shading_point(
+		  vec3 point, vec3 cone_axis, float cone_theta_0, float theta_u 
+		);
 
     float x_min, x_max, y_min, y_max, z_min, z_max;
     float x_center, y_center, z_center;
@@ -58,6 +63,58 @@ __device__ bool _are_intersecting(
   float t_1_min, float t_1_max, float t_2_min, float t_2_max
 ) {
   return t_1_min <= t_2_max && t_2_min <= t_1_max;
+}
+
+__device__ float BoundingBox::compute_minimum_angle_to_shading_point(
+  vec3 point, vec3 cone_axis, float cone_theta_0, float theta_u 
+){
+	vec3 dir = point - vec3(
+		this -> x_center, this -> y_center, this -> z_center);
+  float theta = acos(dot(cone_axis, dir));
+  return fmaxf(theta - cone_theta_0 - theta_u, 0);
+}
+
+__device__ float BoundingBox::compute_covering_cone_angle(vec3 point) {
+  vec3 v1 = vec3(
+	  this -> x_center, this -> y_center, this -> z_center) - point;
+	v1 = unit_vector(v1);
+
+	vec3 dir;
+	float cos_value, min_cos_value = 0;
+
+  for (int i = 0; i < 8; i++) {
+	  if (i == 0) 
+			dir = vec3(this -> x_min, this -> y_min, this -> z_min) - point;
+	  else if (i == 1)
+			dir = vec3(this -> x_min, this -> y_min, this -> z_max) - point;
+		else if (i == 2)
+			dir = vec3(this -> x_min, this -> y_max, this -> z_min) - point;
+		else if (i == 3)
+			dir = vec3(this -> x_min, this -> y_max, this -> z_max) - point;
+		else if (i == 4)
+			dir = vec3(this -> x_max, this -> y_min, this -> z_min) - point;
+		else if (i == 5)
+			dir = vec3(this -> x_max, this -> y_min, this -> z_max) - point;
+		else if (i == 6)
+			dir = vec3(this -> x_max, this -> y_max, this -> z_min) - point;
+		else
+			dir = vec3(this -> x_max, this -> y_max, this -> z_max) - point;
+
+		dir = unit_vector(dir);
+    cos_value = dot(v1, dir);
+		if (cos_value < min_cos_value) min_cos_value = cos_value;
+	}
+	
+	return acos(min_cos_value);
+}
+
+__device__ float BoundingBox::compute_incident_angle(
+  vec3 point, vec3 normal
+) {
+  vec3 v1 = vec3(
+    this -> x_center, this -> y_center, this -> z_center
+  ) - point;
+  return acos(dot(v1, normal));
 }
 
 __device__ void BoundingBox::print_bounding_box() {

@@ -87,9 +87,13 @@ class Primitive {
       return 0;
     }
 
+    __device__ virtual float compute_directed_energy(vec3 point) {
+		  return 0;
+		}
+
     BoundingBox *bounding_box;
     int object_idx;
-
+    float energy;
 };
 
 struct hit_record

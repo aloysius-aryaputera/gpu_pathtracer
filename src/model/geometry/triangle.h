@@ -22,6 +22,7 @@ class Triangle: public Primitive {
       float weight_1, float weight_2, float weight_3);
     __device__ void _compute_tangent();
     __device__ bool _check_if_light_emitting();
+		__device__ float _compute_energy();
 
     float inv_tolerance, tolerance;
     vec3 t, b;
@@ -60,14 +61,24 @@ class Triangle: public Primitive {
     __device__ int get_point_3_idx();
     __device__ void assign_tangent(vec3 tangent_, int idx);
     __device__ float get_hittable_pdf(vec3 origin, vec3 dir);
+    __device__ float compute_directed_energy(vec3 point);
 
     BoundingBox *bounding_box;
     int object_idx;
+		float energy;
 
 };
 
 __host__ __device__ float _compute_triangle_area(
   vec3 point_1, vec3 point_2, vec3 point_3);
+
+__device__ float Triangle::compute_directed_energy(vec3 point) {
+  vec3 normal = this -> _get_normal(1.0 / 3, 1.0 / 3, 1.0 / 3);
+  vec3 dir = point - (
+	  this -> point_1 + this -> point_2 + this -> point_3) / 3.0;
+	dir = unit_vector(dir);
+  return this -> energy * dot(normal, dir);	
+}
 
 __device__ float Triangle::get_hittable_pdf(vec3 origin, vec3 dir) {
   hit_record rec;
@@ -84,6 +95,18 @@ __device__ float Triangle::get_hittable_pdf(vec3 origin, vec3 dir) {
   } else {
     return 0;
   }
+}
+
+__device__ float Triangle::_compute_energy() {
+  vec3 emission_tex_1 = this -> material -> get_texture_emission(
+    this -> tex_1);
+  vec3 emission_tex_2 = this -> material -> get_texture_emission(
+    this -> tex_2);
+  vec3 emission_tex_3 = this -> material -> get_texture_emission(
+    this -> tex_3);
+  vec3 avg_emission_tex = (
+		emission_tex_1 + emission_tex_2 + emission_tex_3) / 3.0;
+	return avg_emission_tex.length() * this -> area;
 }
 
 __device__ bool Triangle::_check_if_light_emitting() {
@@ -256,6 +279,7 @@ __device__ Triangle::Triangle(
   this -> _compute_bounding_box();
   this -> _compute_tangent();
 
+	this -> energy = this -> _compute_energy();
 }
 
 __host__ __device__ float Triangle::_compute_tolerance() {

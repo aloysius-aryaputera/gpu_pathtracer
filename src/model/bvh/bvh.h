@@ -21,6 +21,9 @@ class Node {
     __device__ void set_right_child(Node* right_);
     __device__ void set_parent(Node* parent_);
     __device__ void mark_visited();
+    __device__ float compute_importance(
+		  vec3 point, vec3 normal, vec3 kd
+		);
 
     Node *left, *right, *parent;
     bool visited, is_leaf;
@@ -29,18 +32,27 @@ class Node {
     Primitive *object;
     Point *point;
     int idx;
+		float energy;
 };
 
 __device__ Node::Node() {
   this -> visited = false;
   this -> is_leaf = false;
   this -> idx = -30;
+	this -> energy = 0;
 }
 
 __device__ Node::Node(int idx_) {
   this -> visited = false;
   this -> is_leaf = false;
   this -> idx = idx_;
+	this -> energy = 0;
+}
+
+__device__ float Node::compute_importance(
+  vec3 point, vec3 normal, vec3 kd	
+) {
+  return 0;
 }
 
 __device__ Primitive* Node::get_object() {
@@ -58,6 +70,7 @@ __device__ void Node::assign_object(
 		);
 	}
   this -> is_leaf = true;
+	this -> energy = object_ -> energy;
 }
 
 __device__ void Node::assign_point(Point* point_) {
