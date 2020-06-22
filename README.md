@@ -1,7 +1,8 @@
 # GPU Pathtracer
 
-| <img src="images/20200620_importance_sampling.jpg" width="300"> | <img src="images/20200620_without_importance_sampling.jpg" width="300"> |
-| with importance sampling (sampling per pixel = 256, depth = 128) | without importance sampling (sampling per pixel = 256, depth = 128) |
+|with importance sampling (sampling per pixel = 256, depth = 128) | without importance sampling (sampling per pixel = 256, depth = 128)|
+:-----:|:------:
+<img src="images/20200620_importance_sampling.jpg" width="600"> | <img src="images/20200620_without_importance_sampling.jpg" width="600">
 
 ![](images/20200501_cars.jpg)
 
@@ -18,7 +19,6 @@
 * LaFerrari model was by [mfaprodesign](https://free3d.com/user/mfaprodesign).
 * The Lamborghini Aventador and Bumble Bee models were by [ysup12](https://free3d.com/user/ysup12).
 * The Koenigsegg Jesco model was by [Steven Grey](https://sketchfab.com/Steven007).
-* The Ferrari SF70H model was by [Dil Afroze Ahmed](https://free3d.com/user/dil_afroze).
 * The gecko model was by [DigitalLife3D](https://sketchfab.com/DigitalLife3D).
 * The mechanical shark and the ship in a bottle were by [Loïc Norgeot](https://sketchfab.com/norgeotloic).
 * Glass 1 was by [Pedro Caio](https://free3d.com/user/pedrocaio442).
