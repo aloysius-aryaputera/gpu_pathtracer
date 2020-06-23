@@ -49,6 +49,7 @@ class BoundingBox {
 
     float x_min, x_max, y_min, y_max, z_min, z_max;
     float x_center, y_center, z_center;
+		vec3 center;
     float length_x, length_y, length_z;
     float norm_x_center, norm_y_center, norm_z_center;
     unsigned int morton_code;
@@ -68,16 +69,13 @@ __device__ bool _are_intersecting(
 __device__ float BoundingBox::compute_minimum_angle_to_shading_point(
   vec3 point, vec3 cone_axis, float cone_theta_0, float theta_u 
 ){
-	vec3 dir = point - vec3(
-		this -> x_center, this -> y_center, this -> z_center);
+	vec3 dir = unit_vector(point - this -> center);
   float theta = acos(dot(cone_axis, dir));
   return fmaxf(theta - cone_theta_0 - theta_u, 0);
 }
 
 __device__ float BoundingBox::compute_covering_cone_angle(vec3 point) {
-  vec3 v1 = vec3(
-	  this -> x_center, this -> y_center, this -> z_center) - point;
-	v1 = unit_vector(v1);
+  vec3 v1 = unit_vector(this -> center - point);
 
 	vec3 dir;
 	float cos_value, min_cos_value = 0;
@@ -111,9 +109,7 @@ __device__ float BoundingBox::compute_covering_cone_angle(vec3 point) {
 __device__ float BoundingBox::compute_incident_angle(
   vec3 point, vec3 normal
 ) {
-  vec3 v1 = vec3(
-    this -> x_center, this -> y_center, this -> z_center
-  ) - point;
+  vec3 v1 = unit_vector(this -> center - point);
   return acos(dot(v1, normal));
 }
 
@@ -169,6 +165,7 @@ __device__ void BoundingBox::initialize(
   this -> x_center = 0.5 * (this -> x_min + this -> x_max);
   this -> y_center = 0.5 * (this -> y_min + this -> y_max);
   this -> z_center = 0.5 * (this -> z_min + this -> z_max);
+	this -> center = vec3(x_center, y_center, z_center);
 
   this -> length_x = this -> x_max - this -> x_min;
   this -> length_y = this -> y_max - this -> y_min;
@@ -195,6 +192,7 @@ __device__ BoundingBox::BoundingBox(
   this -> x_center = 0.5 * (this -> x_min + this -> x_max);
   this -> y_center = 0.5 * (this -> y_min + this -> y_max);
   this -> z_center = 0.5 * (this -> z_min + this -> z_max);
+	this -> center = vec3(x_center, y_center, z_center);
 
   this -> length_x = this -> x_max - this -> x_min;
   this -> length_y = this -> y_max - this -> y_min;

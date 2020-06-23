@@ -52,7 +52,26 @@ __device__ Node::Node(int idx_) {
 __device__ float Node::compute_importance(
   vec3 point, vec3 normal, vec3 kd	
 ) {
-  return 0;
+	vec3 dir = point - this -> bounding_box -> center;
+  float cone_angle = this -> bounding_box -> compute_covering_cone_angle(
+	  point);
+  float incident_angle = this -> bounding_box -> compute_incident_angle(
+		point, normal);
+  float min_incident_angle = fmaxf(incident_angle - cone_angle, 0);
+	float min_angle_to_point = \
+	  this -> bounding_box -> compute_minimum_angle_to_shading_point(
+		  point, this -> bounding_cone -> axis, this -> bounding_cone -> theta_0, 
+			cone_angle);
+	float multiplier;
+
+  if (min_angle_to_point < this -> bounding_cone -> theta_e) {
+	  multiplier = cos(min_angle_to_point);
+	} else {
+	  multiplier = 0;
+	}
+
+  return kd.length() * abs(cos(min_incident_angle)) * this -> energy * \
+		multiplier / dir.squared_length();
 }
 
 __device__ Primitive* Node::get_object() {
