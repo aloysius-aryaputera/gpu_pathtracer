@@ -50,7 +50,7 @@ __device__ float get_node_pdf(
 ){
 	Node* it_node = selected_node, *another_node;
 	float pdf = 1, it_pdf, it_tot_pdf, importance_1, importance_2;
-	while(!(it_node -> parent != nullptr)) {
+	while(it_node -> parent != nullptr) {
 		importance_1 = it_node -> compute_importance(
 		  shading_point, normal, kd
 		);
@@ -64,12 +64,12 @@ __device__ float get_node_pdf(
 		);
 		it_tot_pdf = importance_1 + importance_2;
 		it_pdf = importance_1 / it_tot_pdf;
-		if (it_tot_pdf < 1E-10 || it_pdf < 1E-10) {
-		  return 0;
-		} else {
+		//if (it_tot_pdf < 1E-10 || it_pdf < 1E-10) {
+		//  return 0;
+		//} else {
 	    pdf *= it_pdf;
 		  it_node = it_node -> parent;	
-		}
+		//}
 	}
 	return pdf;
 }

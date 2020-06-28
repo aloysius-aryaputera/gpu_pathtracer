@@ -82,7 +82,7 @@ __device__ float Triangle::compute_directed_energy(vec3 point) {
   vec3 dir = point - (
 	  this -> point_1 + this -> point_2 + this -> point_3) / 3.0;
 	dir = unit_vector(dir);
-  return this -> energy * dot(normal, dir);	
+  return fmaxf(0, this -> energy * dot(normal, dir));	
 }
 
 __device__ float Triangle::get_hittable_pdf(vec3 origin, vec3 dir) {
