@@ -57,7 +57,7 @@ __device__ vec3 _compute_color(
   float *bg_r, float *bg_g, float *bg_b,
   curandState *rand_state,
   Node **node_list, Object **object_list, Node **sss_pts_node_list,
-  Node **target_node_list,
+  Node **target_node_list, Node **target_leaf_list,
   bool sss_first_pass, Primitive** target_geom_array, int num_target_geom,
   float hittable_pdf_weight
 );
@@ -90,7 +90,7 @@ __device__ vec3 _compute_color(
   float *bg_r, float *bg_g, float *bg_b,
   curandState *rand_state,
   Node **node_list, Object **object_list, Node **sss_pts_node_list,
-  Node **target_node_list,
+  Node **target_node_list, Node **target_leaf_list,
   bool sss_first_pass, Primitive** target_geom_array, int num_target_geom,
   float hittable_pdf_weight
 ) {
@@ -132,6 +132,7 @@ __device__ vec3 _compute_color(
         change_ref_ray(
           cur_rec, ref, target_geom_array, num_target_geom, factor,
           target_node_list,
+					target_leaf_list,
           hittable_pdf_weight,
           rand_state
         );
@@ -207,6 +208,7 @@ void do_sss_first_pass(
   curandState *rand_state,
   Primitive** target_geom_array,
   Node **target_node_list,
+	Node **target_leaf_list,
   int num_target_geom,
   float hittable_pdf_weight
 ) {
@@ -229,7 +231,7 @@ void do_sss_first_pass(
     color_tmp = _compute_color(
       init_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
       bg_b, &local_rand_state, node_list, empty_object_list, empty_node_list,
-      target_node_list,
+      target_node_list, target_leaf_list,
       true, target_geom_array, num_target_geom,
       hittable_pdf_weight
     );
@@ -250,7 +252,7 @@ void render(
   vec3 sky_emission, int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
   Node **node_list, Object **object_list, Node **sss_pts_node_list,
-  Node **target_node_list,
+  Node **target_node_list, Node **target_leaf_list,
   Primitive** target_geom_array, int num_target_geom,
   float hittable_pdf_weight
 ) {
@@ -276,7 +278,7 @@ void render(
     color_tmp = _compute_color(
       camera_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
       bg_b, &local_rand_state, node_list, object_list, sss_pts_node_list,
-      target_node_list,
+      target_node_list, target_leaf_list,
       false, target_geom_array, num_target_geom,
       hittable_pdf_weight
     );

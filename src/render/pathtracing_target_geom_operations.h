@@ -13,7 +13,7 @@ __global__ void collect_target_geom(
 __device__ bool _is_target_geom(Primitive *geom);
 
 __device__ bool _is_target_geom(Primitive *geom) {
-  return geom -> is_light_source() || geom -> get_material() -> t_r > 0;
+  return geom -> is_light_source();
 }
 
 __global__ void compute_num_target_geom(

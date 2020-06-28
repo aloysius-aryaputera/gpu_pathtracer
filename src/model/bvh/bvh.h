@@ -24,6 +24,7 @@ class Node {
     __device__ float compute_importance(
 		  vec3 point, vec3 normal, vec3 kd
 		);
+		__device__ void set_energy(float energy_);
 
     Node *left, *right, *parent;
     bool visited, is_leaf;
@@ -49,6 +50,10 @@ __device__ Node::Node(int idx_) {
 	this -> energy = 0;
 }
 
+__device__ void Node::set_energy(float energy_) {
+  this -> energy = energy_;
+}
+
 __device__ float Node::compute_importance(
   vec3 point, vec3 normal, vec3 kd	
 ) {
@@ -62,16 +67,24 @@ __device__ float Node::compute_importance(
 	  this -> bounding_box -> compute_minimum_angle_to_shading_point(
 		  point, this -> bounding_cone -> axis, this -> bounding_cone -> theta_0, 
 			cone_angle);
-	float multiplier;
+	float multiplier, effective_energy;
 
   if (min_angle_to_point < this -> bounding_cone -> theta_e) {
-	  multiplier = cos(min_angle_to_point);
+	  //multiplier = fmaxf(cos(min_angle_to_point), 0);
+		multiplier = cos(min_angle_to_point);
 	} else {
 	  multiplier = 0;
 	}
 
-  return kd.length() * abs(cos(min_incident_angle)) * this -> energy * \
-		multiplier / dir.squared_length();
+	if (this -> is_leaf) {
+	  effective_energy = this -> object -> compute_directed_energy(point);
+	} else {
+	  effective_energy = this -> energy;
+	}
+
+  //return kd.length() * abs(cos(min_incident_angle)) * effective_energy * \
+	//	multiplier / dir.squared_length();
+	return this -> energy / dir.squared_length();
 }
 
 __device__ Primitive* Node::get_object() {
@@ -89,7 +102,7 @@ __device__ void Node::assign_object(
 		);
 	}
   this -> is_leaf = true;
-	this -> energy = object_ -> energy;
+	this -> energy = object_ -> get_energy();
 }
 
 __device__ void Node::assign_point(Point* point_) {

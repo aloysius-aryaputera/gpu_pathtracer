@@ -62,6 +62,7 @@ class Triangle: public Primitive {
     __device__ void assign_tangent(vec3 tangent_, int idx);
     __device__ float get_hittable_pdf(vec3 origin, vec3 dir);
     __device__ float compute_directed_energy(vec3 point);
+    __device__ float get_energy();
 
     BoundingBox *bounding_box;
     int object_idx;
@@ -71,6 +72,10 @@ class Triangle: public Primitive {
 
 __host__ __device__ float _compute_triangle_area(
   vec3 point_1, vec3 point_2, vec3 point_3);
+
+__device__ float Triangle::get_energy() {
+  return this -> energy;
+}
 
 __device__ float Triangle::compute_directed_energy(vec3 point) {
   vec3 normal = this -> _get_normal(1.0 / 3, 1.0 / 3, 1.0 / 3);

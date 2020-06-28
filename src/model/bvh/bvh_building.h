@@ -269,7 +269,7 @@ __global__ void compute_node_bounding_cones(
 
   Node* current_node = leaf_list[idx];
 	vec3 new_axis; 
-  float new_theta_0, new_theta_e;
+  float new_theta_0, new_theta_e, energy;
 
   if (current_node -> parent == nullptr) {
     printf("Leaf %d has no parent.\n", idx);
@@ -293,6 +293,9 @@ __global__ void compute_node_bounding_cones(
 			current_node -> right -> bounding_cone,
 			new_axis, new_theta_0, new_theta_e
 		);
+
+		energy = current_node -> left -> energy + current_node -> right -> energy;
+		current_node -> set_energy(energy);
 
     if (!(current_node -> bounding_cone -> initialized)) {
       current_node -> bounding_cone -> initialize(

@@ -91,6 +91,10 @@ class Primitive {
 		  return 0;
 		}
 
+    __device__ virtual float get_energy() {
+		  return this -> energy;
+		}
+
     BoundingBox *bounding_box;
     int object_idx;
     float energy;

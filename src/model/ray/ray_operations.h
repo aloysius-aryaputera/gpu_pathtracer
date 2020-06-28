@@ -26,6 +26,10 @@ __device__ Ray generate_ray(
     v3_rand = get_random_unit_vector_hemisphere(rand_state);
   }
   vec3 v3_rand_world = new_xyz_system.to_world_system(v3_rand);
+
+  if (v3_rand_world.vector_is_nan())
+		printf("Vector is nan!\n");
+
   vec3 dir = unit_vector(main_dir + fuziness * v3_rand_world);
   return Ray(init_point, dir);
 }

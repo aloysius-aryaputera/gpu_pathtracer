@@ -1011,6 +1011,17 @@ int main(int argc, char **argv) {
   print_end_process(process, start);
 
   start = clock();
+	process = "Printing target node PDF";
+  print_start_process(process, start);
+  print_node_pdf<<<max(1, num_target_geom[0] - 1), 1>>>(
+    target_node_list, num_target_geom[0] - 1, vec3(0, 0, 0),
+		vec3(0, 0, 1), vec3(.5, .5, .5)
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
   process = "Doing first pass for SSS objects";
   print_start_process(process, start);
   do_sss_first_pass<<<max(1, num_sss_points), 1>>>(
@@ -1021,6 +1032,7 @@ int main(int argc, char **argv) {
     bg_texture_r, bg_texture_g, bg_texture_b, node_list,
     rand_state_sss, target_geom_list,
     target_node_list,
+		target_leaf_list,
     num_target_geom[0],
     hittable_pdf_weight
   );
@@ -1078,6 +1090,7 @@ int main(int argc, char **argv) {
     bg_texture_r, bg_texture_g, bg_texture_b, node_list, my_objects,
     sss_pts_node_list,
     target_node_list,
+		target_leaf_list,
     target_geom_list, num_target_geom[0],
     hittable_pdf_weight
   );

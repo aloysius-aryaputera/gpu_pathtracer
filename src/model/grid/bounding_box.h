@@ -78,7 +78,7 @@ __device__ float BoundingBox::compute_covering_cone_angle(vec3 point) {
   vec3 v1 = unit_vector(this -> center - point);
 
 	vec3 dir;
-	float cos_value, min_cos_value = 0;
+	float cos_value, min_cos_value = 1;
 
   for (int i = 0; i < 8; i++) {
 	  if (i == 0) 
