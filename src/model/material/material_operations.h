@@ -50,6 +50,7 @@ __device__ float _recompute_pdf(
     hittable_pdf += weight * target_geom_array[potential_target_idx[i]] ->
       get_hittable_pdf(rec.point, dir);
   }
+	//printf("hittable_df = %f\n", hittable_pdf);
 
   if (dot(rec.normal, dir) <= 0) {
     cos_pdf = 0;
@@ -86,7 +87,10 @@ __device__ float _recompute_pdf_2(
 		);
     hittable_pdf += node_pdf * target_geom_array[potential_target_idx[i]] ->
       get_hittable_pdf(rec.point, dir);
+		if (node_pdf > 1) printf("node_pdf = %f\n", node_pdf);
+		//printf("node_pdf = %f", node_pdf);
   }
+	//printf("hittable_pdf = %f\n", hittable_pdf);
 
   if (dot(rec.normal, dir) <= 0) {
     cos_pdf = 0;

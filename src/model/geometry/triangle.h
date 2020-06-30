@@ -61,7 +61,7 @@ class Triangle: public Primitive {
     __device__ int get_point_3_idx();
     __device__ void assign_tangent(vec3 tangent_, int idx);
     __device__ float get_hittable_pdf(vec3 origin, vec3 dir);
-    __device__ float compute_directed_energy(vec3 point);
+    __device__ float compute_directed_energy(vec3 point, vec3 point_normal);
     __device__ float get_energy();
 
     BoundingBox *bounding_box;
@@ -77,12 +77,15 @@ __device__ float Triangle::get_energy() {
   return this -> energy;
 }
 
-__device__ float Triangle::compute_directed_energy(vec3 point) {
-  vec3 normal = this -> _get_normal(1.0 / 3, 1.0 / 3, 1.0 / 3);
+__device__ float Triangle::compute_directed_energy(
+	vec3 point, vec3 point_normal
+) {
+  vec3 avg_normal = this -> _get_normal(1.0 / 3, 1.0 / 3, 1.0 / 3);
   vec3 dir = point - (
 	  this -> point_1 + this -> point_2 + this -> point_3) / 3.0;
 	dir = unit_vector(dir);
-  return fmaxf(0, this -> energy * dot(normal, dir));	
+  return fmaxf(
+		0, this -> energy * dot(avg_normal, dir) * dot(-dir, point_normal));	
 }
 
 __device__ float Triangle::get_hittable_pdf(vec3 origin, vec3 dir) {

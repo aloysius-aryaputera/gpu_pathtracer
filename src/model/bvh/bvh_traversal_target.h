@@ -49,12 +49,12 @@ __device__ float get_node_pdf(
   Node* selected_node, vec3 shading_point, vec3 normal, vec3 kd
 ){
   Node* it_node = selected_node, *another_node;
-  float pdf = 1, it_pdf, it_tot_pdf, importance_1, importance_2;
+  float pdf = 1.0, it_pdf, it_tot_pdf, importance_1, importance_2;
   while(it_node -> parent != nullptr) {
     importance_1 = it_node -> compute_importance(
       shading_point, normal, kd
     );
-    if (it_node -> parent -> left == it_node) {
+    if ((it_node -> parent -> left) == it_node) {
       another_node = it_node -> parent -> right;
     } else {
       another_node = it_node -> parent -> left;
@@ -71,6 +71,7 @@ __device__ float get_node_pdf(
 		}
     it_node = it_node -> parent;
   }
+	if (!(pdf == pdf)) printf("pdf is nan\n");
   return pdf;
 }
 
@@ -96,6 +97,7 @@ __device__ Primitive* traverse_bvh_to_pick_a_target(
 		  factor = left_importance / total_importance;
 
 		random_number = curand_uniform(&rand_state[0]);
+		//printf("random_number = %f\n", random_number);
 
 		if (random_number < factor) {
 		  selected_node = selected_node -> left;

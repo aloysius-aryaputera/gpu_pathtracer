@@ -87,7 +87,9 @@ class Primitive {
       return 0;
     }
 
-    __device__ virtual float compute_directed_energy(vec3 point) {
+    __device__ virtual float compute_directed_energy(
+			vec3 point, vec3 point_normal
+		) {
 		  return 0;
 		}
 
