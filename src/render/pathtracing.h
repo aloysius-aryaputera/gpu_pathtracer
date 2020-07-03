@@ -98,7 +98,7 @@ __device__ vec3 _compute_color(
   bool hit, reflected = false, refracted = false, false_hit = false;
   bool entering = false, sss = false;
   vec3 mask = vec3(1, 1, 1), light = vec3(0, 0, 0), light_tmp = vec3(0, 0, 0);
-  vec3 acc_color = vec3(0, 0, 0);
+  vec3 acc_color = vec3(0, 0, 0), add_color = vec3(0, 0, 0);
   vec3 v3_rand, v3_rand_world;
   Ray ray = ray_init;
   reflection_record ref;
@@ -169,12 +169,19 @@ __device__ vec3 _compute_color(
           cur_rec.uv_vector
         );
 
-        acc_color += mask * light_tmp;
+				add_color = mask * light_tmp;
+
+        if (add_color.vector_is_nan()) {
+					printf("The vector is nan, light_tmp = (%f, %f, %f), mask = (%f, %f, %f)!\n", light_tmp.r(), light_tmp.g(), light_tmp.b(), mask.r(), mask.g(), mask.b());
+					add_color = de_nan(add_color);
+				}
+
+        acc_color += add_color;
         mask *= (1.0) * ref.filter * factor;
 
-        if (mask.r() < 0.005 && mask.g() < 0.005 && mask.b() < 0.005) {
-          return acc_color;
-        }
+        //if (mask.r() < 0.005 && mask.g() < 0.005 && mask.b() < 0.005) {
+        //  return acc_color;
+        //}
 
       } else {
         return vec3(0, 0, 0);

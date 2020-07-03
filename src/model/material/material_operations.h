@@ -50,7 +50,6 @@ __device__ float _recompute_pdf(
     hittable_pdf += weight * target_geom_array[potential_target_idx[i]] ->
       get_hittable_pdf(rec.point, dir);
   }
-	//printf("hittable_df = %f\n", hittable_pdf);
 
   if (dot(rec.normal, dir) <= 0) {
     cos_pdf = 0;
@@ -68,7 +67,7 @@ __device__ float _recompute_pdf_2(
 	Node **target_leaf_list, vec3 kd
 ) {
   float hittable_pdf = 0, cos_pdf;
-  float node_pdf;
+  float node_pdf = 0;
   int num_potential_targets = 0;
   int potential_target_idx[400];
 
@@ -88,9 +87,7 @@ __device__ float _recompute_pdf_2(
     hittable_pdf += node_pdf * target_geom_array[potential_target_idx[i]] ->
       get_hittable_pdf(rec.point, dir);
 		if (node_pdf > 1) printf("node_pdf = %f\n", node_pdf);
-		//printf("node_pdf = %f", node_pdf);
   }
-	//printf("hittable_pdf = %f\n", hittable_pdf);
 
   if (dot(rec.normal, dir) <= 0) {
     cos_pdf = 0;
@@ -133,10 +130,9 @@ __device__ void change_ref_ray(
 ) {
   float random_number = curand_uniform(rand_state_mis);
   float pdf, scattering_pdf;
-  vec3 new_target_point;
+  vec3 new_target_point, new_dir;
   Ray default_ray = ref.ray;
 
-  //printf("random_number = %f\n", random_number);
 
   if (random_number > 1 - hittable_pdf_weight) {
     //new_target_point = _pick_a_random_point_on_a_target_geom(
@@ -148,7 +144,10 @@ __device__ void change_ref_ray(
 		  rand_state_mis	
 		);
 
-    ref.ray = Ray(default_ray.p0, new_target_point - default_ray.p0);
+		new_dir = new_target_point - default_ray.p0;
+
+		if (dot(new_dir, rec.normal) > 0)
+      ref.ray = Ray(default_ray.p0, new_dir);
   }
 
   //pdf = _recompute_pdf(
