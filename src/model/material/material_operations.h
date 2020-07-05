@@ -96,7 +96,7 @@ __device__ float _recompute_pdf_2(
   }
 
   return hittable_pdf_weight * hittable_pdf + (
-    1 - hittable_pdf_weight) * cos_pdf;
+			1 - hittable_pdf_weight) * cos_pdf;
 }
 
 __device__ vec3 _pick_a_random_point_on_a_target_geom(
@@ -134,7 +134,7 @@ __device__ void change_ref_ray(
   Ray default_ray = ref.ray;
 
 
-  if (random_number > 1 - hittable_pdf_weight) {
+  if (random_number < hittable_pdf_weight) {
     //new_target_point = _pick_a_random_point_on_a_target_geom(
     //  target_geom_array, num_target_geom, rand_state_mis
     //);
@@ -146,8 +146,8 @@ __device__ void change_ref_ray(
 
 		new_dir = new_target_point - default_ray.p0;
 
-		if (dot(new_dir, rec.normal) > 0)
-      ref.ray = Ray(default_ray.p0, new_dir);
+		//if (dot(new_dir, rec.normal) > 0)
+    ref.ray = Ray(default_ray.p0, new_dir);
   }
 
   //pdf = _recompute_pdf(

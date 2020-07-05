@@ -90,13 +90,13 @@ __device__ float Triangle::compute_directed_energy(
 
 __device__ float Triangle::get_hittable_pdf(vec3 origin, vec3 dir) {
   hit_record rec;
-  bool hit;
+  bool hit_;
 
   dir = unit_vector(dir);
   Ray coming_ray = Ray(origin, dir);
 
-  hit = this -> hit(coming_ray, this -> inv_tolerance, rec);
-  if (hit) {
+  hit_ = this -> hit(coming_ray, this -> inv_tolerance, rec);
+  if (hit_) {
     float distance_squared = rec.t * rec.t;
     float cosine_value = fabs(dot(dir, rec.normal));
     return distance_squared / (cosine_value * this -> area);
