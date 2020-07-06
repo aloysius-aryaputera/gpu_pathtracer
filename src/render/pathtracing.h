@@ -172,9 +172,15 @@ __device__ vec3 _compute_color(
 				add_color = mask * light_tmp;
 
         if (add_color.vector_is_nan()) {
-				  printf("The vector is nan, light_tmp = (%f, %f, %f), mask = (%f, %f, %f), prev_factor = %f!\n", light_tmp.r(), light_tmp.g(), light_tmp.b(), mask.r(), mask.g(), mask.b(), prev_factor);
+				  //printf("The vector is nan, light_tmp = (%f, %f, %f), mask = (%f, %f, %f), prev_factor = %f!\n", light_tmp.r(), light_tmp.g(), light_tmp.b(), mask.r(), mask.g(), mask.b(), prev_factor);
 					add_color = de_nan(add_color);
 				}
+
+        //if (add_color.r() > 1 && add_color.g() > 1 && add_color.b() > 1) {
+				//  printf("light_tmp = (%f, %f, %f), mask = (%f, %f, %f), prev_factor = %f!\n", light_tmp.r(), light_tmp.g(), light_tmp.b(), mask.r(), mask.g(), mask.b(), prev_factor);
+				//	//add_color = de_nan(add_color);
+				//}
+
 				prev_factor = factor;
 
         acc_color += add_color;

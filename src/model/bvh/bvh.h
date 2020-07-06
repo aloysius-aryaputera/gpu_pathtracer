@@ -83,10 +83,10 @@ __device__ float Node::compute_importance(
 	  effective_energy = this -> energy;
 	}
 
-  //return kd.length() * abs(cos(min_incident_angle)) * effective_energy * \
-	//	multiplier / dir.squared_length();
+  return kd.length() * abs(cos(min_incident_angle)) * effective_energy * \
+		multiplier / dir.squared_length();
 	//return this -> energy / dir.squared_length();
-	return 1;
+	//return 1;
 }
 
 __device__ Primitive* Node::get_object() {
