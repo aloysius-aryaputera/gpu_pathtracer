@@ -1010,16 +1010,16 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  start = clock();
-	process = "Printing target node PDF";
-  print_start_process(process, start);
-  print_node_pdf<<<max(1, num_target_geom[0] - 1), 1>>>(
-    target_node_list, num_target_geom[0] - 1, vec3(0, 0, 0),
-		vec3(0, 0, 1), vec3(.5, .5, .5)
-  );
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  print_end_process(process, start);
+  //start = clock();
+	//process = "Printing target node PDF";
+  //print_start_process(process, start);
+  //print_node_pdf<<<max(1, num_target_geom[0] - 1), 1>>>(
+  //  target_node_list, num_target_geom[0] - 1, vec3(0, 0, 0),
+	//	vec3(0, 0, 1), vec3(.5, .5, .5)
+  //);
+  //checkCudaErrors(cudaGetLastError());
+  //checkCudaErrors(cudaDeviceSynchronize());
+  //print_end_process(process, start);
 
   start = clock();
   process = "Doing first pass for SSS objects";
