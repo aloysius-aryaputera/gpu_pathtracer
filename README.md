@@ -13,6 +13,17 @@
 ![](images/20200110_dragon.jpg)
 
 
+## Features
+* OBJ file reader
+* Bounding volume hierarchy acceleration structure
+* Diffuse, metal, and dieletric materials
+* Colour (texture) and normal mappings
+* Camera depth of field
+* Nested dielectrics
+* Sub-surface scattering
+* Importance sampling
+
+
 ## References
 
 * https://github.com/RayTracing/raytracing.github.io
