@@ -10,13 +10,11 @@
 __device__ bool traverse_bvh_pts(
   Node* bvh_root, BoundingSphere bounding_sphere, //Point** point_array,
   vec3 &color
-  //int max_num_pts, int &num_pts
 );
 
 __device__ bool traverse_bvh_pts(
   Node* bvh_root, BoundingSphere bounding_sphere, //Point** point_array,
   vec3 &color
-  //int max_num_pts, int &num_pts
 ) {
   Node* stack[400];
   Node *child_l, *child_r;
@@ -29,7 +27,6 @@ __device__ bool traverse_bvh_pts(
   float weight, sum_weight = 0;
   color = vec3(0, 0, 0);
 
-  // num_pts = 0;
   stack[idx_stack_top] = nullptr;
   idx_stack_top++;
 
@@ -42,11 +39,21 @@ __device__ bool traverse_bvh_pts(
     intersection_l = child_l -> bounding_box -> is_intersection(bounding_sphere);
     intersection_r = child_r -> bounding_box -> is_intersection(bounding_sphere);
 
+    //if (intersection_l || intersection_r) printf("Intersection found!\n");
+
+		//printf(
+		//		"child_l = (%f, %f, %f), child_r = (%f, %f, %f)\n",
+		//		child_l -> bounding_box -> x_center,
+		//		child_l -> bounding_box -> y_center,
+		//		child_l -> bounding_box -> z_center,
+		//		child_r -> bounding_box -> x_center,
+		//		child_r -> bounding_box -> y_center,
+		//		child_r -> bounding_box -> z_center
+		//);
+
     if (intersection_l && child_l -> is_leaf) {
       is_inside = bounding_sphere.is_inside(child_l -> point -> location);
-      // if (is_inside && num_pts < max_num_pts) {
       if (is_inside) {
-        // point_array[num_pts++] = child_l -> point;
         point = child_l -> point;
         pts_found = true;
         weight = 1.0 / compute_distance(
@@ -59,9 +66,7 @@ __device__ bool traverse_bvh_pts(
 
     if (intersection_r && child_r -> is_leaf) {
       is_inside = bounding_sphere.is_inside(child_r -> point -> location);
-      // if (is_inside && num_pts < max_num_pts) {
       if (is_inside) {
-        // point_array[num_pts++] = child_r -> point;
         point = child_r -> point;
         pts_found = true;
         weight = 1.0 / compute_distance(
@@ -105,8 +110,10 @@ __device__ bool traverse_bvh_pts(
 
   } while(idx_stack_top > 0 && idx_stack_top < 400 && node != nullptr);
 
-  if (pts_found)
+  if (pts_found) {
+		//printf("pts_found!\n");
     color /= sum_weight;
+	}
 
   return pts_found;
 }

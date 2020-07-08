@@ -43,6 +43,33 @@ class vec3  {
     float e[3];
 };
 
+__host__ __device__ inline vec3 rotate(vec3 vector, vec3 axis, float theta);
+inline std::istream& operator>>(std::istream &is, vec3 &t);
+inline std::ostream& operator<<(std::ostream &os, const vec3 &t);
+__host__ __device__ inline vec3 operator+(const vec3 &v1, const vec3 &v2);
+__host__ __device__ inline vec3 operator-(const vec3 &v1, const vec3 &v2);
+__host__ __device__ inline vec3 operator*(const vec3 &v1, const vec3 &v2);
+__host__ __device__ inline vec3 operator/(const vec3 &v1, const vec3 &v2);
+__host__ __device__ inline vec3 operator*(float t, const vec3 &v);
+__host__ __device__ inline vec3 operator/(vec3 v, float t);
+__host__ __device__ inline vec3 operator*(const vec3 &v, float t);
+__host__ __device__ inline float dot(const vec3 &v1, const vec3 &v2);
+__host__ __device__ inline vec3 cross(const vec3 &v1, const vec3 &v2);
+__host__ __device__ inline float compute_distance(
+  const vec3 &v1, const vec3 &v2
+);
+__host__ __device__ inline vec3 permute(vec3 v, int kx, int ky, int kz);
+__device__ inline vec3 abs(vec3 v);
+__device__ inline int max_dimension(vec3 v);
+__device__ inline vec3 de_nan(const vec3& c);
+__host__ __device__ inline vec3 unit_vector(vec3 v);
+__host__ __device__ void print_vec3(vec3 v);
+
+__host__ __device__ inline vec3 rotate(vec3 vector, vec3 axis, float theta) {
+  return cos(theta) * vector + sin(theta) * cross(vector, axis) + 
+    (1 - cos(theta)) * dot(axis, vector) * axis; 
+}
+
 inline std::istream& operator>>(std::istream &is, vec3 &t) {
   is >> t.e[0] >> t.e[1] >> t.e[2];
   return is;

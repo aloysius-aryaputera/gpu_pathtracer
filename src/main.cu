@@ -9,6 +9,10 @@
 
 #include "external/libjpeg_cpp/jpeg.h"
 
+#include "input/input_param.h"
+#include "input/read_file_util.h"
+#include "input/read_image_util.h"
+#include "lib/world.h"
 #include "model/bvh/bvh.h"
 #include "model/bvh/bvh_building.h"
 #include "model/bvh/bvh_building_pts.h"
@@ -18,52 +22,33 @@
 #include "model/geometry/triangle.h"
 #include "model/geometry/triangle_operations.h"
 #include "model/grid/bounding_box.h"
-#include "model/grid/cell.h"
-#include "model/grid/grid.h"
-#include "model/material.h"
+#include "model/grid/bounding_box_operations.h"
+#include "model/material/material.h"
 #include "model/object/object.h"
 #include "model/object/object_operations.h"
 #include "model/point/point.h"
 #include "model/point/point_operations.h"
 #include "model/ray/ray.h"
-#include "model/scene.h"
+#include "model/vector_and_matrix/mat3.h"
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
+#include "render/pathtracing_target_geom_operations.h"
 #include "util/general.h"
 #include "util/image_util.h"
-#include "util/read_file_util.h"
-#include "util/read_image_util.h"
 #include "util/string_util.h"
-#include "world_lib.h"
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
-void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line) {
-    if (result) {
-        std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
-        file << ":" << line << " '" << func << "' \n";
-        // Make sure we call CUDA Device Reset before exiting
-        cudaDeviceReset();
-        exit(99);
-    }
-}
-
-__global__ void create_scene(
-  Scene** scene, Camera** camera, Grid** grid, int *num_objects
+void check_cuda(
+  cudaError_t result, char const *const func, const char *const file, 
+	int const line
 ) {
-  if (threadIdx.x == 0 && blockIdx.x == 0) {
-    *(scene) = new Scene(camera[0], grid[0], num_objects[0]);
+  if (result) {
+    std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
+    file << ":" << line << " '" << func << "' \n";
+    // Make sure we call CUDA Device Reset before exiting
+    cudaDeviceReset();
+    exit(99);
   }
-}
-
-__global__ void free_world(
-  Scene** scene, Grid **grid, Primitive **geom_array, Camera **camera, int n
-) {
-    for (int i = 0; i < n; i++){
-      delete *(geom_array + i);
-    }
-    delete *camera;
-    delete *grid;
-    delete *scene;
 }
 
 int main(int argc, char **argv) {
@@ -76,38 +61,45 @@ int main(int argc, char **argv) {
   process = "Rendering project";
   print_start_process(process, first_start);
 
-  std::string input_folder_path = argv[1];
-  std::string obj_filename = argv[2];
-  std::string texture_bg_path = argv[3];
-  std::string image_output_path = argv[4];
+  std::string master_file_path = argv[1];
+  std::string image_output_path = argv[2];
 
-  int im_width = std::stoi(argv[5]);
-  int im_height = std::stoi(argv[6]);
-  int pathtracing_sample_size = std::stoi(argv[7]);
-  int pathtracing_level = std::stoi(argv[8]);
-  float eye_x = std::stof(argv[9]);
-  float eye_y = std::stof(argv[10]);
-  float eye_z = std::stof(argv[11]);
-  float center_x = std::stof(argv[12]);
-  float center_y = std::stof(argv[13]);
-  float center_z = std::stof(argv[14]);
-  float up_x = std::stof(argv[15]);
-  float up_y = std::stof(argv[16]);
-  float up_z = std::stof(argv[17]);
-  float fovy = std::stof(argv[18]);
-  float aperture = std::stof(argv[19]);
-  float focus_dist = std::stof(argv[20]);
+  InputParam input_param = InputParam();
+  input_param.extract_parameters(master_file_path);
 
-  float sky_emission_r = std::stof(argv[21]);
-  float sky_emission_g = std::stof(argv[22]);
-  float sky_emission_b = std::stof(argv[23]);
+  std::string input_folder_path = input_param.input_folder_path;
+  std::string obj_filename = input_param.obj_filename;
+  std::string texture_bg_path = input_param.texture_bg_path;
 
-  int sss_pts_per_object = std::stoi(argv[24]);
+  int im_width = input_param.image_width;
+  int im_height = input_param.image_height;
+  int pathtracing_sample_size = input_param.pathtracing_sample_size;
+  int pathtracing_level = input_param.pathtracing_level;
+  float eye_x = input_param.eye_x;
+  float eye_y = input_param.eye_y;
+  float eye_z = input_param.eye_z;
+  float center_x = input_param.center_x;
+  float center_y = input_param.center_y;
+  float center_z = input_param.center_z;
+  float up_x = input_param.up_x;
+  float up_y = input_param.up_y;
+  float up_z = input_param.up_z;
+  float fovy = input_param.fovy;
+  float aperture = input_param.aperture;
+  float focus_dist = input_param.focus_dist;
+
+  float sky_emission_r = input_param.sky_emission_r;
+  float sky_emission_g = input_param.sky_emission_g;
+  float sky_emission_b = input_param.sky_emission_b;
+
+  int sss_pts_per_object = input_param.sss_pts_per_object;
+  float hittable_pdf_weight = input_param.hittable_pdf_weight;
 
   int tx = 8, ty = 8;
 
   BoundingBox **world_bounding_box;
   Primitive **my_geom;
+  Primitive **target_geom_list;
   Object **my_objects;
   unsigned int *morton_code_list;
   Material **my_material;
@@ -118,7 +110,7 @@ int main(int argc, char **argv) {
   int num_pixels = im_width * im_height;
   int max_num_materials = 100;
   int num_objects, num_vertices, num_faces, num_vt, num_vn;
-  int *num_sss_objects;
+  int *num_sss_objects, *num_target_geom;
   size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state_sss, *rand_state_image;
   size_t rand_state_image_size = num_pixels * sizeof(curandState);
@@ -131,6 +123,7 @@ int main(int argc, char **argv) {
   float *tf_x, *tf_y, *tf_z;
   float *path_length;
   float *material_image_r, *material_image_g, *material_image_b;
+	float *bm;
   int *num_materials;
   int *material_image_height_diffuse, *material_image_width_diffuse, \
     *material_image_offset_diffuse, *material_priority;
@@ -146,16 +139,6 @@ int main(int argc, char **argv) {
 
   float *bg_texture_r, *bg_texture_g, *bg_texture_b;
   int bg_height, bg_width;
-
-  ///////////////////////////////////////////////////////////////////////////
-  // For offline testing
-  ///////////////////////////////////////////////////////////////////////////
-  // float ka_x[100], ka_y[100], ka_z[100], kd_x[100], kd_y[100], kd_z[100];
-  // float ks_x[100], ks_y[100], ks_z[100], ke_x[100], ke_y[100], ke_z[100];
-  // float material_image_r[1000], material_image_g[1000], material_image_b[1000];
-  // int num_materials[1], material_image_height[100], material_image_width[100], material_image_offset[100];
-  // int len_texture[1];
-  ///////////////////////////////////////////////////////////////////////////
 
   start = clock();
   process = "Extracting background texture";
@@ -278,6 +261,9 @@ int main(int argc, char **argv) {
     (void **)&path_length, max_num_materials * sizeof(float)));
 
   checkCudaErrors(cudaMallocManaged(
+    (void **)&bm, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged(
     (void **)&t_r, max_num_materials * sizeof(float)));
   checkCudaErrors(cudaMallocManaged(
     (void **)&n_s, max_num_materials * sizeof(float)));
@@ -353,7 +339,7 @@ int main(int argc, char **argv) {
     ke_x, ke_y, ke_z,
     tf_x, tf_y, tf_z,
     path_length,
-    t_r, n_s, n_i,
+    t_r, n_s, n_i, bm,
     material_priority,
     material_image_height_diffuse, material_image_width_diffuse,
     material_image_offset_diffuse,
@@ -489,7 +475,7 @@ int main(int argc, char **argv) {
     ke_x, ke_y, ke_z,
     tf_x, tf_y, tf_z,
     path_length,
-    t_r, n_s, n_i,
+    t_r, n_s, n_i, bm,
     material_priority,
     material_image_height_diffuse,
     material_image_width_diffuse,
@@ -561,8 +547,8 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Creating the world";
   print_start_process(process, start);
-  dim3 blocks_world(num_triangles[0] / 1024 + 1);
-  dim3 threads_world(1024);
+  dim3 blocks_world(num_triangles[0] / 1 + 1);
+  dim3 threads_world(1);
   create_world<<<blocks_world, threads_world>>>(
     my_geom,
     triangle_area,
@@ -800,7 +786,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Compute pts node bounding boxes";
   print_start_process(process, start);
-  compute_node_bounding_boxes<<<blocks_world, threads_world>>>(
+  compute_node_bounding_boxes<<<max(1, num_sss_points), 1>>>(
     sss_pts_leaf_list, sss_pts_node_list, num_sss_points
   );
   checkCudaErrors(cudaGetLastError());
@@ -913,6 +899,128 @@ int main(int argc, char **argv) {
 
   vec3 sky_emission = vec3(sky_emission_r, sky_emission_g, sky_emission_b);
 
+  checkCudaErrors(cudaMallocManaged((void **)&num_target_geom, sizeof(int)));
+
+  start = clock();
+  process = "Computing the number of target geometries";
+  print_start_process(process, start);
+  compute_num_target_geom<<<1, 1>>>(
+    my_geom, num_triangles[0], num_target_geom
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&target_geom_list, num_target_geom[0] * sizeof(Primitive *)));
+
+  start = clock();
+  process = "Collecting target geometries";
+  print_start_process(process, start);
+  collect_target_geom<<<1, 1>>>(
+    my_geom, num_triangles[0], target_geom_list
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Sorting the target geometries based on morton code";
+  print_start_process(process, start);
+  thrust::stable_sort(
+    thrust::device, target_geom_list, target_geom_list + num_target_geom[0],
+    sort_geom);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  Node** target_node_list, **target_leaf_list;
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&target_node_list, (num_target_geom[0] - 1) * sizeof(Node *)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&target_leaf_list, num_target_geom[0] * sizeof(Node *)));
+
+  start = clock();
+  process = "Building target leaves";
+  print_start_process(process, start);
+  build_leaf_list<<<max(1, num_target_geom[0]), 1>>>(
+    target_leaf_list, target_geom_list, num_target_geom[0], true
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Building target nodes";
+  print_start_process(process, start);
+  build_node_list<<<max(1, num_target_geom[0]), 1>>>(
+    target_node_list, num_target_geom[0], true
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  unsigned int *target_morton_code_list;
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&target_morton_code_list,
+    max(1, num_target_geom[0]) * sizeof(unsigned int)));
+
+  start = clock();
+  process = "Extracting target morton codes";
+  print_start_process(process, start);
+  extract_morton_code_list<<<max(1, num_target_geom[0]), 1>>>(
+    target_geom_list, target_morton_code_list, num_target_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Setting target node relationship";
+  print_start_process(process, start);
+  set_node_relationship<<<max(1, num_target_geom[0]), 1>>>(
+    target_node_list, target_leaf_list, target_morton_code_list,
+    num_target_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  checkCudaErrors(cudaFree(target_morton_code_list));
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+
+  start = clock();
+  process = "Compute target node bounding boxes";
+  print_start_process(process, start);
+  compute_node_bounding_boxes<<<max(1, num_target_geom[0]), 1>>>(
+    target_leaf_list, target_node_list, num_target_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Compute target node bounding cones";
+  print_start_process(process, start);
+  compute_node_bounding_cones<<<max(1, num_target_geom[0]), 1>>>(
+    target_leaf_list, target_node_list, num_target_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  //start = clock();
+	//process = "Printing target node PDF";
+  //print_start_process(process, start);
+  //print_node_pdf<<<max(1, num_target_geom[0] - 1), 1>>>(
+  //  target_node_list, num_target_geom[0] - 1, vec3(0, 0, 0),
+	//	vec3(0, 0, 1), vec3(.5, .5, .5)
+  //);
+  //checkCudaErrors(cudaGetLastError());
+  //checkCudaErrors(cudaDeviceSynchronize());
+  //print_end_process(process, start);
+
   start = clock();
   process = "Doing first pass for SSS objects";
   print_start_process(process, start);
@@ -922,13 +1030,17 @@ int main(int argc, char **argv) {
     pathtracing_level, sky_emission,
     bg_height, bg_width,
     bg_texture_r, bg_texture_g, bg_texture_b, node_list,
-    rand_state_sss
+    rand_state_sss, target_geom_list,
+    target_node_list,
+		target_leaf_list,
+    num_target_geom[0],
+    hittable_pdf_weight
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
+	checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
   dim3 blocks(im_width / tx + 1, im_height / ty + 1);
   dim3 threads(tx, ty);
 
@@ -976,7 +1088,11 @@ int main(int argc, char **argv) {
     image_output, my_camera, rand_state_image, pathtracing_sample_size,
     pathtracing_level, sky_emission, bg_height, bg_width,
     bg_texture_r, bg_texture_g, bg_texture_b, node_list, my_objects,
-    sss_pts_node_list
+    sss_pts_node_list,
+    target_node_list,
+		target_leaf_list,
+    target_geom_list, num_target_geom[0],
+    hittable_pdf_weight
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());

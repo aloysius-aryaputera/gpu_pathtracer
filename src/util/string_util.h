@@ -2,14 +2,37 @@
 #define STRING_UTIL_H
 
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <time.h>
+#include <vector>
+
+void print_end_process(std::string process, clock_t start);
+void print_start_process(std::string process, clock_t &start);
+std::string clean_string_end(std::string str);
+std::string trim(const std::string& str,
+                 const std::string& whitespace = " \t");
+std::vector<std::string> split(const std::string& s, char delimiter);
+std::string reduce(const std::string& str,
+                   const std::string& fill = " ",
+                   const std::string& whitespace = " \t");
+void print_horizontal_line(char character, int length);
+
+std::vector<std::string> split(const std::string& s, char delimiter) {
+   std::vector<std::string> tokens;
+   std::string token;
+   std::istringstream tokenStream(s);
+   while (std::getline(tokenStream, token, delimiter))
+   {
+      tokens.push_back(token);
+   }
+   return tokens;
+}
 
 // https://stackoverflow.com/questions/1798112/removing-leading-and-trailing-spaces-from-a-string
 
 std::string trim(const std::string& str,
-                 const std::string& whitespace = " \t")
-{
+                 const std::string& whitespace) {
     const auto strBegin = str.find_first_not_of(whitespace);
     if (strBegin == std::string::npos)
         return ""; // no content
@@ -21,9 +44,8 @@ std::string trim(const std::string& str,
 }
 
 std::string reduce(const std::string& str,
-                   const std::string& fill = " ",
-                   const std::string& whitespace = " \t")
-{
+                   const std::string& fill,
+                   const std::string& whitespace) {
     // trim first
     auto result = trim(str, whitespace);
 
@@ -58,13 +80,22 @@ std::string clean_string_end(std::string str) {
   return new_str;
 }
 
+void print_horizontal_line(char character, int length) {
+  for (int i = 0; i < length; i++) {
+    printf("%c", character);
+  }
+  printf("\n");
+}	
+
 void print_start_process(std::string process, clock_t &start) {
   time_t my_time = time(NULL);
   start = clock();
-  printf("==============================================================\n");
+  print_horizontal_line('=', 75);
+  //printf("==============================================================\n");
   printf("Time now        : %s", ctime(&my_time));
   printf("Started process : %s\n", process.c_str());
-  printf("--------------------------------------------------------------\n");
+  print_horizontal_line('-', 75);
+  //printf("--------------------------------------------------------------\n");
 }
 
 void print_end_process(std::string process, clock_t start) {
@@ -75,7 +106,8 @@ void print_end_process(std::string process, clock_t start) {
   printf("Time now          : %s", ctime(&my_time));
   printf("Done with process : %s\n", process.c_str());
   printf("The process took  : %5.2f seconds.\n", time_seconds);
-  printf("==============================================================\n\n\n");
+  print_horizontal_line('=', 75);
+  //printf("==============================================================\n\n\n");
 }
 
 #endif

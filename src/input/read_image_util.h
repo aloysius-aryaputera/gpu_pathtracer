@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "read_file_util.h"
+#include "../util/string_util.h"
 
 void extract_image_resource_requirement(
   std::string folder_path,
@@ -156,13 +156,14 @@ void _extract_image_resource_requirement_single_mtl(
           chunks[0] == "map_Ns" || chunks[0] == "map_Ke" ||
           chunks[0] == "map_Bump"
         ) {
+					int chunks_size = chunks.size();
           std::pair<bool, int> result = find_in_vector<std::string>(
-            image_file_name, chunks[1]);
+            image_file_name, chunks[chunks_size - 1]);
           if (!result.first) {
             extract_single_image_requirement(
-              folder_path, chunks[1], height, width
+              folder_path, chunks[chunks_size - 1], height, width
             );
-            image_file_name.push_back(chunks[1]);
+            image_file_name.push_back(chunks[chunks_size - 1]);
             image_offset.push_back(next_offset);
             image_height.push_back(height);
             image_width.push_back(width);

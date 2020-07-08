@@ -3,6 +3,8 @@
 
 #include <curand_kernel.h>
 
+__host__ float clamp(const float &lo, const float &hi, const float &v);
+
 __global__ void init_curand_state(
   int num_rand_state, curandState *rand_state
 ) {
@@ -17,5 +19,8 @@ __device__ float de_nan(float number) {
   if (!(number == number)) { number = 0; }
   return number;
 }
+
+__host__ float clamp(const float &lo, const float &hi, const float &v)
+{ return std::max(lo, std::min(hi, v)); }
 
 #endif

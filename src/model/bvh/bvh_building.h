@@ -5,13 +5,16 @@
 #include "../geometry/primitive.h"
 #include "../grid/bounding_box.h"
 #include "../ray/ray.h"
+#include "../vector_and_matrix/vec3.h"
 #include "bvh.h"
 
 __global__ void extract_morton_code_list(
   Primitive** object_list, unsigned int* morton_code_list, int num_objects
 );
 
-__global__ void build_node_list(Node** node_list, int num_objects);
+__global__ void build_node_list(
+	Node** node_list, int num_objects, bool bounding_cone_required=false
+);
 
 __global__ void set_node_relationship(
   Node** node_list, Node** leaf_list, unsigned int* morton_code_list,
@@ -19,7 +22,8 @@ __global__ void set_node_relationship(
 );
 
 __global__ void build_leaf_list(
-  Node** leaf_list, Primitive **object_list, int num_objects
+  Node** leaf_list, Primitive **object_list, int num_objects,
+	bool bounding_cone_required=false
 );
 
 __global__ void compute_morton_code_batch(
@@ -29,6 +33,10 @@ __global__ void compute_morton_code_batch(
 __global__ void check(Node** leaf_list, Node** node_list, int num_objects);
 
 __global__ void compute_node_bounding_boxes(
+  Node** leaf_list, Node** node_list, int num_objects
+);
+
+__global__ void compute_node_bounding_cones(
   Node** leaf_list, Node** node_list, int num_objects
 );
 
@@ -46,18 +54,24 @@ __global__ void compute_morton_code_batch(
 }
 
 __global__ void build_leaf_list(
-  Node** leaf_list, Primitive **object_list, int num_triangles
+  Node** leaf_list, Primitive **object_list, int num_triangles,
+	bool bounding_cone_required
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_triangles) return;
   leaf_list[idx] = new Node(idx);
-  (leaf_list[idx]) -> assign_object(object_list[idx]);
+  (leaf_list[idx]) -> assign_object(object_list[idx], bounding_cone_required);
 }
 
-__global__ void build_node_list(Node** node_list, int num_objects) {
+__global__ void build_node_list(
+	Node** node_list, int num_objects, bool bounding_cone_required
+) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_objects - 1) return;
   node_list[idx] = new Node(idx);
+  if (bounding_cone_required) {
+		(node_list[idx]) -> bounding_cone = new BoundingCone();
+	}
   (node_list[idx]) -> bounding_box = new BoundingBox();
 }
 
@@ -243,11 +257,51 @@ __global__ void compute_node_bounding_boxes(
         bb_z_min, bb_z_max
       );
     }
+  }
+}
 
-    // if (current_node -> parent == nullptr) {
-    //   printf("We have reached the root!\n");
-    //   current_node -> bounding_box -> print_bounding_box();
-    // }
+__global__ void compute_node_bounding_cones(
+  Node** leaf_list, Node** node_list, int num_objects
+) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (idx >= num_objects) return;
+
+  Node* current_node = leaf_list[idx];
+	vec3 new_axis; 
+  float new_theta_0, new_theta_e, energy;
+
+  if (current_node -> parent == nullptr) {
+    printf("Leaf %d has no parent.\n", idx);
+    return;
+  }
+
+  while(
+    current_node -> is_leaf ||
+    (!current_node -> is_leaf && current_node -> parent != nullptr)
+  ) {
+    current_node = current_node -> parent;
+
+    if (
+      !(current_node -> left -> bounding_cone -> initialized) ||
+      !(current_node -> right -> bounding_cone -> initialized)
+    )
+      return;
+
+		cone_union(
+			current_node -> left -> bounding_cone,
+			current_node -> right -> bounding_cone,
+			new_axis, new_theta_0, new_theta_e
+		);
+
+		energy = current_node -> left -> energy + current_node -> right -> energy;
+		current_node -> set_energy(energy);
+
+    if (!(current_node -> bounding_cone -> initialized)) {
+      current_node -> bounding_cone -> initialize(
+        new_axis, new_theta_0, new_theta_e
+      );
+    }
   }
 }
 

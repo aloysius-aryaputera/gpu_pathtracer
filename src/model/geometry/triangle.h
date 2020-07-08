@@ -8,7 +8,7 @@
 #include "../../param.h"
 #include "../cartesian_system.h"
 #include "../grid/bounding_box.h"
-#include "../material.h"
+#include "../material/material.h"
 #include "../object/object.h"
 #include "../ray/ray.h"
 #include "../vector_and_matrix/vec3.h"
@@ -21,6 +21,8 @@ class Triangle: public Primitive {
     __device__ vec3 _get_normal(
       float weight_1, float weight_2, float weight_3);
     __device__ void _compute_tangent();
+    __device__ bool _check_if_light_emitting();
+		__device__ float _compute_energy();
 
     float inv_tolerance, tolerance;
     vec3 t, b;
@@ -29,6 +31,7 @@ class Triangle: public Primitive {
     vec3 tangent_1, tangent_2, tangent_3;
     Material *material;
     bool sub_surface_scattering;
+    bool light_source;
     float area;
     int point_1_idx, point_2_idx, point_3_idx;
 
@@ -46,23 +49,89 @@ class Triangle: public Primitive {
     __device__ Material* get_material();
     __device__ BoundingBox* get_bounding_box();
     __device__ bool is_sub_surface_scattering();
+    __device__ bool is_light_source();
     __device__ hit_record get_random_point_on_surface(curandState *rand_state);
     __device__ float get_area();
     __device__ int get_object_idx();
+    __device__ vec3 get_fixed_normal();
     __device__ vec3 get_t();
     __device__ vec3 get_b();
     __device__ int get_point_1_idx();
     __device__ int get_point_2_idx();
     __device__ int get_point_3_idx();
     __device__ void assign_tangent(vec3 tangent_, int idx);
+    __device__ float get_hittable_pdf(vec3 origin, vec3 dir);
+    __device__ float compute_directed_energy(vec3 point, vec3 point_normal);
+    __device__ float get_energy();
 
     BoundingBox *bounding_box;
     int object_idx;
+		float energy;
 
 };
 
 __host__ __device__ float _compute_triangle_area(
   vec3 point_1, vec3 point_2, vec3 point_3);
+
+__device__ float Triangle::get_energy() {
+  return this -> energy;
+}
+
+__device__ float Triangle::compute_directed_energy(
+	vec3 point, vec3 point_normal
+) {
+  vec3 avg_normal = this -> _get_normal(1.0 / 3, 1.0 / 3, 1.0 / 3);
+  vec3 dir = point - (
+	  this -> point_1 + this -> point_2 + this -> point_3) / 3.0;
+	dir = unit_vector(dir);
+  return fmaxf(
+		0, this -> energy * dot(avg_normal, dir) * dot(-dir, point_normal));	
+}
+
+__device__ float Triangle::get_hittable_pdf(vec3 origin, vec3 dir) {
+  hit_record rec;
+  bool hit_;
+
+  dir = unit_vector(dir);
+  Ray coming_ray = Ray(origin, dir);
+
+  hit_ = this -> hit(coming_ray, this -> inv_tolerance, rec);
+  if (hit_) {
+    float distance_squared = rec.t * rec.t;
+    float cosine_value = fabs(dot(dir, rec.normal));
+    return distance_squared / (cosine_value * this -> area);
+  } else {
+    return 0;
+  }
+}
+
+__device__ float Triangle::_compute_energy() {
+  vec3 emission_tex_1 = this -> material -> get_texture_emission(
+    this -> tex_1);
+  vec3 emission_tex_2 = this -> material -> get_texture_emission(
+    this -> tex_2);
+  vec3 emission_tex_3 = this -> material -> get_texture_emission(
+    this -> tex_3);
+  vec3 avg_emission_tex = (
+		emission_tex_1 + emission_tex_2 + emission_tex_3) / 3.0;
+	return avg_emission_tex.length() * this -> area;
+}
+
+__device__ bool Triangle::_check_if_light_emitting() {
+  vec3 emission_tex_1 = this -> material -> get_texture_emission(
+    this -> tex_1);
+  vec3 emission_tex_2 = this -> material -> get_texture_emission(
+    this -> tex_2);
+  vec3 emission_tex_3 = this -> material -> get_texture_emission(
+    this -> tex_3);
+  return compute_distance(emission_tex_1, vec3(0, 0, 0)) > this -> tolerance ||
+    compute_distance(emission_tex_2, vec3(0, 0, 0)) > this -> tolerance ||
+    compute_distance(emission_tex_3, vec3(0, 0, 0)) > this -> tolerance;
+}
+
+__device__ vec3 Triangle::get_fixed_normal() {
+  return this -> normal;
+}
 
 __device__ int Triangle::get_object_idx() {
   return this -> object_idx;
@@ -202,7 +271,9 @@ __device__ Triangle::Triangle(
   this -> tex_3 = tex_3_;
 
   this -> sub_surface_scattering = \
-    this -> get_material() -> sub_surface_scattering;
+    this -> material -> sub_surface_scattering;
+  this -> light_source = \
+    this -> _check_if_light_emitting();
 
   if (
     compute_distance(norm_1_, vec3(0, 0, 0)) < this -> tolerance ||
@@ -216,6 +287,7 @@ __device__ Triangle::Triangle(
   this -> _compute_bounding_box();
   this -> _compute_tangent();
 
+	this -> energy = this -> _compute_energy();
 }
 
 __host__ __device__ float Triangle::_compute_tolerance() {
@@ -236,6 +308,10 @@ __host__ __device__ float Triangle::_compute_tolerance() {
 
 __device__ bool Triangle::is_sub_surface_scattering() {
   return this -> sub_surface_scattering;
+}
+
+__device__ bool Triangle::is_light_source() {
+  return this -> light_source;
 }
 
 __device__ Material* Triangle::get_material() {

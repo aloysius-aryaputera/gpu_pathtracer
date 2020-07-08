@@ -4,16 +4,17 @@
 
 #include <curand_kernel.h>
 
-#include "../util/vector_util.h"
-#include "cartesian_system.h"
-#include "ray/ray.h"
-#include "ray/ray_operations.h"
-#include "vector_and_matrix/vec3.h"
+#include "../../util/vector_util.h"
+#include "../cartesian_system.h"
+#include "../ray/ray.h"
+#include "../ray/ray_operations.h"
+#include "../vector_and_matrix/vec3.h"
 
 struct reflection_record
 {
   Ray ray;
   vec3 filter;
+  bool diffuse;
 };
 
 __device__ vec3 reflect(vec3 v, vec3 normal);
@@ -37,7 +38,6 @@ class Material {
       vec3 uv_vector, vec3 filter, float* texture_r, float* texture_g,
       float* texture_b, int texture_height, int texture_width
     );
-    __device__ vec3 _get_texture_specular(vec3 uv_vector);
     __device__ float _get_texture_n_s(vec3 uv_vector);
     __device__ reflection_record _refract(
       vec3 hit_point, vec3 v_in, vec3 normal,
@@ -60,7 +60,7 @@ class Material {
     int texture_width_emission, texture_height_emission;
     int texture_width_n_s, texture_height_n_s;
     int texture_width_bump, texture_height_bump;
-    float t_r, n_s;
+    float n_s, bm;
     float *texture_r_diffuse, *texture_g_diffuse, *texture_b_diffuse;
     float *texture_r_specular, *texture_g_specular, *texture_b_specular;
     float *texture_r_emission, *texture_g_emission, *texture_b_emission;
@@ -73,7 +73,7 @@ class Material {
       vec3 ambient_, vec3 diffuse_, vec3 specular_, vec3 emission_,
       vec3 transmission_,
       float path_length_,
-      float t_r_, float n_s_, float n_i_,
+      float t_r_, float n_s_, float n_i_, float bm_,
       int priority_,
       int texture_height_diffuse_,
       int texture_width_diffuse_,
@@ -111,10 +111,11 @@ class Material {
     __device__ vec3 get_texture_emission(vec3 uv_vector);
     __device__ vec3 get_texture_diffuse(vec3 uv_vector);
     __device__ vec3 get_texture_bump(vec3 uv_vector);
+    __device__ vec3 get_texture_specular(vec3 uv_vector);
 
     vec3 emission;
     int priority;
-    float n_i, path_length;
+    float n_i, path_length, t_r;
     bool sub_surface_scattering;
 };
 
@@ -222,6 +223,7 @@ __device__ reflection_record Material::_refract(
       Ray ray_out = Ray(hit_point, v_out);
       ref.ray = ray_out;
       ref.filter = this -> transmission * this -> t_r;
+      ref.diffuse = false;
 
       reflected = false;
       refracted = true;
@@ -233,6 +235,7 @@ __device__ reflection_record Material::_refract(
       vec3 v_out = reflect(v_in, normal);
       ref.ray = Ray(hit_point, v_out);
       ref.filter = this -> transmission * this -> t_r;
+      ref.diffuse = false;
 
       reflected = true;
       refracted = false;
@@ -255,6 +258,7 @@ __device__ reflection_record Material::_refract(
       vec3 v_out = reflect(v_in, -normal);
       ref.ray = Ray(hit_point, v_out);
       ref.filter = this -> transmission * this -> t_r;
+      ref.diffuse = false;
 
       reflected = true;
       refracted = false;
@@ -275,6 +279,7 @@ __device__ reflection_record Material::_refract(
       Ray ray_out = Ray(hit_point, v_out);
       ref.ray = ray_out;
       ref.filter = this -> transmission * this -> t_r;
+      ref.diffuse = false;
 
       reflected = false;
       refracted = true;
@@ -292,6 +297,7 @@ __host__ __device__ Material::Material(
   float t_r_,
   float n_s_,
   float n_i_,
+	float bm_,
   int priority_,
   int texture_height_diffuse_,
   int texture_width_diffuse_,
@@ -328,6 +334,7 @@ __host__ __device__ Material::Material(
   this -> n_s = n_s_;
   this -> n_i = n_i_;
   this -> t_r = t_r_;
+	this -> bm = bm_;
   this -> priority = priority_;
 
   this -> texture_height_diffuse = texture_height_diffuse_;
@@ -394,6 +401,7 @@ __device__ void Material::check_next_path(
     sss = false;
     ref.ray = Ray(hit_point, v_in);
     ref.filter = vec3(1.0, 1.0, 1.0);
+    ref.diffuse = false;
 
     if (dot(v_in, normal) <= 0) {
       entering = true;
@@ -432,9 +440,14 @@ __device__ void Material::check_next_path(
     actual_mat = this;
   }
 
-  float factor = \
-    actual_mat -> diffuse_mag / (
-      actual_mat -> diffuse_mag + actual_mat -> specular_mag);
+  //float factor = \
+  //  actual_mat -> diffuse_mag / (
+  //    actual_mat -> diffuse_mag + actual_mat -> specular_mag);
+	float factor = \
+		actual_mat -> get_texture_diffuse(uv_vector).length() / (
+		  actual_mat -> get_texture_diffuse(uv_vector).length() + 
+	    actual_mat -> get_texture_specular(uv_vector).length()		
+		);
   float fuziness, local_n_s = this -> _get_texture_n_s(uv_vector);
 
   if (local_n_s == 0) {
@@ -444,9 +457,11 @@ __device__ void Material::check_next_path(
   }
 
   if (random_number <= factor) {
-    ref.ray = generate_ray(hit_point, vec3(0, 0, 0), normal, 1, rand_state);
-    cos_theta = dot(ref.ray.dir, normal);
-    ref.filter = actual_mat -> get_texture_diffuse(uv_vector) * cos_theta;
+    ref.ray = generate_ray(
+			hit_point, vec3(0, 0, 0), normal, 1, true, rand_state);
+    //cos_theta = dot(ref.ray.dir, normal);
+    ref.filter = actual_mat -> get_texture_diffuse(uv_vector);
+    ref.diffuse = true;
     refracted = false;
     reflected = true;
     false_hit = false;
@@ -459,11 +474,12 @@ __device__ void Material::check_next_path(
 
     return;
   } else {
-    reflected_ray_dir = reflect(coming_ray.dir, normal);
+    reflected_ray_dir = reflect(v_in, normal);
     ref.ray = generate_ray(
-      hit_point, reflected_ray_dir, normal, fuziness, rand_state);
+      hit_point, reflected_ray_dir, normal, fuziness, true, rand_state);
     cos_theta = dot(ref.ray.dir, normal);
-    ref.filter = actual_mat -> _get_texture_specular(uv_vector) * cos_theta;
+    ref.filter = actual_mat -> get_texture_specular(uv_vector);
+    ref.diffuse = false;
     if (cos_theta <= 0) {
       refracted = false;
       reflected = false;
@@ -526,7 +542,7 @@ __device__ vec3 Material::get_texture_bump(vec3 uv_vector) {
   if (this -> texture_height_bump < 2 || this -> texture_width_bump < 2) {
     return vec3(0.0, 0.0, 0.0);
   } else {
-    return 2 * (
+    return 2 * this -> bm * (
       this -> _get_texture(
         uv_vector, vec3(1.0, 1.0, 1.0), this -> texture_r_bump,
         this -> texture_g_bump, this -> texture_b_bump,
@@ -536,7 +552,7 @@ __device__ vec3 Material::get_texture_bump(vec3 uv_vector) {
   }
 }
 
-__device__ vec3 Material::_get_texture_specular(vec3 uv_vector) {
+__device__ vec3 Material::get_texture_specular(vec3 uv_vector) {
   return this -> _get_texture(
     uv_vector, this -> specular, this -> texture_r_specular,
     this -> texture_g_specular, this -> texture_b_specular,
