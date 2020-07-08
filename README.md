@@ -40,6 +40,7 @@
 
 ## Credits
 
+* The Dr.Booms Exo model was by [LDsanya](https://www.blendswap.com/profile/740888).
 * The leaf neon light was by [colinquinn](https://free3d.com/user/colinquinn).
 * The neon sign was by [Alexander](https://www.cgtrader.com/alexbes).
 * The T-Rex model was by [joel3d](https://www.turbosquid.com/Search/Artists/joel3d).
