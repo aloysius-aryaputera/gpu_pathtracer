@@ -64,12 +64,19 @@ __device__ float _recompute_pdf(
 __device__ float _recompute_pdf_2(
   hit_record rec, vec3 origin, vec3 dir, Primitive **target_geom_array,
   int num_target_geom, float hittable_pdf_weight, Node **target_node_list,
-	Node **target_leaf_list, vec3 kd
+	Node **target_leaf_list, vec3 kd, bool diffuse, float n, 
+	vec3 perfect_reflection_dir
 ) {
-  float hittable_pdf = 0, cos_pdf;
+  float hittable_pdf = 0, sampling_pdf;
   float node_pdf = 0;
   int num_potential_targets = 0;
   int potential_target_idx[400];
+  vec3 pivot;
+
+	if (diffuse) 
+		pivot = rec.normal;
+	else 
+		pivot = perfect_reflection_dir;
 
   dir = unit_vector(dir);
 
@@ -81,7 +88,7 @@ __device__ float _recompute_pdf_2(
 
   for(int i = 0; i < num_potential_targets; i++) {
 		node_pdf = get_node_pdf(
-		  target_leaf_list[potential_target_idx[i]], origin, rec.normal, 
+		  target_leaf_list[potential_target_idx[i]], origin, pivot, 
 			kd
 		);
     hittable_pdf += node_pdf * target_geom_array[potential_target_idx[i]] ->
@@ -90,13 +97,15 @@ __device__ float _recompute_pdf_2(
   }
 
   if (dot(rec.normal, dir) <= 0) {
-    cos_pdf = 0;
+    sampling_pdf = 0;
+  } else if (diffuse) {
+    sampling_pdf = dot(rec.normal, dir) / M_PI;
   } else {
-    cos_pdf = dot(rec.normal, dir) / M_PI;
-  }
+		sampling_pdf = (n + 1) * powf(dot(perfect_reflection_dir, ray.dir), n) / (2 * M_PI);
+	}
 
   return hittable_pdf_weight * hittable_pdf + (
-			1 - hittable_pdf_weight) * cos_pdf;
+			1 - hittable_pdf_weight) * sampling_pdf;
 }
 
 __device__ vec3 _pick_a_random_point_on_a_target_geom(
@@ -130,9 +139,13 @@ __device__ void change_ref_ray(
 ) {
   float random_number = curand_uniform(rand_state_mis);
   float pdf, scattering_pdf;
-  vec3 new_target_point, new_dir;
+  vec3 new_target_point, new_dir, pivot;
   Ray default_ray = ref.ray;
 
+	if (ref.diffuse) 
+		pivot = rec.normal;
+	else 
+		pivot = ref.perfect_reflection_dir;
 
   if (random_number < hittable_pdf_weight) {
     //new_target_point = _pick_a_random_point_on_a_target_geom(
@@ -140,7 +153,7 @@ __device__ void change_ref_ray(
     //);
 
     new_target_point = _pick_a_random_point_on_a_target_geom_2(
-		  target_node_list[0], default_ray.p0, rec.normal, ref.filter,
+		  target_node_list[0], default_ray.p0, pivot, ref.filter,
 		  rand_state_mis	
 		);
 
@@ -150,6 +163,14 @@ __device__ void change_ref_ray(
     ref.ray = Ray(default_ray.p0, new_dir);
   }
 
+	if (ref.reflected) {
+	  ref.filter = ref.ks * (ref.n + 2) * powf(dot(ref.ray.dir, pivot), ref.n) / 2;
+		ref.filter = vec3(
+			fmaxf(0, ref.filter.r()), fmaxf(0, ref.filter.g()), 
+			fmaxf(0, ref.filter.b())
+		);
+	}
+
   //pdf = _recompute_pdf(
   //  rec, ref.ray.p0, ref.ray.dir, target_geom_array, num_target_geom,
   //  hittable_pdf_weight, target_node_list
@@ -157,7 +178,8 @@ __device__ void change_ref_ray(
 
   pdf = _recompute_pdf_2(
     rec, ref.ray.p0, ref.ray.dir, target_geom_array, num_target_geom,
-    hittable_pdf_weight, target_node_list, target_leaf_list, ref.filter
+    hittable_pdf_weight, target_node_list, target_leaf_list, ref.filter,
+    ref.diffuse, ref.n, ref.perfect_reflection_dir
   );
 
   if (dot(rec.normal, ref.ray.dir) <= 0) {

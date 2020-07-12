@@ -13,8 +13,13 @@
 struct reflection_record
 {
   Ray ray;
+	vec3 ks;
   vec3 filter;
+	vec3 perfect_reflection_dir;
   bool diffuse;
+	bool reflected;
+
+	float kd_length, ks_length, n;
 };
 
 __device__ vec3 reflect(vec3 v, vec3 normal);
@@ -443,25 +448,33 @@ __device__ void Material::check_next_path(
   //float factor = \
   //  actual_mat -> diffuse_mag / (
   //    actual_mat -> diffuse_mag + actual_mat -> specular_mag);
-	float factor = \
-		actual_mat -> get_texture_diffuse(uv_vector).length() / (
-		  actual_mat -> get_texture_diffuse(uv_vector).length() + 
-	    actual_mat -> get_texture_specular(uv_vector).length()		
-		);
-  float fuziness, local_n_s = this -> _get_texture_n_s(uv_vector);
+	
+	float kd_length = actual_mat -> get_texture_diffuse(uv_vector).length();
+	float ks_length = actual_mat -> get_texture_specular(uv_vector).length();
+	float factor = kd_length / (kd_length + ks_length);
+	ref.kd_length = kd_length;
+	ref.ks_length = ks_length;
+	//float factor = \
+	//	actual_mat -> get_texture_diffuse(uv_vector).length() / (
+	//	  actual_mat -> get_texture_diffuse(uv_vector).length() + 
+	//    actual_mat -> get_texture_specular(uv_vector).length()		
+	//	);
+  //float fuziness;
+	float local_n_s = this -> _get_texture_n_s(uv_vector);
 
-  if (local_n_s == 0) {
-    fuziness = 99999;
-  } else {
-    fuziness = 1 / local_n_s;
-  }
+  //if (local_n_s == 0) {
+  //  fuziness = 99999;
+  //} else {
+  //  fuziness = 1 / local_n_s;
+  //}
 
   if (random_number <= factor) {
     ref.ray = generate_ray(
-			hit_point, vec3(0, 0, 0), normal, 1, true, rand_state);
+			hit_point, vec3(0, 0, 0), normal, 0, 1, rand_state);
     //cos_theta = dot(ref.ray.dir, normal);
     ref.filter = actual_mat -> get_texture_diffuse(uv_vector);
     ref.diffuse = true;
+		ref.reflected = false;
     refracted = false;
     reflected = true;
     false_hit = false;
@@ -476,10 +489,16 @@ __device__ void Material::check_next_path(
   } else {
     reflected_ray_dir = reflect(v_in, normal);
     ref.ray = generate_ray(
-      hit_point, reflected_ray_dir, normal, fuziness, true, rand_state);
+      hit_point, reflected_ray_dir, normal, 1, local_n_s, rand_state);
     cos_theta = dot(ref.ray.dir, normal);
-    ref.filter = actual_mat -> get_texture_specular(uv_vector);
+    ref.filter = actual_mat -> get_texture_specular(uv_vector) * \
+		  (local_n_s + 2) * powf(
+				dot(reflected_ray_dir, ref.ray.dir), local_n_s) / 2;
     ref.diffuse = false;
+		ref.reflected = true;
+		ref.perfect_reflection_dir = reflected_ray_dir;
+		ref.n = local_n_s;
+		ref.ks = actual_mat -> get_texture_specular(uv_vector);
     if (cos_theta <= 0) {
       refracted = false;
       reflected = false;
@@ -564,6 +583,7 @@ __device__ float Material::_get_texture_n_s(vec3 uv_vector) {
   vec3 filter = vec3(
     this -> n_s / powf(3, .5), this -> n_s / powf(3, .5),
     this -> n_s / powf(3, .5));
+  //vec3 filter = this -> n_s * vec3(1.0, 1.0, 1.0);
   vec3 n_s_vector =  this -> _get_texture(
     uv_vector, filter,
     this -> texture_r_n_s,

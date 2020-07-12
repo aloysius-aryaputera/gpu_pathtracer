@@ -127,7 +127,7 @@ __device__ vec3 _compute_color(
         ref, rand_state
       );
 
-      if (ref.diffuse && !(sss && !sss_first_pass)) {
+      if ((ref.reflected || ref.diffuse) && !(sss && !sss_first_pass)) {
         // Modify ref.ray
         change_ref_ray(
           cur_rec, ref, target_geom_array, num_target_geom, factor,
@@ -242,7 +242,7 @@ void do_sss_first_pass(
 
   for(int idx = 0; idx < sample_size; idx++) {
     init_ray = generate_ray(
-      init_point, vec3(0, 0, 0), normal, 1, true, &local_rand_state);
+      init_point, vec3(0, 0, 0), normal, 0, 1, &local_rand_state);
     color_tmp = _compute_color(
       init_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
       bg_b, &local_rand_state, node_list, empty_object_list, empty_node_list,
