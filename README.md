@@ -36,6 +36,7 @@
 * C. Schmidt and B. Budge, "Simple Nested Dielectrics in Ray Traced Images," *Journal of Graphics Tools*, 2002.
 * E. Lengyel, "Chapter 7: Shading," *Foundations of Game Engine Development, Vol. 2*, 2019.
 * A. C. Estevez and C. Kulla, "Importance Sampling of Many Lights with Adaptive Tree Splitting," *Proc. ACM Comput.Graph. Interact. Tech.*, 2018.
+* E. P. Lafortune and Y. D. Willems, "Using the Modified Phong Reflectance Model for Physically Based Rendering," *Report CW 197*, 1994.
 
 
 ## Credits
