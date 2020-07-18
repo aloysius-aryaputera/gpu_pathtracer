@@ -95,7 +95,7 @@ __device__ vec3 _compute_color(
   float hittable_pdf_weight
 ) {
   hit_record cur_rec;
-  bool hit, reflected = false, refracted = false, false_hit = false;
+  bool hit, reflected = false, refracted = false;
   bool entering = false, sss = false;
   vec3 mask = vec3(1, 1, 1), light = vec3(0, 0, 0), light_tmp = vec3(0, 0, 0);
   vec3 acc_color = vec3(0, 0, 0), add_color = vec3(0, 0, 0);
@@ -121,7 +121,7 @@ __device__ vec3 _compute_color(
 
       cur_rec.object -> get_material() -> check_next_path(
         cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
-        reflected, false_hit, refracted,
+        reflected, refracted,
         entering, sss,
         material_list, material_list_length,
         ref, rand_state
@@ -142,22 +142,22 @@ __device__ vec3 _compute_color(
         return compute_color_sss(cur_rec, object_list, sss_pts_node_list);
       }
 
-      if (false_hit && entering)
+      if (ref.false_hit && entering)
         add_new_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
 
-      if (false_hit && !entering)
+      if (ref.false_hit && !entering)
         remove_a_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
 
-      if (!false_hit && refracted && entering)
+      if (!(ref.false_hit) && refracted && entering)
         add_new_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
 
-      if (!false_hit && refracted && !entering)
+      if (!(ref.false_hit) && refracted && !entering)
         remove_a_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
