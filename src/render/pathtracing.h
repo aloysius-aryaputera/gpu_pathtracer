@@ -127,10 +127,16 @@ __device__ vec3 _compute_color(
         ref, rand_state
       );
 
-      if ((ref.reflected || ref.diffuse) && !(sss && !sss_first_pass)) {
+			//if (!(ref.false_hit))
+			//	last_valid_ref = ref;
+
+      if (
+				!(ref.false_hit) && !(sss && !sss_first_pass)
+			) {
         // Modify ref.ray
         change_ref_ray(
-          cur_rec, ref, target_geom_array, num_target_geom, factor,
+          cur_rec, ref,
+					target_geom_array, num_target_geom, factor,
           target_node_list,
 					target_leaf_list,
           hittable_pdf_weight,
@@ -142,27 +148,27 @@ __device__ vec3 _compute_color(
         return compute_color_sss(cur_rec, object_list, sss_pts_node_list);
       }
 
-      if (ref.false_hit && entering)
+      if (ref.false_hit && ref.entering)
         add_new_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
 
-      if (ref.false_hit && !entering)
+      if (ref.false_hit && !(ref.entering))
         remove_a_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
 
-      if (!(ref.false_hit) && refracted && entering)
+      if (!(ref.false_hit) && ref.refracted && ref.entering)
         add_new_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
 
-      if (!(ref.false_hit) && refracted && !entering)
+      if (!(ref.false_hit) && ref.refracted && !(ref.entering))
         remove_a_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
 
-      if (reflected || refracted) {
+      if (!(ref.false_hit)) {
 
         ray = ref.ray;
         light_tmp = cur_rec.object -> get_material() -> get_texture_emission(
@@ -175,8 +181,15 @@ __device__ vec3 _compute_color(
 					add_color = de_nan(add_color);
 				}
 
+				//float xx = fminf(.999, factor);
+        //printf("new filter = [%f, %f, %f], xx = %f\n", ref.filter.r() / xx, ref.filter.g() / xx, ref.filter.b() / xx, xx);
+        
+				vec3 mask_factor = ref.filter * factor;
+        mask_factor = vec3(fmaxf(0, mask_factor.r()), fmaxf(0, mask_factor.g()), fmaxf(0, mask_factor.b()));
+				mask_factor = vec3(fminf(.99, mask_factor.r()), fminf(.99, mask_factor.g()), fminf(.99, mask_factor.b()));
+
         acc_color += add_color;
-        mask *= (1.0) * ref.filter * fminf(.999, factor);
+        mask *= mask_factor;
 
       } else {
 				return acc_color;

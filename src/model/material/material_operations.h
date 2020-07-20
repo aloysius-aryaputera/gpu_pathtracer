@@ -9,7 +9,8 @@
 #include "material.h"
 
 __device__ void change_ref_ray(
-  hit_record rec, reflection_record &ref, Primitive **target_geom_array,
+  hit_record rec, reflection_record &ref,
+	Primitive **target_geom_array,
   int num_target_geom, float &factor, Node **target_node_list,
 	Node **target_leaf_list,
   curandState *rand_state_mis
@@ -65,7 +66,7 @@ __device__ float _recompute_pdf_2(
   hit_record rec, vec3 origin, vec3 dir, Primitive **target_geom_array,
   int num_target_geom, float hittable_pdf_weight, Node **target_node_list,
 	Node **target_leaf_list, vec3 kd, bool diffuse, float n, 
-	vec3 perfect_reflection_dir
+	vec3 perfect_reflection_dir, reflection_record ref
 ) {
   float hittable_pdf = 0, sampling_pdf;
   float node_pdf = 0;
@@ -96,16 +97,57 @@ __device__ float _recompute_pdf_2(
 		if (node_pdf > 1) printf("node_pdf = %f\n", node_pdf);
   }
 
-  if (dot(rec.normal, dir) <= 0) {
-    sampling_pdf = 0;
-  } else if (diffuse) {
-    sampling_pdf = dot(rec.normal, dir) / M_PI;
-  } else {
-		sampling_pdf = (n + 1) * powf(dot(perfect_reflection_dir, ray.dir), n) / (2 * M_PI);
+  //if (dot(rec.normal, dir) <= 0) {
+  //  sampling_pdf = 0;
+  //} else if (diffuse) {
+  //  sampling_pdf = dot(rec.normal, dir) / M_PI;
+  //} else {
+	//	sampling_pdf = (n + 1) * powf(dot(perfect_reflection_dir, ray.dir), n) / (2 * M_PI);
+	//}
+
+  if (ref.diffuse) {
+		if (dot(rec.normal, ref.ray.dir) <= 0) {
+		  sampling_pdf = 0;
+		} else {
+			sampling_pdf = dot(rec.normal, ref.ray.dir) / M_PI;
+		}
+	} else if (ref.reflected) {
+		if (
+			(
+			  dot(rec.coming_ray.dir, rec.normal) >= 0 &&
+				dot(ref.ray.dir, rec.normal) <= 0
+			) || 
+			(
+			  dot(rec.coming_ray.dir, rec.normal) <= 0 &&
+				dot(ref.ray.dir, rec.normal) >= 0
+			)
+		) {
+			sampling_pdf = (n + 1) * powf(dot(perfect_reflection_dir, ray.dir), n) / (2 * M_PI);
+		} else {
+		  sampling_pdf = 0;
+		}
+	} else {
+	  if (	
+		  (
+			  dot(rec.coming_ray.dir, rec.normal) >= 0 &&
+			  dot(ref.ray.dir, rec.normal) >= 0
+		  ) || 
+		  (
+			  dot(rec.coming_ray.dir, rec.normal) <= 0 &&
+			  dot(ref.ray.dir, rec.normal) <= 0
+		  )
+	  ) {
+			sampling_pdf = (n + 1) * powf(dot(perfect_reflection_dir, ray.dir), n) / (2 * M_PI);
+		} else {
+		  sampling_pdf = 0;
+		}
 	}
 
-  return hittable_pdf_weight * hittable_pdf + (
-			1 - hittable_pdf_weight) * sampling_pdf;
+	sampling_pdf = fmaxf(0, sampling_pdf);
+
+  //return hittable_pdf_weight * hittable_pdf + (
+	//		1 - hittable_pdf_weight) * sampling_pdf;
+	return sampling_pdf;
 }
 
 __device__ vec3 _pick_a_random_point_on_a_target_geom(
@@ -132,7 +174,8 @@ __device__ vec3 _pick_a_random_point_on_a_target_geom_2(
 }
 
 __device__ void change_ref_ray(
-  hit_record rec, reflection_record &ref, Primitive **target_geom_array,
+  hit_record rec, reflection_record &ref,
+	Primitive **target_geom_array,
   int num_target_geom, float &factor, Node **target_node_list,
 	Node **target_leaf_list,
   float hittable_pdf_weight, curandState *rand_state_mis
@@ -161,14 +204,14 @@ __device__ void change_ref_ray(
 
 		//if (dot(new_dir, rec.normal) > 0)
     ref.ray = Ray(default_ray.p0, new_dir);
-  }
 
-	if (ref.reflected) {
-	  ref.filter = ref.ks * (ref.n + 2) * powf(dot(ref.ray.dir, pivot), ref.n) / 2;
-		ref.filter = vec3(
-			fmaxf(0, ref.filter.r()), fmaxf(0, ref.filter.g()), 
-			fmaxf(0, ref.filter.b())
-		);
+	  if (ref.reflected) {
+	    ref.filter = ref.ks * (ref.n + 2) * powf(dot(ref.ray.dir, pivot), ref.n) / 2;
+		  ref.filter = vec3(
+			  fmaxf(0, ref.filter.r()), fmaxf(0, ref.filter.g()), 
+			  fmaxf(0, ref.filter.b())
+		  );
+	  }
 	}
 
   //pdf = _recompute_pdf(
@@ -177,16 +220,50 @@ __device__ void change_ref_ray(
   //);
 
   pdf = _recompute_pdf_2(
-    rec, ref.ray.p0, ref.ray.dir, target_geom_array, num_target_geom,
+    rec, ref.ray.p0, ref.ray.dir, 
+		target_geom_array, num_target_geom,
     hittable_pdf_weight, target_node_list, target_leaf_list, ref.filter,
-    ref.diffuse, ref.n, ref.perfect_reflection_dir
+    ref.diffuse, ref.n, ref.perfect_reflection_dir, ref
   );
 
-  if (dot(rec.normal, ref.ray.dir) <= 0) {
-    scattering_pdf = 0;
-  } else {
-    scattering_pdf = dot(rec.normal, ref.ray.dir);
-  }
+  if (ref.reflected || ref.diffuse) {
+		if (
+			(
+			  dot(rec.coming_ray.dir, rec.normal) >= 0 &&
+				dot(ref.ray.dir, rec.normal) <= 0
+			) || 
+			(
+			  dot(rec.coming_ray.dir, rec.normal) <= 0 &&
+				dot(ref.ray.dir, rec.normal) >= 0
+			)
+		) {
+			scattering_pdf = fmaxf(
+			  dot(rec.normal, ref.ray.dir),
+				dot(-rec.normal, ref.ray.dir)
+			);
+		} else {
+		  scattering_pdf = 0;
+		}
+	} else {
+	if (	
+		(
+			dot(rec.coming_ray.dir, rec.normal) >= 0 &&
+			dot(ref.ray.dir, rec.normal) >= 0
+		) || 
+		(
+			dot(rec.coming_ray.dir, rec.normal) <= 0 &&
+			dot(ref.ray.dir, rec.normal) <= 0
+		)
+	) {
+			scattering_pdf = fmaxf(
+			  dot(rec.normal, ref.ray.dir),
+				dot(-rec.normal, ref.ray.dir)
+			);
+		} else {
+		  scattering_pdf = 0;
+		}
+	}
+
 
   factor = scattering_pdf / M_PI / pdf;
 }

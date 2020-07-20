@@ -71,7 +71,7 @@ __device__ float get_node_pdf(
 		}
     it_node = it_node -> parent;
   }
-	if (!(pdf == pdf)) printf("pdf is nan\n");
+	//if (!(pdf == pdf)) printf("pdf is nan\n");
   return pdf;
 }
 

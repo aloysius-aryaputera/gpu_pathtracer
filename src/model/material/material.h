@@ -45,6 +45,7 @@ class Material {
     __device__ float _get_texture_n_s(vec3 uv_vector);
     __device__ reflection_record _refract(
       vec3 hit_point, vec3 v_in, vec3 normal,
+			vec3 uv_vector,
       bool &reflected, bool &refracted,
       bool &entering, bool &sss,
       Material *highest_prioritised_material,
@@ -192,6 +193,7 @@ __device__ bool Material::_check_if_false_hit(
 
 __device__ reflection_record Material::_refract(
   vec3 hit_point, vec3 v_in, vec3 normal,
+	vec3 uv_vector,
   bool &reflected, bool &refracted,
   bool &entering, bool &sss,
   Material *highest_prioritised_material,
@@ -205,6 +207,9 @@ __device__ reflection_record Material::_refract(
     highest_prioritised_material);
   float second_highest_prioritised_material_ref_idx = \
     get_material_refraction_index(second_highest_prioritised_material);
+
+	float local_n_s = this -> _get_texture_n_s(uv_vector);
+	ref.n = local_n_s;
 
   if (dot(v_in, normal) <= 0) {
     float cos_theta_1 = dot(v_in, -normal);
@@ -224,28 +229,60 @@ __device__ reflection_record Material::_refract(
         - 1 / tan_theta_2 * v_in_parallel.length() * normal;
       vec3 v_out = v_in_parallel + v_out_perpendicular;
       v_out.make_unit_vector();
-      Ray ray_out = Ray(hit_point, v_out);
-      ref.ray = ray_out;
-      ref.filter = this -> transmission * this -> t_r;
+      
+			ref.perfect_reflection_dir = v_out;
+      ref.ray = generate_ray(
+			  hit_point, v_out, normal, 1, local_n_s, rand_state
+			);
+
+      //Ray ray_out = Ray(hit_point, v_out);
+      //ref.ray = ray_out;
+      //ref.filter = this -> transmission * this -> t_r;
+      
+			ref.filter = this -> transmission * this -> t_r * \
+				(local_n_s + 2) * powf(
+				  dot(v_out, ref.ray.dir), local_n_s) / 2;
+
+		  ref.filter = vec3(
+			  fmaxf(0, ref.filter.r()), fmaxf(0, ref.filter.g()), 
+			  fmaxf(0, ref.filter.b())
+		  );
       ref.diffuse = false;
 
-      reflected = false;
-      refracted = true;
+      ref.reflected = false;
+      ref.refracted = true;
       ref.false_hit = false;
       sss = false;
-      entering = true;
+      ref.entering = true;
 
     } else {
       vec3 v_out = reflect(v_in, normal);
-      ref.ray = Ray(hit_point, v_out);
-      ref.filter = this -> transmission * this -> t_r;
+      v_out.make_unit_vector();
+
+			ref.perfect_reflection_dir = v_out;
+			ref.ray = generate_ray(
+			  hit_point, v_out, normal, 1, local_n_s, rand_state
+			);
+
+      //ref.ray = Ray(hit_point, v_out);
+      //ref.filter = this -> transmission * this -> t_r;
+			
+
+			ref.filter = this -> transmission * this -> t_r * \
+				(local_n_s + 2) * powf(
+				  dot(v_out, ref.ray.dir), local_n_s) / 2;
+
+		  ref.filter = vec3(
+			  fmaxf(0, ref.filter.r()), fmaxf(0, ref.filter.g()), 
+			  fmaxf(0, ref.filter.b())
+		  );
       ref.diffuse = false;
 
-      reflected = true;
-      refracted = false;
+      ref.reflected = true;
+      ref.refracted = false;
       ref.false_hit = false;
       sss = false;
-      entering = false;
+      ref.entering = false;
 
     }
   } else {
@@ -260,16 +297,32 @@ __device__ reflection_record Material::_refract(
       sin_theta_1 >= sin_theta_1_max | random_number <= reflection_probability
     ) {
       vec3 v_out = reflect(v_in, -normal);
-      ref.ray = Ray(hit_point, v_out);
-      ref.filter = this -> transmission * this -> t_r;
+      v_out.make_unit_vector();
+
+			ref.perfect_reflection_dir = v_out;
+			ref.ray = generate_ray(
+			  hit_point, v_out, normal, 1, local_n_s, rand_state
+			);
+
+      //ref.ray = Ray(hit_point, v_out);
+      //ref.filter = this -> transmission * this -> t_r;
+
+			ref.filter = this -> transmission * this -> t_r * \
+				(local_n_s + 2) * powf(
+				  dot(v_out, ref.ray.dir), local_n_s) / 2;
+
+		  ref.filter = vec3(
+			  fmaxf(0, ref.filter.r()), fmaxf(0, ref.filter.g()), 
+			  fmaxf(0, ref.filter.b())
+		  );
       ref.diffuse = false;
 
-      reflected = true;
-      refracted = false;
+      ref.reflected = true;
+      ref.refracted = false;
       ref.false_hit = false;
-      entering = false;
+      ref.entering = false;
 
-    }else {
+    } else {
       vec3 v_in_perpendicular = cos_theta_1 * normal;
       vec3 v_in_parallel = v_in - v_in_perpendicular;
       float sin_theta_2 = \
@@ -280,15 +333,30 @@ __device__ reflection_record Material::_refract(
         1 / tan_theta_2 * v_in_parallel.length() * normal;
       vec3 v_out = v_in_parallel + v_out_perpendicular;
       v_out.make_unit_vector();
-      Ray ray_out = Ray(hit_point, v_out);
-      ref.ray = ray_out;
-      ref.filter = this -> transmission * this -> t_r;
-      ref.diffuse = false;
 
-      reflected = false;
-      refracted = true;
+      ref.perfect_reflection_dir = v_out;
+			ref.ray = generate_ray(
+			  hit_point, v_out, normal, 1, local_n_s, rand_state
+			);
+
+      //Ray ray_out = Ray(hit_point, v_out);
+      //ref.ray = ray_out;
+      //ref.filter = this -> transmission * this -> t_r;
+      
+			ref.filter = this -> transmission * this -> t_r * \
+				(local_n_s + 2) * powf(
+				  dot(v_out, ref.ray.dir), local_n_s) / 2;
+			
+		  ref.filter = vec3(
+			  fmaxf(0, ref.filter.r()), fmaxf(0, ref.filter.g()), 
+			  fmaxf(0, ref.filter.b())
+		  );
+			ref.diffuse = false;
+
+      ref.reflected = false;
+      ref.refracted = true;
       ref.false_hit = false;
-      entering = false;
+      ref.entering = false;
     }
   }
   return ref;
@@ -399,17 +467,17 @@ __device__ void Material::check_next_path(
   );
 
   if (ref.false_hit) {
-    reflected = false;
-    refracted = true;
+    ref.reflected = false;
+    ref.refracted = true;
     sss = false;
     ref.ray = Ray(hit_point, v_in);
     ref.filter = vec3(1.0, 1.0, 1.0);
     ref.diffuse = false;
 
     if (dot(v_in, normal) <= 0) {
-      entering = true;
+      ref.entering = true;
     } else {
-      entering = false;
+      ref.entering = false;
     }
 
     return;
@@ -424,6 +492,7 @@ __device__ void Material::check_next_path(
   ) {
     ref = this -> _refract(
       hit_point, coming_ray.dir, normal,
+			uv_vector,
       reflected, refracted,
       entering, sss,
       highest_prioritised_material,
@@ -448,7 +517,7 @@ __device__ void Material::check_next_path(
 	float factor = kd_length / (kd_length + ks_length);
 	ref.kd_length = kd_length;
 	ref.ks_length = ks_length;
-	float local_n_s = this -> _get_texture_n_s(uv_vector);
+	float local_n_s = actual_mat -> _get_texture_n_s(uv_vector);
 
   if (random_number <= factor) {
     ref.ray = generate_ray(
@@ -474,6 +543,10 @@ __device__ void Material::check_next_path(
     ref.filter = actual_mat -> get_texture_specular(uv_vector) * \
 		  (local_n_s + 2) * powf(
 				dot(reflected_ray_dir, ref.ray.dir), local_n_s) / 2;
+		ref.filter = vec3(
+			fmaxf(0, ref.filter.r()), fmaxf(0, ref.filter.g()), 
+			fmaxf(0, ref.filter.b())
+		);
     ref.diffuse = false;
 		ref.reflected = true;
 		ref.perfect_reflection_dir = reflected_ray_dir;
