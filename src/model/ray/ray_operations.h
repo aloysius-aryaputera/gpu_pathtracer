@@ -26,14 +26,26 @@ __device__ Ray generate_ray(
 		v3_rand_world = new_xyz_system.to_world_system(v3_rand);
 		dir = unit_vector(v3_rand_world);
   } else {
+
+    if (main_dir.vector_is_nan()) {
+		  printf("main_dir is nan\n");
+		}
+
 		new_xyz_system = CartesianSystem(main_dir);
     v3_rand = get_random_unit_vector_phong(n, rand_state);
 		v3_rand_world = new_xyz_system.to_world_system(v3_rand);
 		dir = unit_vector(v3_rand_world);
+
+		if (
+			(dot(main_dir, normal) >= 0 && dot(dir, normal) <= 0) ||
+			(dot(main_dir, normal) <= 0 && dot(dir, normal) >= 0)
+		) {
+			dir = main_dir;
+		}
   }
 
-  if (v3_rand_world.vector_is_nan())
-		printf("Vector is nan!\n");
+  //if (v3_rand_world.vector_is_nan())
+	//	printf("Vector is nan!\n");
 
   //vec3 dir = unit_vector(main_dir + fuziness * v3_rand_world);
   return Ray(init_point, dir);

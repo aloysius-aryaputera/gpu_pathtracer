@@ -17,9 +17,9 @@ __device__ vec3 get_random_unit_vector_disk(curandState *rand_state);
 __device__ vec3 get_random_unit_vector_phong(float n, curandState *rand_state) {
   float r1 = curand_uniform(&rand_state[0]);
 	float r2 = curand_uniform(&rand_state[0]);
-	float x = sqrt(1 - powf(r1, 2 / (n + 1))) * cos(2 * M_PI * r2);
-	float y = sqrt(1 - powf(r1, 2 / (n + 1))) * sin(2 * M_PI * r2);
-  float z = powf(r1, 1 / (n + 1));
+	float x = sqrt(1 - powf(r1, 2.0 / (n + 1))) * cos(2 * M_PI * r2);
+	float y = sqrt(1 - powf(r1, 2.0 / (n + 1))) * sin(2 * M_PI * r2);
+  float z = powf(r1, 1.0 / (n + 1));
 	vec3 output_vector = vec3(x, y, z);
 	output_vector.make_unit_vector();
 	return output_vector;

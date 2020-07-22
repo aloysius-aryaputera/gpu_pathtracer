@@ -241,6 +241,8 @@ __device__ void change_ref_ray(
 			  dot(rec.normal, ref.ray.dir),
 				dot(-rec.normal, ref.ray.dir)
 			);
+			if (ref.reflected)
+			  scattering_pdf = 1;
 		} else {
 		  scattering_pdf = 0;
 		}
@@ -259,13 +261,15 @@ __device__ void change_ref_ray(
 			  dot(rec.normal, ref.ray.dir),
 				dot(-rec.normal, ref.ray.dir)
 			);
+			scattering_pdf = 1;
 		} else {
 		  scattering_pdf = 0;
 		}
 	}
 
 
-  factor = scattering_pdf / M_PI / pdf;
+  //factor = scattering_pdf / M_PI / pdf;
+	factor = (pdf * M_PI) / scattering_pdf;
 }
 
 #endif

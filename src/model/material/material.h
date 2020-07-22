@@ -221,15 +221,27 @@ __device__ reflection_record Material::_refract(
       float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
       vec3 v_in_perpendicular = - cos_theta_1 * normal;
       vec3 v_in_parallel = v_in - v_in_perpendicular;
+			vec3 v_out;
       float sin_theta_2 = \
         highest_prioritised_material_ref_idx / this -> n_i * sin_theta_1;
       float cos_theta_2 = powf(1 - powf(sin_theta_2, 2), .5);
       float tan_theta_2 = sin_theta_2 / cos_theta_2;
-      vec3 v_out_perpendicular = \
-        - 1 / tan_theta_2 * v_in_parallel.length() * normal;
-      vec3 v_out = v_in_parallel + v_out_perpendicular;
-      v_out.make_unit_vector();
-      
+
+      if (abs(tan_theta_2) > SMALL_DOUBLE) {
+        vec3 v_out_perpendicular = \
+          - 1 / tan_theta_2 * v_in_parallel.length() * normal;
+        v_out = v_in_parallel + v_out_perpendicular;
+        v_out.make_unit_vector();
+			} else {
+				v_out = -normal;
+			}
+
+
+      if (v_out.vector_is_nan()) {
+			  printf("entering = false; sin_theta_1 = %f, cos_theta_1 = %f, sin_theta_2 = %f, cos_theta_2 = %f, tan_theta_2 = %f\n",
+						sin_theta_1, cos_theta_1, sin_theta_2, cos_theta_2, tan_theta_2);
+			}
+
 			ref.perfect_reflection_dir = v_out;
       ref.ray = generate_ray(
 			  hit_point, v_out, normal, 1, local_n_s, rand_state
@@ -325,14 +337,25 @@ __device__ reflection_record Material::_refract(
     } else {
       vec3 v_in_perpendicular = cos_theta_1 * normal;
       vec3 v_in_parallel = v_in - v_in_perpendicular;
+			vec3 v_out;
       float sin_theta_2 = \
         this -> n_i / second_highest_prioritised_material_ref_idx * sin_theta_1;
       float cos_theta_2 = powf(1 - powf(sin_theta_2, 2), .5);
       float tan_theta_2 = sin_theta_2 / cos_theta_2;
-      vec3 v_out_perpendicular = \
-        1 / tan_theta_2 * v_in_parallel.length() * normal;
-      vec3 v_out = v_in_parallel + v_out_perpendicular;
-      v_out.make_unit_vector();
+
+      if (abs(tan_theta_2) > SMALL_DOUBLE) {
+      	vec3 v_out_perpendicular = \
+        	1 / tan_theta_2 * v_in_parallel.length() * normal;
+      	v_out = v_in_parallel + v_out_perpendicular;
+      	v_out.make_unit_vector();
+			} else {
+				v_out = normal;
+			}
+
+      if (v_out.vector_is_nan()) {
+			  printf("entering = false; cos_theta_1 = %f, sin_theta_2 = %f, cos_theta_2 = %f, tan_theta_2 = %f\n",
+						cos_theta_1, sin_theta_2, cos_theta_2, tan_theta_2);
+			}
 
       ref.perfect_reflection_dir = v_out;
 			ref.ray = generate_ray(
@@ -525,6 +548,7 @@ __device__ void Material::check_next_path(
     ref.filter = actual_mat -> get_texture_diffuse(uv_vector);
     ref.diffuse = true;
 		ref.reflected = false;
+		ref.refracted = false;
     refracted = false;
     reflected = true;
 
@@ -549,6 +573,7 @@ __device__ void Material::check_next_path(
 		);
     ref.diffuse = false;
 		ref.reflected = true;
+		ref.refracted = false;
 		ref.perfect_reflection_dir = reflected_ray_dir;
 		ref.n = local_n_s;
 		ref.ks = actual_mat -> get_texture_specular(uv_vector);
