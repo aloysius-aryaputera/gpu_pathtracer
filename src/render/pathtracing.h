@@ -127,16 +127,9 @@ __device__ vec3 _compute_color(
         ref, rand_state
       );
 
-			//if (!(ref.false_hit))
-			//	last_valid_ref = ref;
-
       if (
 				!(ref.false_hit) && !(sss && !sss_first_pass)
 			) {
-				if (ref.perfect_reflection_dir.vector_is_nan()) {
-				  printf("dir is nan: ref.refracted = %d, ref.reflected = %d, ref.diffuse = %d, ref.entering = %d\n", 
-							ref.refracted, ref.reflected, ref.diffuse, ref.entering);
-				}
         // Modify ref.ray
         change_ref_ray(
           cur_rec, ref,
@@ -179,42 +172,20 @@ __device__ vec3 _compute_color(
           cur_rec.uv_vector
         );
 
-        //printf("\nmask = [%f, %f, %f]\n", mask.r(), mask.g(), mask.b());
-
 				add_color = mask * light_tmp;
 
         if (add_color.vector_is_nan()) {
-					printf("de_nan = mask = [%f, %f, %f], light_tmp = [%f, %f, %f]\n",
-							mask.r(), mask.g(), mask.b(), light_tmp.r(), light_tmp.g(), light_tmp.b());
 					add_color = de_nan(add_color);
 				}
 
-				//float xx = fminf(.999, factor);
-        //printf("new filter = [%f, %f, %f], xx = %f\n", ref.filter.r() / xx, ref.filter.g() / xx, ref.filter.b() / xx, xx);
-        
 				vec3 mask_factor = ref.filter / factor;
-
         mask_factor = vec3(fmaxf(0, mask_factor.r()), fmaxf(0, mask_factor.g()), fmaxf(0, mask_factor.b()));
 				mask_factor = vec3(fminf(.99, mask_factor.r()), fminf(.99, mask_factor.g()), fminf(.99, mask_factor.b()));
 
         acc_color += add_color;
         mask *= mask_factor;
 
-				//printf("acc_color = [%f, %f, %f]\n", acc_color.r(), acc_color.g(), acc_color.b());
-
-				//if (mask_factor.vector_is_nan()) {
-				  //printf("ref.filter = [%f, %f, %f], factor = %f, ref.diffuse = %d, ref.reflected = %d, ref.refracted = %d, ref.entering = %d\n",
-					//			ref.filter.r(), ref.filter.g(), ref.filter.b(), factor, ref.diffuse, ref.reflected, ref.refracted, ref.entering
-					//		);
-					if (!(ref.diffuse)) {
-					  //printf("alpha = %f, n = %f\n", dot(ref.perfect_reflection_dir, ref.ray.dir), ref.n); 
-						//printf("pseudo_filter = %f\n", (ref.n + 2) * powf(dot(ref.perfect_reflection_dir, ref.ray.dir), ref.n) / 2 );
-					}
-				//}
-
-      } //else {
-				//return acc_color;
-      //}
+      }
 
 			ray = ref.ray;
 

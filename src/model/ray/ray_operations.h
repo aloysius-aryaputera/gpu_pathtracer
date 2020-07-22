@@ -44,10 +44,6 @@ __device__ Ray generate_ray(
 		}
   }
 
-  //if (v3_rand_world.vector_is_nan())
-	//	printf("Vector is nan!\n");
-
-  //vec3 dir = unit_vector(main_dir + fuziness * v3_rand_world);
   return Ray(init_point, dir);
 }
 
