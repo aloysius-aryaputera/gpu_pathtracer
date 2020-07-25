@@ -95,7 +95,7 @@ __device__ void change_ref_ray(
 ) {
   float random_number = curand_uniform(rand_state_mis);
   float pdf, scattering_pdf;
-  vec3 new_target_point, new_dir, pivot;
+  vec3 new_target_point, new_dir, pivot, tmp_filter;
   Ray default_ray = ref.ray;
 
 	if (ref.diffuse) 
@@ -103,7 +103,7 @@ __device__ void change_ref_ray(
 	else 
 		pivot = ref.perfect_reflection_dir;
 
-  if (random_number < hittable_pdf_weight) {
+  if (ref.mis_enabled && random_number < hittable_pdf_weight) {
 
     new_target_point = _pick_a_random_point_on_a_target_geom(
 		  target_node_list[0], default_ray.p0, pivot, ref.ks,
@@ -116,9 +116,16 @@ __device__ void change_ref_ray(
     ref.ray = Ray(default_ray.p0, new_dir);
 
 	  if (ref.reflected || ref.refracted) {
-			ref.filter = compute_phong_filter(ref.ks, ref.n, pivot, ref.ray.dir);
+			tmp_filter = compute_phong_filter(ref.ks, ref.n, pivot, new_dir);
+			//if (tmp_filter.length() > 0) {
+			ref.ray = Ray(default_ray.p0, new_dir);
+			ref.filter = tmp_filter;
+			//}
 	  }
 	}
+
+	if (!(ref.mis_enabled))
+		hittable_pdf_weight = 0;
 
   pdf = _recompute_pdf(
     rec, ref.ray.p0, ref.ray.dir, 
