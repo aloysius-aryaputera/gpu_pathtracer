@@ -35,8 +35,7 @@ class Material {
     __device__ reflection_record _refract(
       vec3 hit_point, vec3 v_in, vec3 normal,
 			vec3 uv_vector,
-      bool &reflected, bool &refracted,
-      bool &entering, bool &sss,
+      bool &sss,
       Material *highest_prioritised_material,
       Material *second_highest_prioritised_material,
       curandState *rand_state
@@ -97,8 +96,7 @@ class Material {
     );
     __device__ void check_next_path(
       Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
-      bool &reflected, bool &refracted,
-      bool &entering, bool &sss,
+      bool &sss,
       Material** material_list, int material_list_length,
       reflection_record &ref, curandState *rand_state
     );
@@ -183,8 +181,7 @@ __device__ bool Material::_check_if_false_hit(
 __device__ reflection_record Material::_refract(
   vec3 hit_point, vec3 v_in, vec3 normal,
 	vec3 uv_vector,
-  bool &reflected, bool &refracted,
-  bool &entering, bool &sss,
+  bool &sss,
   Material *highest_prioritised_material,
   Material *second_highest_prioritised_material,
   curandState *rand_state
@@ -200,6 +197,7 @@ __device__ reflection_record Material::_refract(
   vec3 k = this -> transmission * this -> t_r, v_out;
 	float local_n_s = this -> _get_texture_n_s(uv_vector);
 	ref.n = local_n_s;
+  sss = false;
 
   if (dot(v_in, normal) <= 0) {
     float cos_theta_1 = dot(v_in, -normal);
@@ -230,7 +228,6 @@ __device__ reflection_record Material::_refract(
       ref.reflected = false;
       ref.refracted = true;
       ref.false_hit = false;
-      sss = false;
       ref.entering = true;
     } else {
       v_out = reflect(v_in, normal);
@@ -241,7 +238,6 @@ __device__ reflection_record Material::_refract(
       ref.reflected = true;
       ref.refracted = false;
       ref.false_hit = false;
-      sss = false;
       ref.entering = false;
     }
   } else {
@@ -291,6 +287,7 @@ __device__ reflection_record Material::_refract(
   }
 
   ref.ray = generate_ray(hit_point, v_out, normal, 1, local_n_s, rand_state);
+	ref.ks = k;
   ref.filter = compute_phong_filter(k, local_n_s, v_out, ref.ray.dir);
   return ref;
 }
@@ -402,8 +399,7 @@ __device__ reflection_record _get_false_hit_parameters(
 
 __device__ void Material::check_next_path(
   Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
-  bool &reflected, bool &refracted,
-  bool &entering, bool &sss,
+  bool &sss,
   Material** material_list, int material_list_length,
   reflection_record &ref, curandState *rand_state
 ) {
@@ -434,8 +430,7 @@ __device__ void Material::check_next_path(
     ref = this -> _refract(
       hit_point, coming_ray.dir, normal,
 			uv_vector,
-      reflected, refracted,
-      entering, sss,
+      sss,
       highest_prioritised_material,
       second_highest_prioritised_material,
       rand_state
@@ -466,6 +461,7 @@ __device__ void Material::check_next_path(
     ref.diffuse = true;
 		ref.reflected = false;
 		ref.refracted = false;
+		ref.ks = ref.filter;
 
     if (actual_mat -> sub_surface_scattering) {
       sss = true;
@@ -487,12 +483,10 @@ __device__ void Material::check_next_path(
 		ref.refracted = false;
 		ref.perfect_reflection_dir = reflected_ray_dir;
 		ref.n = local_n_s;
-		ref.ks = actual_mat -> get_texture_specular(uv_vector);
+		ref.ks = k;
 		sss = false;
   }
 
-  refracted = false;
-  reflected = false;
   return;
 }
 

@@ -95,8 +95,7 @@ __device__ vec3 _compute_color(
   float hittable_pdf_weight
 ) {
   hit_record cur_rec;
-  bool hit, reflected = false, refracted = false;
-  bool entering = false, sss = false;
+  bool hit, sss = false;
   vec3 mask = vec3(1, 1, 1), light = vec3(0, 0, 0), light_tmp = vec3(0, 0, 0);
   vec3 acc_color = vec3(0, 0, 0), add_color = vec3(0, 0, 0);
   vec3 v3_rand, v3_rand_world;
@@ -121,8 +120,7 @@ __device__ vec3 _compute_color(
 
       cur_rec.object -> get_material() -> check_next_path(
         cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
-        reflected, refracted,
-        entering, sss,
+        sss,
         material_list, material_list_length,
         ref, rand_state
       );
@@ -175,12 +173,13 @@ __device__ vec3 _compute_color(
 				add_color = mask * light_tmp;
 
         if (add_color.vector_is_nan()) {
+					printf("add_color is nan!\n");
 					add_color = de_nan(add_color);
 				}
 
 				vec3 mask_factor = ref.filter / factor;
-        mask_factor = vec3(fmaxf(0, mask_factor.r()), fmaxf(0, mask_factor.g()), fmaxf(0, mask_factor.b()));
-				mask_factor = vec3(fminf(.99, mask_factor.r()), fminf(.99, mask_factor.g()), fminf(.99, mask_factor.b()));
+				mask_factor.min_limit(0);
+				mask_factor.max_limit(.9999);
 
         acc_color += add_color;
         mask *= mask_factor;

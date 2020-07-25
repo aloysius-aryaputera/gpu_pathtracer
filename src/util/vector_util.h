@@ -15,6 +15,72 @@ __device__ vec3 compute_phong_filter(
 );
 __device__ vec3 reflect(vec3 v, vec3 normal);
 __device__ float compute_schlick_specular(float cos_theta);
+__device__ float compute_diffuse_sampling_pdf(
+	vec3 normal, vec3 reflected_dir
+);
+__device__ float compute_specular_sampling_pdf(
+  vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n, bool refracted
+);
+__device__ float _compute_reflection_sampling_pdf(
+	vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
+);
+__device__ float _compute_refraction_sampling_pdf(
+	vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
+);
+
+__device__ float _compute_reflection_sampling_pdf(
+	vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
+) {
+  if (
+		(
+		  dot(in, normal) >= 0 && dot(normal, out) <= 0
+		) ||
+		(
+		  dot(in, normal) <= 0 && dot(normal, out) >= 0
+		)
+	) {
+		return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
+
+		//return powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
+	}	else {
+	  return 0;
+	}
+}
+
+__device__ float _compute_refraction_sampling_pdf(
+	vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
+) {
+  if (
+		(
+		  dot(in, normal) >= 0 && dot(normal, out) >= 0
+		) ||
+		(
+		  dot(in, normal) <= 0 && dot(normal, out) <= 0
+		)
+	) {
+		return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
+
+		//return powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
+	}	else {
+	  return 0;
+	}
+}
+
+__device__ float compute_specular_sampling_pdf(
+  vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n, bool refracted
+) {
+  if (refracted) {
+	  return _compute_refraction_sampling_pdf(in, out, normal, perfect_out, n);
+	} else {
+	  return _compute_reflection_sampling_pdf(in, out, normal, perfect_out, n);
+	}
+}
+
+__device__ float compute_diffuse_sampling_pdf(
+  vec3 normal, vec3 reflected_dir
+) {
+	return fmaxf(0.0, dot(normal, reflected_dir) / M_PI);
+}
 
 __device__ float compute_schlick_specular(
   float cos_theta, float n_1, float n_2
@@ -31,6 +97,8 @@ __device__ vec3 compute_phong_filter(
 	vec3 k, float n, vec3 ideal_dir, vec3 dir
 ) {
   return k * (n + 2) * powf(fmaxf(0, dot(ideal_dir, dir)), n) / 2;
+
+  //return k * powf(fmaxf(0, dot(ideal_dir, dir)), n) / 2;
 }
 
 __device__ vec3 get_random_unit_vector_phong(float n, curandState *rand_state) {

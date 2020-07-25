@@ -38,7 +38,8 @@ class vec3  {
     __host__ __device__ inline float squared_length() const { return e[0]*e[0] + e[1]*e[1] + e[2]*e[2]; }
     __host__ __device__ inline void make_unit_vector();
     __device__ inline bool vector_is_nan();
-
+    __device__ void min_limit(float limit);
+		__device__ void max_limit(float limit);
 
     float e[3];
 };
@@ -78,6 +79,18 @@ inline std::istream& operator>>(std::istream &is, vec3 &t) {
 inline std::ostream& operator<<(std::ostream &os, const vec3 &t) {
   os << t.e[0] << " " << t.e[1] << " " << t.e[2];
   return os;
+}
+
+__device__ void vec3::min_limit(float limit) {
+  this -> e[0] = fmaxf(this -> e[0], limit);
+	this -> e[1] = fmaxf(this -> e[1], limit);
+	this -> e[2] = fmaxf(this -> e[2], limit);
+}
+
+__device__ void vec3::max_limit(float limit) {
+  this -> e[0] = fminf(this -> e[0], limit);
+	this -> e[1] = fminf(this -> e[1], limit);
+	this -> e[2] = fminf(this -> e[2], limit);
 }
 
 __host__ __device__ inline void vec3::make_unit_vector() {
