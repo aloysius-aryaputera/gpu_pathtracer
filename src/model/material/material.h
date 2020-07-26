@@ -464,6 +464,7 @@ __device__ void Material::check_next_path(
 		ref.reflected = false;
 		ref.refracted = false;
 		ref.ks = ref.filter;
+		ref.n = 1;
 
     if (actual_mat -> sub_surface_scattering) {
       sss = true;
@@ -555,7 +556,6 @@ __device__ float Material::_get_texture_n_s(vec3 uv_vector) {
   vec3 filter = vec3(
     this -> n_s / powf(3, .5), this -> n_s / powf(3, .5),
     this -> n_s / powf(3, .5));
-  //vec3 filter = this -> n_s * vec3(1.0, 1.0, 1.0);
   vec3 n_s_vector =  this -> _get_texture(
     uv_vector, filter,
     this -> texture_r_n_s,
