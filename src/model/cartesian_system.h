@@ -15,7 +15,7 @@ class CartesianSystem {
     );
     __host__ __device__ vec3 to_world_system(vec3 input_vector);
 
-    vec3 new_x_axis, new_y_axis, new_z_axis, tmp;
+    vec3 new_x_axis, new_y_axis, new_z_axis;
 };
 
 __host__ __device__ CartesianSystem::CartesianSystem() {
@@ -25,7 +25,6 @@ __host__ __device__ CartesianSystem::CartesianSystem() {
 }
 
 __host__ __device__ CartesianSystem::CartesianSystem(vec3 new_z_axis_) {
-	this -> tmp = new_z_axis_;
   this -> new_z_axis = unit_vector(new_z_axis_);
   if (abs(new_z_axis.x()) > abs(new_z_axis.y())) {
     this -> new_x_axis = vec3(
@@ -69,12 +68,10 @@ __host__ __device__ vec3 CartesianSystem::to_world_system(vec3 input_vector) {
   if (isnan(v3_rand_world.x()) || isnan(v3_rand_world.y()) || isnan(v3_rand_world.z())) {
     printf(
       "input_vector = %5.5f, %5.5f, %5.5f; \
-			tmp = %5.5f, %5.5f, %5.5f;\
       new_x_axis = %5.5f, %5.5f, %5.5f;\
       new_y_axis = %5.5f, %5.5f, %5.5f;\
       new_z_axis = %5.5f, %5.5f, %5.5f;\n",
       input_vector.x(), input_vector.y(), input_vector.z(),
-			this -> tmp.x(), this -> tmp.y(), this -> tmp.z(),
       this -> new_x_axis.x(), this -> new_x_axis.y(), this -> new_x_axis.z(),
       this -> new_y_axis.x(), this -> new_y_axis.y(), this -> new_y_axis.z(),
       this -> new_z_axis.x(), this -> new_z_axis.y(), this -> new_z_axis.z()
