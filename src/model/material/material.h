@@ -16,7 +16,7 @@ struct reflection_record
 	vec3 ks;
   vec3 filter;
 	vec3 perfect_reflection_dir;
-  bool diffuse, reflected, refracted, false_hit, entering, mis_enabled;
+  bool diffuse, reflected, refracted, false_hit, entering;
 
 	float n;
 };
@@ -289,7 +289,6 @@ __device__ reflection_record Material::_refract(
   ref.ray = generate_ray(hit_point, v_out, normal, 1, local_n_s, rand_state);
 	ref.ks = k;
   ref.filter = compute_phong_filter(k, local_n_s, v_out, ref.ray.dir);
-	ref.mis_enabled = false;
   return ref;
 }
 
@@ -408,7 +407,6 @@ __device__ void Material::check_next_path(
   Material *highest_prioritised_material = nullptr;
   Material *second_highest_prioritised_material = nullptr;
   vec3 v_in = coming_ray.dir;
-	ref.mis_enabled = true;
 
   ref.false_hit = this -> _check_if_false_hit(
     material_list, material_list_length,

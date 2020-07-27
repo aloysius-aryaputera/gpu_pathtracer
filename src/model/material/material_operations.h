@@ -25,15 +25,13 @@ __device__ float _recompute_pdf(
   hit_record rec, vec3 origin, vec3 dir, Primitive **target_geom_array,
   int num_target_geom, float hittable_pdf_weight, Node **target_node_list,
 	Node **target_leaf_list, vec3 kd, bool diffuse, float n, 
-	vec3 perfect_reflection_dir, reflection_record ref,
-	bool light_sampling
+	vec3 perfect_reflection_dir, reflection_record ref
 ) {
   float hittable_pdf = 0, sampling_pdf;
   float node_pdf = 0;
   int num_potential_targets = 0;
   int potential_target_idx[400];
   vec3 pivot;
-  float out, weight;
 
 	if (diffuse) 
 		pivot = rec.normal;
@@ -72,22 +70,6 @@ __device__ float _recompute_pdf(
 
   return hittable_pdf_weight * hittable_pdf + (
 			1 - hittable_pdf_weight) * sampling_pdf;
-
-  //if (!(ref.mis_enabled) || hittable_pdf_weight <= SMALL_DOUBLE) {
-	//  out = sampling_pdf;
-	//} else if (light_sampling) {
-	//	weight = powf(hittable_pdf / (hittable_pdf + sampling_pdf), 2);
-	//	out = hittable_pdf / weight;
-	//} else {
-	//	weight = powf(sampling_pdf / (hittable_pdf + sampling_pdf), 2);
-	//	out = sampling_pdf / weight;
-	//}
-  //float hit_weight = powf(hittable_pdf / (hittable_pdf + sampling_pdf), 2);
-	//float samp_weight = powf(sampling_pdf / (hittable_pdf + sampling_pdf), 2);
-	//float weight = hit_
-	//return sampling_pdf;
-	
-	//return out;
 }
 
 __device__ vec3 _pick_a_random_point_on_a_target_geom(
@@ -114,21 +96,13 @@ __device__ void change_ref_ray(
   float pdf, scattering_pdf;
   vec3 new_target_point, new_dir, pivot, tmp_filter;
   Ray default_ray = ref.ray;
-	bool light_sampling = false;
 
 	if (ref.diffuse) 
 		pivot = rec.normal;
 	else 
 		pivot = ref.perfect_reflection_dir;
 
-  //if (!(ref.mis_enabled)) {
-	//  hittable_pdf_weight = 0;
-	//} else {
-	//  hittable_pdf_weight /= fmaxf(1.0, ref.n);
-	//}
-
-  if (ref.mis_enabled && random_number < hittable_pdf_weight) {
-		light_sampling = true;
+  if (random_number < hittable_pdf_weight) {
 
     new_target_point = _pick_a_random_point_on_a_target_geom(
 		  target_node_list[0], default_ray.p0, pivot, ref.ks,
@@ -149,8 +123,7 @@ __device__ void change_ref_ray(
     rec, ref.ray.p0, ref.ray.dir, 
 		target_geom_array, num_target_geom,
     hittable_pdf_weight, target_node_list, target_leaf_list, ref.ks,
-    ref.diffuse, ref.n, ref.perfect_reflection_dir, ref,
-		light_sampling
+    ref.diffuse, ref.n, ref.perfect_reflection_dir, ref
   );
 
 	if (ref.diffuse) {
