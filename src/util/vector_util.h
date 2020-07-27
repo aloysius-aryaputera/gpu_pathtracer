@@ -31,17 +31,13 @@ __device__ float _compute_refraction_sampling_pdf(
 __device__ float _compute_reflection_sampling_pdf(
 	vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
 ) {
+	float dot_prod_1 = dot(in, normal);
+	float dot_prod_2 = dot(normal, out);
   if (
-		(
-		  dot(in, normal) >= 0 && dot(normal, out) <= 0
-		) ||
-		(
-		  dot(in, normal) <= 0 && dot(normal, out) >= 0
-		)
+		(dot_prod_1 >= 0 && dot_prod_2 <= 0) ||
+		(dot_prod_1 <= 0 && dot_prod_2 >= 0)
 	) {
 		return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
-
-		//return powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
 	}	else {
 	  return 0;
 	}
@@ -50,17 +46,13 @@ __device__ float _compute_reflection_sampling_pdf(
 __device__ float _compute_refraction_sampling_pdf(
 	vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
 ) {
+	float dot_prod_1 = dot(in, normal);
+	float dot_prod_2 = dot(normal, out);
   if (
-		(
-		  dot(in, normal) >= 0 && dot(normal, out) >= 0
-		) ||
-		(
-		  dot(in, normal) <= 0 && dot(normal, out) <= 0
-		)
+		(dot_prod_1 >= 0 && dot_prod_2 >= 0) ||
+		(dot_prod_1 <= 0 && dot_prod_2 <= 0)
 	) {
 		return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
-
-		//return powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
 	}	else {
 	  return 0;
 	}
@@ -97,8 +89,6 @@ __device__ vec3 compute_phong_filter(
 	vec3 k, float n, vec3 ideal_dir, vec3 dir
 ) {
   return k * (n + 2) * powf(fmaxf(0, dot(ideal_dir, dir)), n) / 2;
-
-  //return k * powf(fmaxf(0, dot(ideal_dir, dir)), n) / 2;
 }
 
 __device__ vec3 get_random_unit_vector_phong(float n, curandState *rand_state) {
