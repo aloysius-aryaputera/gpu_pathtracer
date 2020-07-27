@@ -76,11 +76,11 @@ __device__ float _recompute_pdf(
   if (!(ref.mis_enabled) || hittable_pdf_weight <= SMALL_DOUBLE) {
 	  out = sampling_pdf;
 	} else if (light_sampling) {
-		weight = powf(sampling_pdf / (hittable_pdf + sampling_pdf), 2);
-		out = sampling_pdf / weight;
-	} else {
 		weight = powf(hittable_pdf / (hittable_pdf + sampling_pdf), 2);
 		out = hittable_pdf / weight;
+	} else {
+		weight = powf(sampling_pdf / (hittable_pdf + sampling_pdf), 2);
+		out = sampling_pdf / weight;
 	}
   //float hit_weight = powf(hittable_pdf / (hittable_pdf + sampling_pdf), 2);
 	//float samp_weight = powf(sampling_pdf / (hittable_pdf + sampling_pdf), 2);
