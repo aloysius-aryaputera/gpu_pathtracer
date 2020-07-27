@@ -70,24 +70,24 @@ __device__ float _recompute_pdf(
  if (isnan(hittable_pdf))
    printf("hittable_pdf is nan\n");	 
 
-  //return hittable_pdf_weight * hittable_pdf + (
-	//		1 - hittable_pdf_weight) * sampling_pdf;
+  return hittable_pdf_weight * hittable_pdf + (
+			1 - hittable_pdf_weight) * sampling_pdf;
 
-  if (!(ref.mis_enabled) || hittable_pdf_weight <= SMALL_DOUBLE) {
-	  out = sampling_pdf;
-	} else if (light_sampling) {
-		weight = powf(hittable_pdf / (hittable_pdf + sampling_pdf), 2);
-		out = hittable_pdf / weight;
-	} else {
-		weight = powf(sampling_pdf / (hittable_pdf + sampling_pdf), 2);
-		out = sampling_pdf / weight;
-	}
+  //if (!(ref.mis_enabled) || hittable_pdf_weight <= SMALL_DOUBLE) {
+	//  out = sampling_pdf;
+	//} else if (light_sampling) {
+	//	weight = powf(hittable_pdf / (hittable_pdf + sampling_pdf), 2);
+	//	out = hittable_pdf / weight;
+	//} else {
+	//	weight = powf(sampling_pdf / (hittable_pdf + sampling_pdf), 2);
+	//	out = sampling_pdf / weight;
+	//}
   //float hit_weight = powf(hittable_pdf / (hittable_pdf + sampling_pdf), 2);
 	//float samp_weight = powf(sampling_pdf / (hittable_pdf + sampling_pdf), 2);
 	//float weight = hit_
 	//return sampling_pdf;
 	
-	return out;
+	//return out;
 }
 
 __device__ vec3 _pick_a_random_point_on_a_target_geom(
