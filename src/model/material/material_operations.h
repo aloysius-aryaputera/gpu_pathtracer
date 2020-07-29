@@ -94,7 +94,7 @@ __device__ void change_ref_ray(
 ) {
   float random_number = curand_uniform(rand_state_mis);
   float pdf, scattering_pdf;
-  vec3 new_target_point, new_dir, pivot, tmp_filter;
+  vec3 new_target_point, new_dir, pivot;
   Ray default_ray = ref.ray;
 
 	if (ref.diffuse) 
@@ -115,7 +115,7 @@ __device__ void change_ref_ray(
     ref.ray = Ray(default_ray.p0, new_dir);
 
 	  if (ref.reflected || ref.refracted) {
-			ref.filter = compute_phong_filter(ref.ks, ref.n, pivot, new_dir);
+			ref.filter = compute_phong_filter(ref.ks, ref.n, pivot, ref.ray.dir);
 	  }
 	}
 
@@ -129,9 +129,9 @@ __device__ void change_ref_ray(
 	if (ref.diffuse) {
 		scattering_pdf = fmaxf(0.0, dot(rec.normal, ref.ray.dir));
 	} else {
+		float dot_prod_1 = dot(rec.coming_ray.dir, rec.normal);
+		float dot_prod_2 = dot(ref.ray.dir, rec.normal);
 		if (ref.reflected) {
-			float dot_prod_1 = dot(rec.coming_ray.dir, rec.normal);
-			float dot_prod_2 = dot(ref.ray.dir, rec.normal);
 		  if (
 			  (dot_prod_1 >= 0 && dot_prod_2 <= 0) || 
 			  (dot_prod_1 <= 0 && dot_prod_2 >= 0)
@@ -152,8 +152,8 @@ __device__ void change_ref_ray(
 	  }
 	}
 
-  //factor = scattering_pdf / M_PI / pdf;
-	factor = (pdf * M_PI) / scattering_pdf;
+  factor = scattering_pdf / M_PI / pdf;
+	//factor = (pdf * M_PI) / scattering_pdf;
 }
 
 #endif
