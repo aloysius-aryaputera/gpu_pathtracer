@@ -131,25 +131,32 @@ __device__ void change_ref_ray(
 	} else {
 		float dot_prod_1 = dot(rec.coming_ray.dir, rec.normal);
 		float dot_prod_2 = dot(ref.ray.dir, rec.normal);
-		if (ref.reflected) {
-		  if (
-			  (dot_prod_1 >= 0 && dot_prod_2 <= 0) || 
-			  (dot_prod_1 <= 0 && dot_prod_2 >= 0)
-		  ) {
-			  scattering_pdf = 1;
-		  } else {
-		    scattering_pdf = 0;
-		  }
-	  } else {
-	    if (	
-		    (dot_prod_1 >= 0 && dot_prod_2 >= 0) || 
-		    (dot_prod_1 <= 0 && dot_prod_2 <= 0)
-	    ) {
-			  scattering_pdf = 1;
-		  } else {
-		    scattering_pdf = 0;
-		  }
-	  }
+    scattering_pdf = (
+				(dot_prod_1 >= 0 && dot_prod_2 <= 0 && ref.reflected) ||
+				(dot_prod_1 <= 0 && dot_prod_2 >= 0 && ref.reflected) ||
+				(dot_prod_1 >= 0 && dot_prod_2 >= 0 && ref.refracted) ||
+				(dot_prod_1 <= 0 && dot_prod_2 <= 0 && ref.refracted)
+		);
+
+    //if (ref.reflected) {
+		//  if (
+		//	  (dot_prod_1 >= 0 && dot_prod_2 <= 0) || 
+		//	  (dot_prod_1 <= 0 && dot_prod_2 >= 0)
+		//  ) {
+		//	  scattering_pdf = 1;
+		//  } else {
+		//    scattering_pdf = 0;
+		//  }
+	  //} else {
+	  //  if (	
+		//    (dot_prod_1 >= 0 && dot_prod_2 >= 0) || 
+		//    (dot_prod_1 <= 0 && dot_prod_2 <= 0)
+	  //  ) {
+		//	  scattering_pdf = 1;
+		//  } else {
+		//    scattering_pdf = 0;
+		//  }
+	  //}
 	}
 
   factor = scattering_pdf / M_PI / pdf;

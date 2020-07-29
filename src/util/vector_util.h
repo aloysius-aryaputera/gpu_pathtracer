@@ -89,18 +89,18 @@ __device__ vec3 compute_phong_filter(
 	vec3 k, float n, vec3 ideal_dir, vec3 dir
 ) {
 	vec3 filter = k * (n + 2) * powf(fmaxf(0, dot(ideal_dir, dir)), n) / 2;
-	if (filter.vector_is_nan()) {
-     printf("filter = [%f, %f, %f], dot_prod = %f, dot_prod_2 = %f, powf = %f, k = [%f, %f, %f], n = %f, ideal_dir = [%f, %f, %f], dir = [%f, %f, %f]\n",
-				 filter.r(), filter.g(), filter.b(), 
-				 dot(ideal_dir, dir),
-				 fmaxf(0, dot(ideal_dir, dir)),
-				 powf(fmaxf(0, dot(ideal_dir, dir)), n),
-				 k.r(), k.g(), k.b(),
-				 n,
-				 ideal_dir.r(), ideal_dir.g(), ideal_dir.b(),
-				 dir.r(), dir.g(), dir.b()
-				 );
-	}
+	//if (filter.vector_is_nan()) {
+  //   printf("filter = [%f, %f, %f], dot_prod = %f, dot_prod_2 = %f, powf = %f, k = [%f, %f, %f], n = %f, ideal_dir = [%f, %f, %f], dir = [%f, %f, %f]\n",
+	//			 filter.r(), filter.g(), filter.b(), 
+	//			 dot(ideal_dir, dir),
+	//			 fmaxf(0, dot(ideal_dir, dir)),
+	//			 powf(fmaxf(0, dot(ideal_dir, dir)), n),
+	//			 k.r(), k.g(), k.b(),
+	//			 n,
+	//			 ideal_dir.r(), ideal_dir.g(), ideal_dir.b(),
+	//			 dir.r(), dir.g(), dir.b()
+	//			 );
+	//}
   return filter; 
 }
 
