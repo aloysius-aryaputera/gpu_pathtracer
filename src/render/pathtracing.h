@@ -112,6 +112,7 @@ __device__ vec3 _compute_color(
 
   cur_rec.object = nullptr;
 
+	start_1 = clock();
   for (int i = 0; i < level; i++) {
 
     factor = 1;
@@ -123,20 +124,20 @@ __device__ vec3 _compute_color(
 			ref.refracted = false;
 			ref.diffuse = false;
 
-			start_1 = clock();
+			//start_1 = clock();
       cur_rec.object -> get_material() -> check_next_path(
         cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
         sss,
         material_list, material_list_length,
         ref, rand_state
       );
-			end_1 = clock();
+			//end_1 = clock();
 
       if (
 				!(ref.false_hit) && !(sss && !sss_first_pass)
 			) {
         // Modify ref.ray
-				start_2 = clock();
+				//start_2 = clock();
         change_ref_ray(
           cur_rec, ref,
 					target_geom_array, num_target_geom, factor,
@@ -145,7 +146,7 @@ __device__ vec3 _compute_color(
           hittable_pdf_weight,
           rand_state
         );
-				end_2 = clock();
+				//end_2 = clock();
       }
 
       if (sss && !sss_first_pass) {
@@ -196,17 +197,17 @@ __device__ vec3 _compute_color(
 				vec3 mask_factor = ref.filter * clamp(0, .9999, factor);
 				//mask_factor.min_limit(0);
 				//mask_factor.max_limit(.9999);
-        prev_factor = factor;
-				prev_filter = ref.filter;
-        prev_ref = ref;
+        //prev_factor = factor;
+				//prev_filter = ref.filter;
+        //prev_ref = ref;
 
         acc_color += add_color;
         mask *= mask_factor;
 
-        printf("t1 = %f, t2 = %f\n", 
-						((float)(end_1 - start_1)) / CLOCKS_PER_SEC,
-						((float)(end_2 - start_2)) / CLOCKS_PER_SEC
-						);	
+        //printf("t1 = %f, t2 = %f\n", 
+				//		((float)(end_1 - start_1)) / CLOCKS_PER_SEC,
+				//		((float)(end_2 - start_2)) / CLOCKS_PER_SEC
+				//		);	
 
       }
 
@@ -214,9 +215,13 @@ __device__ vec3 _compute_color(
 
     } else {
       if (i < 1){
+				end_1 = clock();
+				printf("time = %f\n", ((float)(end_1 - start_1)) / CLOCKS_PER_SEC);
         return _get_sky_color(
           sky_emission, ray.dir, bg_height, bg_width, bg_r, bg_g, bg_b);
       } else {
+				end_1 = clock();
+				printf("time = %f\n", ((float)(end_1 - start_1)) / CLOCKS_PER_SEC);
         light = _get_sky_color(
           sky_emission, ray.dir, bg_height, bg_width, bg_r, bg_g, bg_b);
         acc_color += mask * light;
@@ -225,6 +230,8 @@ __device__ vec3 _compute_color(
     }
   }
 
+	end_1 = clock();
+	printf("time = %f\n", ((float)(end_1 - start_1)) / CLOCKS_PER_SEC);
   return acc_color;
 }
 

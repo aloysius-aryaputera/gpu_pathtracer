@@ -137,6 +137,7 @@ __device__ void change_ref_ray(
 				(dot_prod_1 >= 0 && dot_prod_2 >= 0 && ref.refracted) ||
 				(dot_prod_1 <= 0 && dot_prod_2 <= 0 && ref.refracted)
 		);
+	}
 
     //if (ref.reflected) {
 		//  if (
@@ -157,7 +158,7 @@ __device__ void change_ref_ray(
 		//    scattering_pdf = 0;
 		//  }
 	  //}
-	}
+	//}
 
   factor = scattering_pdf / M_PI / pdf;
 	//factor = (pdf * M_PI) / scattering_pdf;
