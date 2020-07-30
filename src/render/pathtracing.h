@@ -104,6 +104,7 @@ __device__ vec3 _compute_color(
   Material* material_list[400];
   float factor = 1, prev_factor;
 	vec3 prev_filter;
+  clock_t start_1, start_2, end_1, end_2;
 
   int material_list_length = 0;
 
@@ -122,17 +123,20 @@ __device__ vec3 _compute_color(
 			ref.refracted = false;
 			ref.diffuse = false;
 
+			start_1 = clock();
       cur_rec.object -> get_material() -> check_next_path(
         cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
         sss,
         material_list, material_list_length,
         ref, rand_state
       );
+			end_1 = clock();
 
       if (
 				!(ref.false_hit) && !(sss && !sss_first_pass)
 			) {
         // Modify ref.ray
+				start_2 = clock();
         change_ref_ray(
           cur_rec, ref,
 					target_geom_array, num_target_geom, factor,
@@ -141,6 +145,7 @@ __device__ vec3 _compute_color(
           hittable_pdf_weight,
           rand_state
         );
+				end_2 = clock();
       }
 
       if (sss && !sss_first_pass) {
@@ -197,6 +202,11 @@ __device__ vec3 _compute_color(
 
         acc_color += add_color;
         mask *= mask_factor;
+
+        printf("t1 = %f, t2 = %f\n", 
+						((float)(end_1 - start_1)) / CLOCKS_PER_SEC,
+						((float)(end_2 - start_2)) / CLOCKS_PER_SEC
+						);	
 
       }
 
