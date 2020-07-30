@@ -102,7 +102,7 @@ __device__ vec3 _compute_color(
   Ray ray = ray_init;
   reflection_record ref, prev_ref;
   Material* material_list[400];
-  float factor = 1, prev_factor;
+  float factor = 1, original_factor = 1;
 	vec3 prev_filter;
   clock_t start_1, start_2, end_1, end_2;
 
@@ -181,12 +181,12 @@ __device__ vec3 _compute_color(
         );
 
 				add_color = mask * light_tmp;
-
         if (add_color.vector_is_nan()) {
-					printf("add_color is nan! prev_factor = %f; prev_filter = [%f, %f, %f], prev_ref.n = %f, prev_reflected = %d, prev_refracted = %d, prev_diffuse = %d\n", 
-							prev_factor, prev_filter.r(), prev_filter.g(), prev_filter.b(), prev_ref.n, prev_ref.reflected, prev_ref.refracted, prev_ref.diffuse);
+					//printf("add_color is nan! prev_factor = %f; prev_filter = [%f, %f, %f], prev_ref.n = %f, prev_reflected = %d, prev_refracted = %d, prev_diffuse = %d\n", 
+					//		prev_factor, prev_filter.r(), prev_filter.g(), prev_filter.b(), prev_ref.n, prev_ref.reflected, prev_ref.refracted, prev_ref.diffuse);
 					add_color = de_nan(add_color);
 				}
+				acc_color += add_color;
 
 				//float factor_x = fminf(factor, .99999);
 				//factor_x = fmaxf(0.0, factor_x);
@@ -194,15 +194,17 @@ __device__ vec3 _compute_color(
 				//if (isnan(factor_x))
 				//	printf("factor = %f\n", factor);
 
-				vec3 mask_factor = ref.filter * clamp(0, .9999, factor);
-				//mask_factor.min_limit(0);
-				//mask_factor.max_limit(.9999);
-        //prev_factor = factor;
-				//prev_filter = ref.filter;
-        //prev_ref = ref;
-
-        acc_color += add_color;
-        mask *= mask_factor;
+				if (factor > 0) {
+				  vec3 mask_factor = ref.filter * clamp(0, .9999, factor);
+				  //mask_factor.min_limit(0);
+				  //mask_factor.max_limit(.9999);
+          //prev_factor = factor;
+				  //prev_filter = ref.filter;
+          //prev_ref = ref;
+          mask *= mask_factor;
+				} else {
+				  return acc_color;
+				}
 
         //printf("t1 = %f, t2 = %f\n", 
 				//		((float)(end_1 - start_1)) / CLOCKS_PER_SEC,
@@ -215,13 +217,9 @@ __device__ vec3 _compute_color(
 
     } else {
       if (i < 1){
-				end_1 = clock();
-				printf("time = %f\n", ((float)(end_1 - start_1)) / CLOCKS_PER_SEC);
         return _get_sky_color(
           sky_emission, ray.dir, bg_height, bg_width, bg_r, bg_g, bg_b);
       } else {
-				end_1 = clock();
-				printf("time = %f\n", ((float)(end_1 - start_1)) / CLOCKS_PER_SEC);
         light = _get_sky_color(
           sky_emission, ray.dir, bg_height, bg_width, bg_r, bg_g, bg_b);
         acc_color += mask * light;
@@ -230,8 +228,6 @@ __device__ vec3 _compute_color(
     }
   }
 
-	end_1 = clock();
-	printf("time = %f\n", ((float)(end_1 - start_1)) / CLOCKS_PER_SEC);
   return acc_color;
 }
 
@@ -328,10 +324,6 @@ void render(
     color += color_tmp;
   }
   color *= (1.0 / sample_size);
-
-	//if (color.r() < 1E-12 && color.g() < 1E-12 && color.b() < 1E-12) {
-	//  printf("i = %d, j = %d\n", i, j);
-	//}
 
   fb[pixel_index] = color;
 

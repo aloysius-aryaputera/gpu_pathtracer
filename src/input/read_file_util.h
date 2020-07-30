@@ -373,7 +373,7 @@ void _extract_single_material_data(
         } else if (chunks[0] == "Tr") {
           *(t_r + idx) = clamp(std::stof(chunks[1]), 0, 1);
         } else if (chunks[0] == "Ns") {
-          *(n_s + idx) = clamp(std::stof(chunks[1]), 0, 1000);
+          *(n_s + idx) = clamp(std::stof(chunks[1]), 0, 1E6);
         } else if (chunks[0] == "Ni") {
           *(n_i + idx) = clamp(std::stof(chunks[1]), 1, 1000);
         } else if (chunks[0] == "priority") {
