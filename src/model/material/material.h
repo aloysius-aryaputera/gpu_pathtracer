@@ -333,10 +333,9 @@ __host__ __device__ Material::Material(
   this -> emission = emission_;
   this -> transmission = transmission_;
   this -> path_length = path_length_;
-  this -> n_s = n_s_;
   this -> n_i = n_i_;
   this -> t_r = t_r_;
-  if (n_s_ >= 1E4 && this -> t_r > 0) 
+  if (n_s_ >= 1E6 && this -> t_r > 0) 
     this -> n_s = INFINITY;
   else
     this -> n_s = n_s_;

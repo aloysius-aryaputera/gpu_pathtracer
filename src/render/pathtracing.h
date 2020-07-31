@@ -102,9 +102,8 @@ __device__ vec3 _compute_color(
   Ray ray = ray_init;
   reflection_record ref, prev_ref;
   Material* material_list[400];
-  float factor = 1, original_factor = 1;
-	vec3 prev_filter;
-  clock_t start_1, start_2, end_1, end_2;
+  float factor = 1, prev_factor;
+  vec3 prev_filter;
 
   int material_list_length = 0;
 
@@ -112,7 +111,6 @@ __device__ vec3 _compute_color(
 
   cur_rec.object = nullptr;
 
-	start_1 = clock();
   for (int i = 0; i < level; i++) {
 
     factor = 1;
@@ -120,33 +118,27 @@ __device__ vec3 _compute_color(
     hit = traverse_bvh(node_list[0], ray, cur_rec);
 
     if (hit) {
-			ref.reflected = false;
-			ref.refracted = false;
-			ref.diffuse = false;
+      ref.reflected = false;
+      ref.refracted = false;
+      ref.diffuse = false;
 
-			//start_1 = clock();
       cur_rec.object -> get_material() -> check_next_path(
         cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
         sss,
         material_list, material_list_length,
         ref, rand_state
       );
-			//end_1 = clock();
 
-      if (
-				!(ref.false_hit) && !(sss && !sss_first_pass)
-			) {
+      if (!(ref.false_hit) && !(sss && !sss_first_pass)) {
         // Modify ref.ray
-				//start_2 = clock();
         change_ref_ray(
           cur_rec, ref,
-					target_geom_array, num_target_geom, factor,
+	  target_geom_array, num_target_geom, factor,
           target_node_list,
-					target_leaf_list,
+          target_leaf_list,
           hittable_pdf_weight,
           rand_state
         );
-				//end_2 = clock();
       }
 
       if (sss && !sss_first_pass) {
@@ -175,45 +167,35 @@ __device__ vec3 _compute_color(
 
       if (!(ref.false_hit)) {
 
-        //ray = ref.ray;
         light_tmp = cur_rec.object -> get_material() -> get_texture_emission(
           cur_rec.uv_vector
         );
 
-				add_color = mask * light_tmp;
+        add_color = mask * light_tmp;
         if (add_color.vector_is_nan()) {
-					//printf("add_color is nan! prev_factor = %f; prev_filter = [%f, %f, %f], prev_ref.n = %f, prev_reflected = %d, prev_refracted = %d, prev_diffuse = %d\n", 
-					//		prev_factor, prev_filter.r(), prev_filter.g(), prev_filter.b(), prev_ref.n, prev_ref.reflected, prev_ref.refracted, prev_ref.diffuse);
-					add_color = de_nan(add_color);
-				}
-				acc_color += add_color;
+	  printf("add_color is nan! prev_factor = %f; prev_filter = [%f, %f, %f], prev_ref.n = %f, prev_reflected = %d, prev_refracted = %d, prev_diffuse = %d\n", 
+	    prev_factor, prev_filter.r(), prev_filter.g(), prev_filter.b(), 
+	    prev_ref.n, prev_ref.reflected, prev_ref.refracted, prev_ref.diffuse
+	  );
+	  add_color = de_nan(add_color);
+        }
+	acc_color += add_color;
 
-				//float factor_x = fminf(factor, .99999);
-				//factor_x = fmaxf(0.0, factor_x);
+	//if (isnan(factor_x))
+	//	printf("factor = %f\n", factor);
 
-				//if (isnan(factor_x))
-				//	printf("factor = %f\n", factor);
+        prev_ref = ref;
+	prev_factor = factor;
 
-				if (factor > 0) {
-				  vec3 mask_factor = ref.filter * clamp(0, .9999, factor);
-				  //mask_factor.min_limit(0);
-				  //mask_factor.max_limit(.9999);
-          //prev_factor = factor;
-				  //prev_filter = ref.filter;
-          //prev_ref = ref;
+	if (factor > 0) {
+	  vec3 mask_factor = ref.filter * clamp(0, .9999, factor);
           mask *= mask_factor;
-				} else {
-				  return acc_color;
-				}
-
-        //printf("t1 = %f, t2 = %f\n", 
-				//		((float)(end_1 - start_1)) / CLOCKS_PER_SEC,
-				//		((float)(end_2 - start_2)) / CLOCKS_PER_SEC
-				//		);	
+	} else {
+	  return acc_color;
+	}
 
       }
-
-			ray = ref.ray;
+      ray = ref.ray;
 
     } else {
       if (i < 1){
@@ -283,7 +265,7 @@ void do_sss_first_pass(
 __global__
 void render_3(
   vec3 *fb, Camera **camera, curandState *rand_state, int sample_size,
-  int level,
+  int level, int dof_sample_size,
   vec3 sky_emission, int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
   Node **node_list, Object **object_list, Node **sss_pts_node_list,
@@ -308,7 +290,7 @@ void render_3(
   Ray camera_ray, ray;
   fb[pixel_index] = color;
 
-  for(int k = 0; k < 20; k++) {
+  for(int k = 0; k < dof_sample_size; k++) {
     camera_ray = camera[0] -> compute_ray(
       i + .5, j + .5, &local_rand_state);
     for(int idx = 0; idx < sample_size; idx++) {
@@ -326,7 +308,7 @@ void render_3(
       color += color_tmp;
     }
   }
-  color *= (1.0 / sample_size / 20.0);
+  color *= (1.0 / sample_size / dof_sample_size);
 
   fb[pixel_index] = color;
 

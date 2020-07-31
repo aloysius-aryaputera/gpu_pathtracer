@@ -38,7 +38,7 @@ __device__ float _compute_reflection_sampling_pdf(
     (dot_prod_1 <= 0 && dot_prod_2 >= 0)
   ) {
     if (isinf(n)) {
-      return 1E5;
+      return 1E6 / (2 * M_PI);
     } else {
       return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
     }
@@ -57,7 +57,7 @@ __device__ float _compute_refraction_sampling_pdf(
     (dot_prod_1 <= 0 && dot_prod_2 <= 0)
   ) {
     if (isinf(n)) {
-      return 1E5;
+      return 1E6 / (2 * M_PI);
     } else {
       return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
     }
@@ -98,7 +98,7 @@ __device__ vec3 compute_phong_filter(
 ) {
   vec3 filter;
   if (isinf(n)) {
-    filter = k * vec3(1E5, 1E5, 1E5);
+    filter = k * vec3(1E6, 1E6, 1E6) / 2;
   } else {
     filter = k * (n + 2) * powf(fmaxf(0, dot(ideal_dir, dir)), n) / 2;
   } 

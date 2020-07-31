@@ -75,6 +75,7 @@ int main(int argc, char **argv) {
   int im_height = input_param.image_height;
   int pathtracing_sample_size = input_param.pathtracing_sample_size;
   int pathtracing_level = input_param.pathtracing_level;
+  int dof_sample_size = input_param.dof_sample_size;
   float eye_x = input_param.eye_x;
   float eye_y = input_param.eye_y;
   float eye_z = input_param.eye_z;
@@ -105,7 +106,7 @@ int main(int argc, char **argv) {
   Material **my_material;
   Camera **my_camera;
   Point **sss_pts;
-  vec3 *image_output, *image_output_2;
+  vec3 *image_output;
 
   int num_pixels = im_width * im_height;
   int max_num_materials = 100;
@@ -123,7 +124,7 @@ int main(int argc, char **argv) {
   float *tf_x, *tf_y, *tf_z;
   float *path_length;
   float *material_image_r, *material_image_g, *material_image_b;
-	float *bm;
+  float *bm;
   int *num_materials;
   int *material_image_height_diffuse, *material_image_width_diffuse, \
     *material_image_offset_diffuse, *material_priority;
@@ -1071,26 +1072,23 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
 
   checkCudaErrors(
-    cudaMallocManaged((void **)&rand_state_image, 10 * rand_state_image_size));
+    cudaMallocManaged((void **)&rand_state_image, rand_state_image_size));
 
   start = clock();
   process = "Generating curand state for rendering";
   print_start_process(process, start);
-  init_curand_state<<<10 * num_pixels / 8 + 1, 8>>>(10 * num_pixels, rand_state_image);
+  init_curand_state<<<num_pixels / 8 + 1, 8>>>(num_pixels, rand_state_image);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
-
-  checkCudaErrors(cudaMallocManaged((void **)&image_output_2, 10 * image_size));
-  dim3 blocks_2(im_width / tx + 1, im_height / ty + 1, 10 / 1 + 1);
-  dim3 threads_2(tx, ty, 1);
 
   start = clock();
   process = "Rendering";
   print_start_process(process, start);
   render_3<<<blocks, threads>>>(
     image_output, my_camera, rand_state_image, pathtracing_sample_size,
-    pathtracing_level, sky_emission, bg_height, bg_width,
+    pathtracing_level, dof_sample_size,
+    sky_emission, bg_height, bg_width,
     bg_texture_r, bg_texture_g, bg_texture_b, node_list, my_objects,
     sss_pts_node_list,
     target_node_list,

@@ -47,42 +47,39 @@ __device__ float _recompute_pdf(
   );
 
   for(int i = 0; i < num_potential_targets; i++) {
-		node_pdf = get_node_pdf(
-		  target_leaf_list[potential_target_idx[i]], origin, pivot, 
-			kd
-		);
+    node_pdf = get_node_pdf(
+      target_leaf_list[potential_target_idx[i]], origin, pivot, kd);
     hittable_pdf += node_pdf * target_geom_array[potential_target_idx[i]] ->
       get_hittable_pdf(rec.point, dir);
-		if (node_pdf > 1) printf("node_pdf = %f\n", node_pdf);
+    if (node_pdf > 1) printf("node_pdf = %f\n", node_pdf);
   }
 
-
   if (ref.diffuse) {
-		sampling_pdf = compute_diffuse_sampling_pdf(rec.normal, ref.ray.dir);
-	} else {
-	  sampling_pdf = compute_specular_sampling_pdf(
-			rec.coming_ray.dir, ref.ray.dir, rec.normal, perfect_reflection_dir,
-			n, ref.refracted);
-	}
+    sampling_pdf = compute_diffuse_sampling_pdf(rec.normal, ref.ray.dir);
+  } else {
+    sampling_pdf = compute_specular_sampling_pdf(
+      rec.coming_ray.dir, ref.ray.dir, rec.normal, perfect_reflection_dir,
+      n, ref.refracted);
+  }
 
- if (isnan(hittable_pdf))
-   printf("hittable_pdf is nan\n");	 
+  if (isnan(hittable_pdf))
+    printf("hittable_pdf is nan\n");	 
 
   return hittable_pdf_weight * hittable_pdf + (
-			1 - hittable_pdf_weight) * sampling_pdf;
+    1 - hittable_pdf_weight) * sampling_pdf;
 }
 
 __device__ vec3 _pick_a_random_point_on_a_target_geom(
 	Node* target_bvh_root, vec3 origin, vec3 normal, vec3 kd, 
 	curandState *rand_state
 ) {
-	Primitive* selected_target;
-	selected_target = traverse_bvh_to_pick_a_target(
-	  target_bvh_root, origin, normal, kd, rand_state
-	);
+  Primitive* selected_target;
+  selected_target = traverse_bvh_to_pick_a_target(
+    target_bvh_root, origin, normal, kd, rand_state
+  );
   hit_record random_hit_record = selected_target -> 
-		get_random_point_on_surface(rand_state);
-	return random_hit_record.point;
+    get_random_point_on_surface(rand_state);
+  return random_hit_record.point;
 }
 
 __device__ void change_ref_ray(
@@ -129,42 +126,19 @@ __device__ void change_ref_ray(
     ref.diffuse, ref.n, ref.perfect_reflection_dir, ref
   );
 
-	if (ref.diffuse) {
-		scattering_pdf = fmaxf(0.0, dot(rec.normal, ref.ray.dir));
-	} else {
-		float dot_prod_1 = dot(rec.coming_ray.dir, rec.normal);
-		float dot_prod_2 = dot(ref.ray.dir, rec.normal);
+  if (ref.diffuse) {
+    scattering_pdf = fmaxf(0.0, dot(rec.normal, ref.ray.dir));
+  } else {
+    float dot_prod_1 = dot(rec.coming_ray.dir, rec.normal);
+    float dot_prod_2 = dot(ref.ray.dir, rec.normal);
     scattering_pdf = (
-				(dot_prod_1 >= 0 && dot_prod_2 <= 0 && ref.reflected) ||
-				(dot_prod_1 <= 0 && dot_prod_2 >= 0 && ref.reflected) ||
-				(dot_prod_1 >= 0 && dot_prod_2 >= 0 && ref.refracted) ||
-				(dot_prod_1 <= 0 && dot_prod_2 <= 0 && ref.refracted)
-		);
-	}
-
-    //if (ref.reflected) {
-		//  if (
-		//	  (dot_prod_1 >= 0 && dot_prod_2 <= 0) || 
-		//	  (dot_prod_1 <= 0 && dot_prod_2 >= 0)
-		//  ) {
-		//	  scattering_pdf = 1;
-		//  } else {
-		//    scattering_pdf = 0;
-		//  }
-	  //} else {
-	  //  if (	
-		//    (dot_prod_1 >= 0 && dot_prod_2 >= 0) || 
-		//    (dot_prod_1 <= 0 && dot_prod_2 <= 0)
-	  //  ) {
-		//	  scattering_pdf = 1;
-		//  } else {
-		//    scattering_pdf = 0;
-		//  }
-	  //}
-	//}
-
+      (dot_prod_1 >= 0 && dot_prod_2 <= 0 && ref.reflected) ||
+      (dot_prod_1 <= 0 && dot_prod_2 >= 0 && ref.reflected) ||
+      (dot_prod_1 >= 0 && dot_prod_2 >= 0 && ref.refracted) ||
+      (dot_prod_1 <= 0 && dot_prod_2 <= 0 && ref.refracted)
+    );
+  }
   factor = scattering_pdf / M_PI / pdf;
-	//factor = (pdf * M_PI) / scattering_pdf;
 }
 
 #endif
