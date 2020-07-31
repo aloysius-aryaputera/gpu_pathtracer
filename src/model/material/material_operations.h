@@ -33,10 +33,10 @@ __device__ float _recompute_pdf(
   int potential_target_idx[400];
   vec3 pivot;
 
-	if (diffuse) 
-		pivot = rec.normal;
-	else 
-		pivot = perfect_reflection_dir;
+  if (diffuse) 
+    pivot = rec.normal;
+  else 
+    pivot = perfect_reflection_dir;
 
   dir = unit_vector(dir);
 
@@ -97,27 +97,30 @@ __device__ void change_ref_ray(
   vec3 new_target_point, new_dir, pivot;
   Ray default_ray = ref.ray;
 
-	if (ref.diffuse) 
-		pivot = rec.normal;
-	else 
-		pivot = ref.perfect_reflection_dir;
+  if (ref.diffuse) 
+    pivot = rec.normal;
+  else 
+    pivot = ref.perfect_reflection_dir;
+
+  if (isinf(ref.n))
+    hittable_pdf_weight = 0;
 
   if (random_number < hittable_pdf_weight) {
 
     new_target_point = _pick_a_random_point_on_a_target_geom(
-		  target_node_list[0], default_ray.p0, pivot, ref.ks,
-		  rand_state_mis	
-		);
+      target_node_list[0], default_ray.p0, pivot, ref.ks,
+      rand_state_mis	
+    );
 
-		new_dir = new_target_point - default_ray.p0;
+    new_dir = new_target_point - default_ray.p0;
 
-		//if (dot(new_dir, rec.normal) > 0)
+    //if (dot(new_dir, rec.normal) > 0)
     ref.ray = Ray(default_ray.p0, new_dir);
 
-	  if (ref.reflected || ref.refracted) {
-			ref.filter = compute_phong_filter(ref.ks, ref.n, pivot, ref.ray.dir);
-	  }
-	}
+    if (ref.reflected || ref.refracted) {
+      ref.filter = compute_phong_filter(ref.ks, ref.n, pivot, ref.ray.dir);
+    }
+  }
 
   pdf = _recompute_pdf(
     rec, ref.ray.p0, ref.ray.dir, 

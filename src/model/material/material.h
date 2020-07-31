@@ -13,12 +13,12 @@
 struct reflection_record
 {
   Ray ray;
-	vec3 ks;
+  vec3 ks;
   vec3 filter;
-	vec3 perfect_reflection_dir;
+  vec3 perfect_reflection_dir;
   bool diffuse, reflected, refracted, false_hit, entering;
 
-	float n;
+  float n;
 };
 
 __device__ reflection_record _get_false_hit_parameters(
@@ -195,8 +195,8 @@ __device__ reflection_record Material::_refract(
     get_material_refraction_index(second_highest_prioritised_material);
 
   vec3 k = this -> transmission * this -> t_r, v_out;
-	float local_n_s = this -> _get_texture_n_s(uv_vector);
-	ref.n = local_n_s;
+  float local_n_s = this -> _get_texture_n_s(uv_vector);
+  ref.n = local_n_s;
   sss = false;
 
   if (dot(v_in, normal) <= 0) {
@@ -299,7 +299,7 @@ __host__ __device__ Material::Material(
   float t_r_,
   float n_s_,
   float n_i_,
-	float bm_,
+  float bm_,
   int priority_,
   int texture_height_diffuse_,
   int texture_width_diffuse_,
@@ -336,7 +336,11 @@ __host__ __device__ Material::Material(
   this -> n_s = n_s_;
   this -> n_i = n_i_;
   this -> t_r = t_r_;
-	this -> bm = bm_;
+  if (n_s_ >= 1E4 && this -> t_r > 0) 
+    this -> n_s = INFINITY;
+  else
+    this -> n_s = n_s_;
+  this -> bm = bm_;
   this -> priority = priority_;
 
   this -> texture_height_diffuse = texture_height_diffuse_;
@@ -383,12 +387,12 @@ __device__ reflection_record _get_false_hit_parameters(
   vec3 hit_point, vec3 v_in, vec3 normal
 ) {
   reflection_record ref;
-	ref.false_hit = true;
-	ref.reflected = false;
-	ref.refracted = true;
-	ref.ray = Ray(hit_point, v_in);
-	ref.filter = vec3(1.0, 1.0, 1.0);
-	ref.diffuse = false;
+  ref.false_hit = true;
+  ref.reflected = false;
+  ref.refracted = true;
+  ref.ray = Ray(hit_point, v_in);
+  ref.filter = vec3(1.0, 1.0, 1.0);
+  ref.diffuse = false;
   if (dot(v_in, normal) <= 0) {
     ref.entering = true;
   } else {
@@ -448,21 +452,21 @@ __device__ void Material::check_next_path(
     actual_mat = this;
   }
 
-	float kd_length = actual_mat -> get_texture_diffuse(uv_vector).length();
-	float ks_length = actual_mat -> get_texture_specular(uv_vector).length();
-	float factor = kd_length / (kd_length + ks_length);
-	float local_n_s = actual_mat -> _get_texture_n_s(uv_vector);
+  float kd_length = actual_mat -> get_texture_diffuse(uv_vector).length();
+  float ks_length = actual_mat -> get_texture_specular(uv_vector).length();
+  float factor = kd_length / (kd_length + ks_length);
+  float local_n_s = actual_mat -> _get_texture_n_s(uv_vector);
   vec3 k;
 
   if (random_number <= factor) {
     ref.ray = generate_ray(
-			hit_point, vec3(0, 0, 0), normal, 0, 1, rand_state);
+      hit_point, vec3(0, 0, 0), normal, 0, 1, rand_state);
     ref.filter = actual_mat -> get_texture_diffuse(uv_vector);
     ref.diffuse = true;
-		ref.reflected = false;
-		ref.refracted = false;
-		ref.ks = ref.filter;
-		ref.n = 1;
+    ref.reflected = false;
+    ref.refracted = false;
+    ref.ks = ref.filter;
+    ref.n = 1;
 
     if (actual_mat -> sub_surface_scattering) {
       sss = true;
@@ -475,17 +479,17 @@ __device__ void Material::check_next_path(
     reflected_ray_dir = reflect(v_in, normal);
     ref.ray = generate_ray(
       hit_point, reflected_ray_dir, normal, 1, local_n_s, rand_state);
-		k = actual_mat -> get_texture_specular(uv_vector);
+    k = actual_mat -> get_texture_specular(uv_vector);
     ref.filter = compute_phong_filter(
-			k, local_n_s, reflected_ray_dir, ref.ray.dir);
+      k, local_n_s, reflected_ray_dir, ref.ray.dir);
 
     ref.diffuse = false;
-		ref.reflected = true;
-		ref.refracted = false;
-		ref.perfect_reflection_dir = reflected_ray_dir;
-		ref.n = local_n_s;
-		ref.ks = k;
-		sss = false;
+    ref.reflected = true;
+    ref.refracted = false;
+    ref.perfect_reflection_dir = reflected_ray_dir;
+    ref.n = local_n_s;
+    ref.ks = k;
+    sss = false;
   }
 
   return;
@@ -551,6 +555,8 @@ __device__ vec3 Material::get_texture_specular(vec3 uv_vector) {
 }
 
 __device__ float Material::_get_texture_n_s(vec3 uv_vector) {
+  if (isinf(this -> n_s))
+    return this -> n_s;
   vec3 filter = vec3(
     this -> n_s / powf(3, .5), this -> n_s / powf(3, .5),
     this -> n_s / powf(3, .5));
