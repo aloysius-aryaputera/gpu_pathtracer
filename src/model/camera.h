@@ -12,7 +12,7 @@
 class Camera {
   private:
     vec3 center, up, u, v, w;
-    float fovy, fovx, aperture, lens_radius, focus_dist;
+    float fovy, fovx, aperture, focus_dist;
 
   public:
     __host__ __device__ Camera(
@@ -24,6 +24,7 @@ class Camera {
     __device__ int compute_j(vec3 direction);
 
     int width, height;
+    float lens_radius;
     vec3 eye;
 };
 

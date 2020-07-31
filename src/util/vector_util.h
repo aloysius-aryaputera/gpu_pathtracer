@@ -31,16 +31,20 @@ __device__ float _compute_refraction_sampling_pdf(
 __device__ float _compute_reflection_sampling_pdf(
 	vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
 ) {
-	float dot_prod_1 = dot(in, normal);
-	float dot_prod_2 = dot(normal, out);
+  float dot_prod_1 = dot(in, normal);
+  float dot_prod_2 = dot(normal, out);
   if (
-		(dot_prod_1 >= 0 && dot_prod_2 <= 0) ||
-		(dot_prod_1 <= 0 && dot_prod_2 >= 0)
-	) {
-		return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
-	}	else {
-	  return 0;
-	}
+    (dot_prod_1 >= 0 && dot_prod_2 <= 0) ||
+    (dot_prod_1 <= 0 && dot_prod_2 >= 0)
+  ) {
+    if (isinf(n)) {
+      return 1E5;
+    } else {
+      return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
+    }
+  } else {
+    return 0;
+  }
 }
 
 __device__ float _compute_refraction_sampling_pdf(
@@ -66,10 +70,10 @@ __device__ float compute_specular_sampling_pdf(
   vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n, bool refracted
 ) {
   if (refracted) {
-	  return _compute_refraction_sampling_pdf(in, out, normal, perfect_out, n);
-	} else {
-	  return _compute_reflection_sampling_pdf(in, out, normal, perfect_out, n);
-	}
+    return _compute_refraction_sampling_pdf(in, out, normal, perfect_out, n);
+  } else {
+    return _compute_reflection_sampling_pdf(in, out, normal, perfect_out, n);
+  }
 }
 
 __device__ float compute_diffuse_sampling_pdf(
