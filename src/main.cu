@@ -1085,7 +1085,7 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Rendering";
   print_start_process(process, start);
-  render_3<<<blocks, threads>>>(
+  render<<<blocks, threads>>>(
     image_output, my_camera, rand_state_image, pathtracing_sample_size,
     pathtracing_level, dof_sample_size,
     sky_emission, bg_height, bg_width,

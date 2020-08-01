@@ -25,12 +25,11 @@
 __global__
 void render(
   vec3 *fb, Camera **camera, curandState *rand_state, int sample_size,
-  int level,
+  int level, int dof_sample_size,
   vec3 sky_emission, int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
-  Node **node_list,
-  Object **object_list, Node **sss_pts_node_list,
-  Node **target_node_list,
+  Node **node_list, Object **object_list, Node **sss_pts_node_list,
+  Node **target_node_list, Node **target_leaf_list,
   Primitive** target_geom_array, int num_target_geom,
   float hittable_pdf_weight
 );
@@ -263,7 +262,7 @@ void do_sss_first_pass(
 }
 
 __global__
-void render_3(
+void render(
   vec3 *fb, Camera **camera, curandState *rand_state, int sample_size,
   int level, int dof_sample_size,
   vec3 sky_emission, int bg_height, int bg_width,
@@ -319,122 +318,6 @@ void render_3(
         camera[0] -> height * camera[0] -> width)
     );
   }
-}
-
-__global__
-void render_2(
-  vec3 *fb, Camera **camera, curandState *rand_state, int sample_size,
-  int level,
-  vec3 sky_emission, int bg_height, int bg_width,
-  float *bg_r, float *bg_g, float *bg_b,
-  Node **node_list, Object **object_list, Node **sss_pts_node_list,
-  Node **target_node_list, Node **target_leaf_list,
-  Primitive** target_geom_array, int num_target_geom,
-  float hittable_pdf_weight
-) {
-
-  int j = threadIdx.x + blockIdx.x * blockDim.x;
-  int i = threadIdx.y + blockIdx.y * blockDim.y;
-  int k = threadIdx.z + blockIdx.z * blockDim.z;
-
-  if(
-    (j >= camera[0] -> width) || (i >= camera[0] -> height) || (k >= 10)
-  ) {
-    return;
-  }
-
-  hit_record init_rec, cur_rec;
-  vec3 color = vec3(0, 0, 0), color_tmp;
-  int pixel_index = k * (camera[0] -> width) * (camera[0] -> height) + \
-    i * (camera[0] -> width) + j;
-  curandState local_rand_state = rand_state[pixel_index];
-  Ray camera_ray = camera[0] -> compute_ray(
-    i + .5, j + .5, &local_rand_state), ray;
-  fb[pixel_index] = color;
-
-  for(int idx = 0; idx < sample_size; idx++) {
-    color_tmp = _compute_color(
-      camera_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
-      bg_b, &local_rand_state, node_list, object_list, sss_pts_node_list,
-      target_node_list, target_leaf_list,
-      false, target_geom_array, num_target_geom,
-      hittable_pdf_weight
-    );
-    if (color_tmp.vector_is_nan()) {
-      printf("color_tmp is nan!\n");
-    }
-    color_tmp = de_nan(color_tmp);
-    color += color_tmp;
-  }
-  color *= (1.0 / sample_size);
-
-  fb[pixel_index] = color;
-
-  if (j == 0 && (i % (camera[0] -> height / 100) == 0)) {
-    printf(
-      "Progress = %5.5f %%\n",
-      100.0 * i * camera[0] -> width / (
-        camera[0] -> height * camera[0] -> width)
-    );
-  }
-
-}
-
-__global__
-void render(
-  vec3 *fb, Camera **camera, curandState *rand_state, int sample_size,
-  int level,
-  vec3 sky_emission, int bg_height, int bg_width,
-  float *bg_r, float *bg_g, float *bg_b,
-  Node **node_list, Object **object_list, Node **sss_pts_node_list,
-  Node **target_node_list, Node **target_leaf_list,
-  Primitive** target_geom_array, int num_target_geom,
-  float hittable_pdf_weight
-) {
-
-  int j = threadIdx.x + blockIdx.x * blockDim.x;
-  int i = threadIdx.y + blockIdx.y * blockDim.y;
-
-  if(
-    (j >= camera[0] -> width) || (i >= camera[0] -> height)
-  ) {
-    return;
-  }
-
-  hit_record init_rec, cur_rec;
-  vec3 color = vec3(0, 0, 0), color_tmp;
-  int pixel_index = i * (camera[0] -> width) + j;
-  curandState local_rand_state = rand_state[pixel_index];
-  Ray camera_ray = camera[0] -> compute_ray(
-    i + .5, j + .5, &local_rand_state), ray;
-  fb[pixel_index] = color;
-
-  for(int idx = 0; idx < sample_size; idx++) {
-    color_tmp = _compute_color(
-      camera_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
-      bg_b, &local_rand_state, node_list, object_list, sss_pts_node_list,
-      target_node_list, target_leaf_list,
-      false, target_geom_array, num_target_geom,
-      hittable_pdf_weight
-    );
-    if (color_tmp.vector_is_nan()) {
-      printf("color_tmp is nan!\n");
-    }
-    color_tmp = de_nan(color_tmp);
-    color += color_tmp;
-  }
-  color *= (1.0 / sample_size);
-
-  fb[pixel_index] = color;
-
-  if (j == 0 && (i % (camera[0] -> height / 100) == 0)) {
-    printf(
-      "Progress = %5.5f %%\n",
-      100.0 * i * camera[0] -> width / (
-        camera[0] -> height * camera[0] -> width)
-    );
-  }
-
 }
 
 #endif

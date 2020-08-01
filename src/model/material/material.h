@@ -34,7 +34,7 @@ class Material {
     __device__ float _get_texture_n_s(vec3 uv_vector);
     __device__ reflection_record _refract(
       vec3 hit_point, vec3 v_in, vec3 normal,
-			vec3 uv_vector,
+      vec3 uv_vector,
       bool &sss,
       Material *highest_prioritised_material,
       Material *second_highest_prioritised_material,
@@ -219,11 +219,11 @@ __device__ reflection_record Material::_refract(
           - 1 / tan_theta_2 * v_in_parallel.length() * normal;
         v_out = v_in_parallel + v_out_perpendicular;
         v_out.make_unit_vector();
-			} else {
-				v_out = -normal;
-			}
+      } else {
+	v_out = -normal;
+      }
 
-			ref.perfect_reflection_dir = v_out;
+      ref.perfect_reflection_dir = v_out;
       ref.diffuse = false;
       ref.reflected = false;
       ref.refracted = true;
@@ -232,7 +232,7 @@ __device__ reflection_record Material::_refract(
     } else {
       v_out = reflect(v_in, normal);
       v_out.make_unit_vector();
-			ref.perfect_reflection_dir = v_out;
+      ref.perfect_reflection_dir = v_out;
 
       ref.diffuse = false;
       ref.reflected = true;
@@ -253,7 +253,7 @@ __device__ reflection_record Material::_refract(
     ) {
       v_out = reflect(v_in, -normal);
       v_out.make_unit_vector();
-			ref.perfect_reflection_dir = v_out;
+      ref.perfect_reflection_dir = v_out;
       ref.diffuse = false;
       ref.reflected = true;
       ref.refracted = false;
@@ -270,15 +270,15 @@ __device__ reflection_record Material::_refract(
 
       if (abs(tan_theta_2) > SMALL_DOUBLE) {
       	vec3 v_out_perpendicular = \
-        	1 / tan_theta_2 * v_in_parallel.length() * normal;
+          1 / tan_theta_2 * v_in_parallel.length() * normal;
       	v_out = v_in_parallel + v_out_perpendicular;
       	v_out.make_unit_vector();
-			} else {
-				v_out = normal;
-			}
+      } else {
+	v_out = normal;
+      }
 
       ref.perfect_reflection_dir = v_out;
-			ref.diffuse = false;
+      ref.diffuse = false;
       ref.reflected = false;
       ref.refracted = true;
       ref.false_hit = false;
@@ -287,7 +287,7 @@ __device__ reflection_record Material::_refract(
   }
 
   ref.ray = generate_ray(hit_point, v_out, normal, 1, local_n_s, rand_state);
-	ref.ks = k;
+  ref.ks = k;
   ref.filter = compute_phong_filter(k, local_n_s, v_out, ref.ray.dir);
   return ref;
 }
@@ -335,7 +335,7 @@ __host__ __device__ Material::Material(
   this -> path_length = path_length_;
   this -> n_i = n_i_;
   this -> t_r = t_r_;
-  if (n_s_ >= 1E6 && this -> t_r > 0) 
+  if (n_s_ >= MAX_PHONG_N_S && this -> t_r > 0) 
     this -> n_s = INFINITY;
   else
     this -> n_s = n_s_;
@@ -397,7 +397,7 @@ __device__ reflection_record _get_false_hit_parameters(
   } else {
     ref.entering = false;
   }
-	return ref;
+  return ref;
 }
 
 __device__ void Material::check_next_path(
@@ -418,7 +418,7 @@ __device__ void Material::check_next_path(
   );
 
   if (ref.false_hit) {
-		sss = false;
+    sss = false;
     ref = _get_false_hit_parameters(hit_point, v_in, normal);
     return;
   }

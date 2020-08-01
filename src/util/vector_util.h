@@ -5,31 +5,32 @@
 #include <math.h>
 
 #include "../model/vector_and_matrix/vec3.h"
+#include "../param.h"
 
 __device__ vec3 get_random_unit_vector_hemisphere_cos_pdf(
-	curandState *rand_state);
+  curandState *rand_state);
 __device__ vec3 get_random_unit_vector_phong(curandState *rand_state);
 __device__ vec3 get_random_unit_vector_disk(curandState *rand_state);
 __device__ vec3 compute_phong_filter(
-	vec3 k, float n, vec3 ideal_dir, vec3 dir
+  vec3 k, float n, vec3 ideal_dir, vec3 dir
 );
 __device__ vec3 reflect(vec3 v, vec3 normal);
 __device__ float compute_schlick_specular(float cos_theta);
 __device__ float compute_diffuse_sampling_pdf(
-	vec3 normal, vec3 reflected_dir
+  vec3 normal, vec3 reflected_dir
 );
 __device__ float compute_specular_sampling_pdf(
   vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n, bool refracted
 );
 __device__ float _compute_reflection_sampling_pdf(
-	vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
+  vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
 );
 __device__ float _compute_refraction_sampling_pdf(
-	vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
+  vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
 );
 
 __device__ float _compute_reflection_sampling_pdf(
-	vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
+  vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
 ) {
   float dot_prod_1 = dot(in, normal);
   float dot_prod_2 = dot(normal, out);
@@ -38,7 +39,7 @@ __device__ float _compute_reflection_sampling_pdf(
     (dot_prod_1 <= 0 && dot_prod_2 >= 0)
   ) {
     if (isinf(n)) {
-      return 1E6 / (2 * M_PI);
+      return MAX_PHONG_N_S / (2 * M_PI);
     } else {
       return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
     }
@@ -57,7 +58,7 @@ __device__ float _compute_refraction_sampling_pdf(
     (dot_prod_1 <= 0 && dot_prod_2 <= 0)
   ) {
     if (isinf(n)) {
-      return 1E6 / (2 * M_PI);
+      return MAX_PHONG_N_S / (2 * M_PI);
     } else {
       return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
     }
@@ -98,7 +99,7 @@ __device__ vec3 compute_phong_filter(
 ) {
   vec3 filter;
   if (isinf(n)) {
-    filter = k * vec3(1E6, 1E6, 1E6) / 2;
+    filter = k * MAX_PHONG_N_S * vec3(1, 1, 1) / 2;
   } else {
     filter = k * (n + 2) * powf(fmaxf(0, dot(ideal_dir, dir)), n) / 2;
   } 
