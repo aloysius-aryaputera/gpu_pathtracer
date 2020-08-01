@@ -5,27 +5,126 @@
 #include <math.h>
 
 #include "../model/vector_and_matrix/vec3.h"
+#include "../param.h"
 
-__device__ vec3 get_random_unit_vector_hemisphere(curandState *rand_state);
-
-__device__ vec3 get_random_unit_vector_hemisphere_cos_pdf(curandState *rand_state);
-
+__device__ vec3 get_random_unit_vector_hemisphere_cos_pdf(
+  curandState *rand_state);
 __device__ vec3 get_random_unit_vector_phong(curandState *rand_state);
-
 __device__ vec3 get_random_unit_vector_disk(curandState *rand_state);
+__device__ vec3 compute_phong_filter(
+  vec3 k, float n, vec3 ideal_dir, vec3 dir
+);
+__device__ vec3 reflect(vec3 v, vec3 normal);
+__device__ float compute_schlick_specular(float cos_theta);
+__device__ float compute_diffuse_sampling_pdf(
+  vec3 normal, vec3 reflected_dir
+);
+__device__ float compute_specular_sampling_pdf(
+  vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n, bool refracted
+);
+__device__ float _compute_reflection_sampling_pdf(
+  vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
+);
+__device__ float _compute_refraction_sampling_pdf(
+  vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
+);
 
-__device__ vec3 get_random_unit_vector_phong(float n, curandState *rand_state) {
-  float r1 = curand_uniform(&rand_state[0]);
-	float r2 = curand_uniform(&rand_state[0]);
-	float x = sqrt(1 - powf(r1, 2 / (n + 1))) * cos(2 * M_PI * r2);
-	float y = sqrt(1 - powf(r1, 2 / (n + 1))) * sin(2 * M_PI * r2);
-  float z = powf(r1, 1 / (n + 1));
-	vec3 output_vector = vec3(x, y, z);
-	output_vector.make_unit_vector();
-	return output_vector;
+__device__ float _compute_reflection_sampling_pdf(
+  vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
+) {
+  float dot_prod_1 = dot(in, normal);
+  float dot_prod_2 = dot(normal, out);
+  if (
+    (dot_prod_1 >= 0 && dot_prod_2 <= 0) ||
+    (dot_prod_1 <= 0 && dot_prod_2 >= 0)
+  ) {
+    if (isinf(n)) {
+      return MAX_PHONG_N_S / (2 * M_PI);
+    } else {
+      return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
+    }
+  } else {
+    return 0;
+  }
 }
 
-__device__ vec3 get_random_unit_vector_hemisphere_cos_pdf(curandState *rand_state) {
+__device__ float _compute_refraction_sampling_pdf(
+	vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
+) {
+  float dot_prod_1 = dot(in, normal);
+  float dot_prod_2 = dot(normal, out);
+  if (
+    (dot_prod_1 >= 0 && dot_prod_2 >= 0) ||
+    (dot_prod_1 <= 0 && dot_prod_2 <= 0)
+  ) {
+    if (isinf(n)) {
+      return MAX_PHONG_N_S / (2 * M_PI);
+    } else {
+      return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
+    }
+  } else {
+    return 0;
+  }
+}
+
+__device__ float compute_specular_sampling_pdf(
+  vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n, bool refracted
+) {
+  if (refracted) {
+    return _compute_refraction_sampling_pdf(in, out, normal, perfect_out, n);
+  } else {
+    return _compute_reflection_sampling_pdf(in, out, normal, perfect_out, n);
+  }
+}
+
+__device__ float compute_diffuse_sampling_pdf(
+  vec3 normal, vec3 reflected_dir
+) {
+  return fmaxf(0.0, dot(normal, reflected_dir) / M_PI);
+}
+
+__device__ float compute_schlick_specular(
+  float cos_theta, float n_1, float n_2
+) {
+  float r_0 = powf((n_1 - n_2) / (n_1 + n_2), 2);
+  return r_0 + (1 - r_0) * powf(1 - cos_theta, 5);
+}
+
+__device__ vec3 reflect(vec3 v, vec3 normal) {
+  return v - 2 * dot(v, normal) * normal;
+}
+
+__device__ vec3 compute_phong_filter(
+  vec3 k, float n, vec3 ideal_dir, vec3 dir
+) {
+  vec3 filter;
+  if (isinf(n)) {
+    filter = k * MAX_PHONG_N_S * vec3(1, 1, 1) / 2;
+  } else {
+    filter = k * (n + 2) * powf(fmaxf(0, dot(ideal_dir, dir)), n) / 2;
+  } 
+  return filter;
+}
+
+__device__ vec3 get_random_unit_vector_phong(float n, curandState *rand_state) {
+  vec3 output_vector;
+  if (isinf(n)) {
+    output_vector = vec3(0, 0, 1);
+  } else {
+    float r1 = curand_uniform(&rand_state[0]);
+    float r2 = curand_uniform(&rand_state[0]);
+    float x = sqrt(1 - powf(r1, 2.0 / (n + 1))) * cos(2 * M_PI * r2);
+    float y = sqrt(1 - powf(r1, 2.0 / (n + 1))) * sin(2 * M_PI * r2);
+    float z = powf(r1, 1.0 / (n + 1));
+    output_vector = vec3(x, y, z);
+    output_vector.make_unit_vector();
+  }
+  return output_vector;
+}
+
+__device__ vec3 get_random_unit_vector_hemisphere_cos_pdf(
+  curandState *rand_state
+) {
   float r1 = curand_uniform(&rand_state[0]);
   float r2 = curand_uniform(&rand_state[0]);
   float z = sqrt(1 - r2);
@@ -35,24 +134,6 @@ __device__ vec3 get_random_unit_vector_hemisphere_cos_pdf(curandState *rand_stat
 
   vec3 output_vector = vec3(x, y, z);
   output_vector.make_unit_vector();
-
-  return output_vector;
-}
-
-
-__device__ vec3 get_random_unit_vector_hemisphere(curandState *rand_state) {
-  float sin_theta = curand_uniform(&rand_state[0]);
-  float cos_theta = sqrt(1 - sin_theta * sin_theta);
-  float phi = curand_uniform(&rand_state[0]) * 2 * M_PI;
-  vec3 output_vector = vec3(sin_theta * cos(phi), sin_theta * sin(phi), cos_theta);
-  output_vector.make_unit_vector();
-
-  if (isnan(output_vector.x()) || isnan(output_vector.y()) || isnan(output_vector.z())) {
-    printf(
-      "sin_theta = %5.5f; cos_theta = %5.5f; phi = %5.5f\n",
-      sin_theta, cos_theta, phi
-    );
-  }
 
   return output_vector;
 }

@@ -38,8 +38,7 @@ class vec3  {
     __host__ __device__ inline float squared_length() const { return e[0]*e[0] + e[1]*e[1] + e[2]*e[2]; }
     __host__ __device__ inline void make_unit_vector();
     __device__ inline bool vector_is_nan();
-
-
+    
     float e[3];
 };
 

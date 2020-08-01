@@ -19,7 +19,7 @@ class InputParam {
 
     int image_width, image_height;
 
-    int pathtracing_sample_size, pathtracing_level;
+    int pathtracing_sample_size, pathtracing_level, dof_sample_size;
     int sss_pts_per_object;
     float hittable_pdf_weight;
 
@@ -79,6 +79,12 @@ void InputParam::extract_parameters(
 	  this -> fovy = std::stof(chunks[1]);
 	} else if (chunks[0] == "aperture") {
 	  this -> aperture = std::stof(chunks[1]);
+	} else if (chunks[0] == "dof_sample_size") {
+	  if (this -> aperture > 0) {
+	    this -> dof_sample_size = std::stoi(chunks[1]);
+	  } else {
+	    this -> dof_sample_size = 1;
+	  }
 	} else if (chunks[0] == "focus_dist") {
 	  this -> focus_dist = std::stof(chunks[1]);
 	} else if (chunks[0] == "sky_emission_r") {

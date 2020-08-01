@@ -3,7 +3,7 @@
 
 #include <curand_kernel.h>
 
-__host__ float clamp(const float &lo, const float &hi, const float &v);
+__host__ __device__ float clamp(const float &lo, const float &hi, const float &v);
 
 __global__ void init_curand_state(
   int num_rand_state, curandState *rand_state
@@ -20,7 +20,7 @@ __device__ float de_nan(float number) {
   return number;
 }
 
-__host__ float clamp(const float &lo, const float &hi, const float &v)
-{ return std::max(lo, std::min(hi, v)); }
+__host__ __device__ float clamp(const float &lo, const float &hi, const float &v)
+{ return fmaxf(lo, fminf(hi, v)); }
 
 #endif

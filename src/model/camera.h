@@ -12,7 +12,7 @@
 class Camera {
   private:
     vec3 center, up, u, v, w;
-    float fovy, fovx, aperture, lens_radius, focus_dist;
+    float fovy, fovx, aperture, focus_dist, lens_radius;
 
   public:
     __host__ __device__ Camera(

@@ -12,6 +12,7 @@
 
 #include "../model/geometry/triangle.h"
 #include "../model/vector_and_matrix/vec3.h"
+#include "../param.h"
 #include "../util/string_util.h"
 
 void _extract_single_material_data(
@@ -373,7 +374,7 @@ void _extract_single_material_data(
         } else if (chunks[0] == "Tr") {
           *(t_r + idx) = clamp(std::stof(chunks[1]), 0, 1);
         } else if (chunks[0] == "Ns") {
-          *(n_s + idx) = clamp(std::stof(chunks[1]), 0, 1000);
+          *(n_s + idx) = clamp(std::stof(chunks[1]), 0, MAX_PHONG_N_S);
         } else if (chunks[0] == "Ni") {
           *(n_i + idx) = clamp(std::stof(chunks[1]), 1, 1000);
         } else if (chunks[0] == "priority") {
@@ -385,11 +386,11 @@ void _extract_single_material_data(
             texture_file_name_array, texture_file_name);
 
           *(material_image_height_diffuse + idx) = texture_height_array[
-						result.second];
+	    result.second];
           *(material_image_width_diffuse + idx) = texture_width_array[
-						result.second];
+	    result.second];
           *(material_image_offset_diffuse + idx) = texture_offset_array[
-						result.second];
+	    result.second];
 
         } else if (chunks[0] == "map_Ks") {
           texture_file_name = chunks[1];
@@ -397,11 +398,11 @@ void _extract_single_material_data(
             texture_file_name_array, texture_file_name);
 
           *(material_image_height_specular + idx) = texture_height_array[
-						result.second];
+	    result.second];
           *(material_image_width_specular + idx) = texture_width_array[
-						result.second];
+	    result.second];
           *(material_image_offset_specular + idx) = texture_offset_array[
-						result.second];
+	    result.second];
 
         } else if (chunks[0] == "map_Ke") {
           texture_file_name = chunks[1];
@@ -409,11 +410,11 @@ void _extract_single_material_data(
             texture_file_name_array, texture_file_name);
 
           *(material_image_height_emission + idx) = texture_height_array[
-						result.second];
+	    result.second];
           *(material_image_width_emission + idx) = texture_width_array[
-						result.second];
+	    result.second];
           *(material_image_offset_emission + idx) = texture_offset_array[
-						result.second];
+	    result.second];
 
         } else if (chunks[0] == "map_Ns") {
           texture_file_name = chunks[1];
@@ -421,30 +422,29 @@ void _extract_single_material_data(
             texture_file_name_array, texture_file_name);
 
           *(material_image_height_n_s + idx) = texture_height_array[
-						result.second];
+	    result.second];
           *(material_image_width_n_s + idx) = texture_width_array[
-						result.second];
+	    result.second];
           *(material_image_offset_n_s + idx) = texture_offset_array[
-						result.second];
+	    result.second];
 
         } else if (chunks[0] == "map_Bump") {
           for (int i = 1; i < chunks.size(); i+= 2) {
-						if (chunks[i] == "-bm") {
-						  *(bm + idx) = std::stof(chunks[i + 1]);
-						}
-					}
+	    if (chunks[i] == "-bm") {
+	      *(bm + idx) = std::stof(chunks[i + 1]);
+	    }
+	  }
 
           texture_file_name = chunks[chunks.size() - 1];
           std::pair<bool, int> result = find_in_vector<std::string>(
             texture_file_name_array, texture_file_name);
 
           *(material_image_height_bump + idx) = texture_height_array[
-						result.second];
+	    result.second];
           *(material_image_width_bump + idx) = texture_width_array[
-						result.second];
+	    result.second];
           *(material_image_offset_bump + idx) = texture_offset_array[
-						result.second];
-
+	    result.second];
         }
       }
     }

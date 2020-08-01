@@ -25,12 +25,11 @@
 __global__
 void render(
   vec3 *fb, Camera **camera, curandState *rand_state, int sample_size,
-  int level,
+  int level, int dof_sample_size,
   vec3 sky_emission, int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
-  Node **node_list,
-  Object **object_list, Node **sss_pts_node_list,
-  Node **target_node_list,
+  Node **node_list, Object **object_list, Node **sss_pts_node_list,
+  Node **target_node_list, Node **target_leaf_list,
   Primitive** target_geom_array, int num_target_geom,
   float hittable_pdf_weight
 );
@@ -95,8 +94,7 @@ __device__ vec3 _compute_color(
   float hittable_pdf_weight
 ) {
   hit_record cur_rec;
-  bool hit, reflected = false, refracted = false, false_hit = false;
-  bool entering = false, sss = false;
+  bool hit, sss = false;
   vec3 mask = vec3(1, 1, 1), light = vec3(0, 0, 0), light_tmp = vec3(0, 0, 0);
   vec3 acc_color = vec3(0, 0, 0), add_color = vec3(0, 0, 0);
   vec3 v3_rand, v3_rand_world;
@@ -118,21 +116,24 @@ __device__ vec3 _compute_color(
     hit = traverse_bvh(node_list[0], ray, cur_rec);
 
     if (hit) {
+      ref.reflected = false;
+      ref.refracted = false;
+      ref.diffuse = false;
 
       cur_rec.object -> get_material() -> check_next_path(
         cur_rec.coming_ray, cur_rec.point, cur_rec.normal, cur_rec.uv_vector,
-        reflected, false_hit, refracted,
-        entering, sss,
+        sss,
         material_list, material_list_length,
         ref, rand_state
       );
 
-      if ((ref.reflected || ref.diffuse) && !(sss && !sss_first_pass)) {
+      if (!(ref.false_hit) && !(sss && !sss_first_pass)) {
         // Modify ref.ray
         change_ref_ray(
-          cur_rec, ref, target_geom_array, num_target_geom, factor,
+          cur_rec, ref,
+	  target_geom_array, num_target_geom, factor,
           target_node_list,
-					target_leaf_list,
+          target_leaf_list,
           hittable_pdf_weight,
           rand_state
         );
@@ -142,45 +143,47 @@ __device__ vec3 _compute_color(
         return compute_color_sss(cur_rec, object_list, sss_pts_node_list);
       }
 
-      if (false_hit && entering)
+      if (ref.false_hit && ref.entering)
         add_new_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
 
-      if (false_hit && !entering)
+      if (ref.false_hit && !(ref.entering))
         remove_a_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
 
-      if (!false_hit && refracted && entering)
+      if (!(ref.false_hit) && ref.refracted && ref.entering)
         add_new_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
 
-      if (!false_hit && refracted && !entering)
+      if (!(ref.false_hit) && ref.refracted && !(ref.entering))
         remove_a_material(
           material_list, material_list_length, cur_rec.object -> get_material()
         );
 
-      if (reflected || refracted) {
+      if (!(ref.false_hit)) {
 
-        ray = ref.ray;
         light_tmp = cur_rec.object -> get_material() -> get_texture_emission(
           cur_rec.uv_vector
         );
 
-				add_color = mask * light_tmp;
-
+        add_color = mask * light_tmp;
         if (add_color.vector_is_nan()) {
-					add_color = de_nan(add_color);
-				}
+	  add_color = de_nan(add_color);
+        }
+	acc_color += add_color;
 
-        acc_color += add_color;
-        mask *= (1.0) * ref.filter * fminf(.999, factor);
+	if (factor > 0) {
+	  vec3 mask_factor = ref.filter * clamp(0, .9999, factor);
+          mask *= mask_factor;
+	} else {
+	  return acc_color;
+	}
 
-      } else {
-				return acc_color;
       }
+      ray = ref.ray;
 
     } else {
       if (i < 1){
@@ -250,7 +253,7 @@ void do_sss_first_pass(
 __global__
 void render(
   vec3 *fb, Camera **camera, curandState *rand_state, int sample_size,
-  int level,
+  int level, int dof_sample_size,
   vec3 sky_emission, int bg_height, int bg_width,
   float *bg_r, float *bg_g, float *bg_b,
   Node **node_list, Object **object_list, Node **sss_pts_node_list,
@@ -272,22 +275,28 @@ void render(
   vec3 color = vec3(0, 0, 0), color_tmp;
   int pixel_index = i * (camera[0] -> width) + j;
   curandState local_rand_state = rand_state[pixel_index];
-  Ray camera_ray = camera[0] -> compute_ray(
-    i + .5, j + .5, &local_rand_state), ray;
+  Ray camera_ray, ray;
   fb[pixel_index] = color;
 
-  for(int idx = 0; idx < sample_size; idx++) {
-    color_tmp = _compute_color(
-      camera_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
-      bg_b, &local_rand_state, node_list, object_list, sss_pts_node_list,
-      target_node_list, target_leaf_list,
-      false, target_geom_array, num_target_geom,
-      hittable_pdf_weight
-    );
-    color_tmp = de_nan(color_tmp);
-    color += color_tmp;
+  for(int k = 0; k < dof_sample_size; k++) {
+    camera_ray = camera[0] -> compute_ray(
+      i + .5, j + .5, &local_rand_state);
+    for(int idx = 0; idx < sample_size; idx++) {
+      color_tmp = _compute_color(
+        camera_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,
+        bg_b, &local_rand_state, node_list, object_list, sss_pts_node_list,
+        target_node_list, target_leaf_list,
+        false, target_geom_array, num_target_geom,
+        hittable_pdf_weight
+      );
+      if (color_tmp.vector_is_nan()) {
+        printf("color_tmp is nan!\n");
+      }
+      color_tmp = de_nan(color_tmp);
+      color += color_tmp;
+    }
   }
-  color *= (1.0 / sample_size);
+  color *= (1.0 / sample_size / dof_sample_size);
 
   fb[pixel_index] = color;
 
@@ -298,7 +307,6 @@ void render(
         camera[0] -> height * camera[0] -> width)
     );
   }
-
 }
 
 #endif

@@ -75,6 +75,7 @@ int main(int argc, char **argv) {
   int im_height = input_param.image_height;
   int pathtracing_sample_size = input_param.pathtracing_sample_size;
   int pathtracing_level = input_param.pathtracing_level;
+  int dof_sample_size = input_param.dof_sample_size;
   float eye_x = input_param.eye_x;
   float eye_y = input_param.eye_y;
   float eye_z = input_param.eye_z;
@@ -123,7 +124,7 @@ int main(int argc, char **argv) {
   float *tf_x, *tf_y, *tf_z;
   float *path_length;
   float *material_image_r, *material_image_g, *material_image_b;
-	float *bm;
+  float *bm;
   int *num_materials;
   int *material_image_height_diffuse, *material_image_width_diffuse, \
     *material_image_offset_diffuse, *material_priority;
@@ -1040,7 +1041,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-	checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
+  checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
   dim3 blocks(im_width / tx + 1, im_height / ty + 1);
   dim3 threads(tx, ty);
 
@@ -1086,12 +1087,14 @@ int main(int argc, char **argv) {
   print_start_process(process, start);
   render<<<blocks, threads>>>(
     image_output, my_camera, rand_state_image, pathtracing_sample_size,
-    pathtracing_level, sky_emission, bg_height, bg_width,
+    pathtracing_level, dof_sample_size,
+    sky_emission, bg_height, bg_width,
     bg_texture_r, bg_texture_g, bg_texture_b, node_list, my_objects,
     sss_pts_node_list,
     target_node_list,
-		target_leaf_list,
-    target_geom_list, num_target_geom[0],
+    target_leaf_list,
+    target_geom_list, 
+    num_target_geom[0],
     hittable_pdf_weight
   );
   checkCudaErrors(cudaGetLastError());
