@@ -99,10 +99,9 @@ __device__ vec3 _compute_color(
   vec3 acc_color = vec3(0, 0, 0), add_color = vec3(0, 0, 0);
   vec3 v3_rand, v3_rand_world;
   Ray ray = ray_init;
-  reflection_record ref, prev_ref;
+  reflection_record ref;
   Material* material_list[400];
-  float factor = 1, prev_factor;
-  vec3 prev_filter;
+  float factor = 1;
 
   int material_list_length = 0;
 
@@ -172,19 +171,9 @@ __device__ vec3 _compute_color(
 
         add_color = mask * light_tmp;
         if (add_color.vector_is_nan()) {
-	  printf("add_color is nan! prev_factor = %f; prev_filter = [%f, %f, %f], prev_ref.n = %f, prev_reflected = %d, prev_refracted = %d, prev_diffuse = %d\n", 
-	    prev_factor, prev_filter.r(), prev_filter.g(), prev_filter.b(), 
-	    prev_ref.n, prev_ref.reflected, prev_ref.refracted, prev_ref.diffuse
-	  );
 	  add_color = de_nan(add_color);
         }
 	acc_color += add_color;
-
-	//if (isnan(factor_x))
-	//	printf("factor = %f\n", factor);
-
-        prev_ref = ref;
-	prev_factor = factor;
 
 	if (factor > 0) {
 	  vec3 mask_factor = ref.filter * clamp(0, .9999, factor);
