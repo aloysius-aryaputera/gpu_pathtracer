@@ -15,39 +15,39 @@ class Node {
     __device__ Node(int idx_);
     __device__ Primitive* get_object();
     __device__ void assign_object(
-			Primitive* object_, bool bounding_cone_required=false);
+      Primitive* object_, bool bounding_cone_required=false);
     __device__ void assign_point(Point* point_);
     __device__ void set_left_child(Node* left_);
     __device__ void set_right_child(Node* right_);
     __device__ void set_parent(Node* parent_);
     __device__ void mark_visited();
     __device__ float compute_importance(
-		  vec3 point, vec3 normal, vec3 kd
-		);
-		__device__ void set_energy(float energy_);
+      vec3 point, vec3 normal, vec3 kd
+    );
+    __device__ void set_energy(float energy_);
 
     Node *left, *right, *parent;
     bool visited, is_leaf;
     BoundingBox *bounding_box;
-		BoundingCone *bounding_cone;
+    BoundingCone *bounding_cone;
     Primitive *object;
     Point *point;
     int idx;
-		float energy;
+    float energy;
 };
 
 __device__ Node::Node() {
   this -> visited = false;
   this -> is_leaf = false;
   this -> idx = -30;
-	this -> energy = 0;
+  this -> energy = 0;
 }
 
 __device__ Node::Node(int idx_) {
   this -> visited = false;
   this -> is_leaf = false;
   this -> idx = idx_;
-	this -> energy = 0;
+  this -> energy = 0;
 }
 
 __device__ void Node::set_energy(float energy_) {
@@ -57,24 +57,24 @@ __device__ void Node::set_energy(float energy_) {
 __device__ float Node::compute_importance(
   vec3 point, vec3 normal, vec3 kd	
 ) {
-	vec3 dir = point - this -> bounding_box -> center;
+  vec3 dir = point - this -> bounding_box -> center;
   float cone_angle = this -> bounding_box -> compute_covering_cone_angle(
-	  point);
+    point);
   float incident_angle = this -> bounding_box -> compute_incident_angle(
-		point, normal);
+    point, normal);
   float min_incident_angle = fmaxf(incident_angle - cone_angle, 0);
-	float min_angle_to_point = \
-	  this -> bounding_box -> compute_minimum_angle_to_shading_point(
-		  point, this -> bounding_cone -> axis, this -> bounding_cone -> theta_0, 
-			cone_angle);
-	float multiplier, effective_energy;
+  float min_angle_to_point = \
+  this -> bounding_box -> compute_minimum_angle_to_shading_point(
+    point, this -> bounding_cone -> axis, this -> bounding_cone -> theta_0, 
+    cone_angle);
+  float multiplier, effective_energy;
 
   if (min_angle_to_point < this -> bounding_cone -> theta_e) {
-	  //multiplier = fmaxf(cos(min_angle_to_point), 0);
-		multiplier = cos(min_angle_to_point);
-	} else {
-	  multiplier = 0;
-	}
+    //multiplier = fmaxf(cos(min_angle_to_point), 0);
+    multiplier = cos(min_angle_to_point);
+  } else {
+    multiplier = 0;
+  }
 
 	if (this -> is_leaf) {
 	  effective_energy = this -> object -> compute_directed_energy(
