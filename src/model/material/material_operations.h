@@ -85,9 +85,9 @@ __device__ vec3 _pick_a_random_point_on_a_target_geom(
 
 __device__ void change_ref_ray(
   hit_record rec, reflection_record &ref,
-	Primitive **target_geom_array,
+  Primitive **target_geom_array,
   int num_target_geom, float &factor, Node **target_node_list,
-	Node **target_leaf_list,
+  Node **target_leaf_list,
   float hittable_pdf_weight, curandState *rand_state_mis
 ) {
   float random_number = curand_uniform(rand_state_mis);
