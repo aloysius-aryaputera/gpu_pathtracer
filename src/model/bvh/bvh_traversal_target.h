@@ -66,47 +66,44 @@ __device__ float get_node_pdf(
     it_pdf = importance_1 / it_tot_pdf;
     if (it_tot_pdf < 1E-10) {
       pdf *= .5;
-		} else {
+    } else {
       pdf *= it_pdf;	
-		}
+    }
     it_node = it_node -> parent;
   }
-	//if (!(pdf == pdf)) printf("pdf is nan\n");
   return pdf;
 }
 
 __device__ Primitive* traverse_bvh_to_pick_a_target(
-	Node* bvh_root, vec3 shading_point, vec3 normal, vec3 kd,
-	curandState *rand_state
+  Node* bvh_root, vec3 shading_point, vec3 normal, vec3 kd,
+  curandState *rand_state
 ) {
-	Node* selected_node = bvh_root;
-	float left_importance, right_importance, random_number, factor;
+  Node* selected_node = bvh_root;
+  float left_importance, right_importance, random_number, factor;
   float total_importance;
-	while(!(selected_node -> is_leaf)) {
+  while(!(selected_node -> is_leaf)) {
     left_importance = selected_node -> left -> compute_importance(
-		  shading_point, normal, kd
-		);
-		right_importance = selected_node -> right -> compute_importance(
-		  shading_point, normal, kd
-		);
+      shading_point, normal, kd
+    );
+    right_importance = selected_node -> right -> compute_importance(
+      shading_point, normal, kd
+    );
     total_importance = left_importance + right_importance;
     
     if (total_importance < 1E-10)
       factor = .5;
     else
-		  factor = left_importance / total_importance;
+      factor = left_importance / total_importance;
 
-		random_number = curand_uniform(&rand_state[0]);
-		//printf("random_number = %f\n", random_number);
+    random_number = curand_uniform(&rand_state[0]);
 
-		if (random_number < factor) {
-		  selected_node = selected_node -> left;
-		} else {
-		  selected_node = selected_node -> right;
-		}
-	};
-  
-	return selected_node -> object;
+    if (random_number < factor) {
+      selected_node = selected_node -> left;
+    } else {
+      selected_node = selected_node -> right;
+    }
+  };
+  return selected_node -> object;
 }
 
 __device__ bool traverse_bvh_target(
