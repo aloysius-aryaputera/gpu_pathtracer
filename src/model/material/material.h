@@ -13,7 +13,7 @@
 struct reflection_record
 {
   Ray ray;
-  vec3 ks;
+  vec3 k;
   vec3 filter;
   vec3 perfect_reflection_dir;
   bool diffuse, reflected, refracted, false_hit, entering;
@@ -287,7 +287,7 @@ __device__ reflection_record Material::_refract(
   }
 
   ref.ray = generate_ray(hit_point, v_out, normal, 1, local_n_s, rand_state);
-  ref.ks = k;
+  ref.k = k;
   ref.filter = compute_phong_filter(k, local_n_s, v_out, ref.ray.dir);
   return ref;
 }
@@ -464,7 +464,7 @@ __device__ void Material::check_next_path(
     ref.diffuse = true;
     ref.reflected = false;
     ref.refracted = false;
-    ref.ks = ref.filter;
+    ref.k = ref.filter;
     ref.n = 1;
 
     if (actual_mat -> sub_surface_scattering) {
@@ -487,7 +487,7 @@ __device__ void Material::check_next_path(
     ref.refracted = false;
     ref.perfect_reflection_dir = reflected_ray_dir;
     ref.n = local_n_s;
-    ref.ks = k;
+    ref.k = k;
     sss = false;
   }
 

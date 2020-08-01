@@ -10,22 +10,23 @@
 
 __device__ void change_ref_ray(
   hit_record rec, reflection_record &ref,
-	Primitive **target_geom_array,
-  int num_target_geom, float &factor, Node **target_node_list,
-	Node **target_leaf_list,
+  Primitive **target_geom_array,
+  int num_target_geom, float &factor, 
+  Node **target_node_list,
+  Node **target_leaf_list,
   curandState *rand_state_mis
 );
 
 __device__ vec3 _pick_a_random_point_on_a_target_geom(
-	Node* target_bvh_root, vec3 origin, vec3 normal, vec3 kd, 
-	curandState *rand_state
+  Node* target_bvh_root, vec3 origin, vec3 normal, vec3 kd, 
+  curandState *rand_state
 );
 
 __device__ float _recompute_pdf(
   hit_record rec, vec3 origin, vec3 dir, Primitive **target_geom_array,
   int num_target_geom, float hittable_pdf_weight, Node **target_node_list,
-	Node **target_leaf_list, vec3 kd, bool diffuse, float n, 
-	vec3 perfect_reflection_dir, reflection_record ref
+  Node **target_leaf_list, vec3 kd, bool diffuse, float n, 
+  vec3 perfect_reflection_dir, reflection_record ref
 ) {
   float hittable_pdf = 0, sampling_pdf;
   float node_pdf = 0;
@@ -105,24 +106,23 @@ __device__ void change_ref_ray(
   if (random_number < hittable_pdf_weight) {
 
     new_target_point = _pick_a_random_point_on_a_target_geom(
-      target_node_list[0], default_ray.p0, pivot, ref.ks,
+      target_node_list[0], default_ray.p0, pivot, ref.k,
       rand_state_mis	
     );
 
     new_dir = new_target_point - default_ray.p0;
 
-    //if (dot(new_dir, rec.normal) > 0)
     ref.ray = Ray(default_ray.p0, new_dir);
 
     if (ref.reflected || ref.refracted) {
-      ref.filter = compute_phong_filter(ref.ks, ref.n, pivot, ref.ray.dir);
+      ref.filter = compute_phong_filter(ref.k, ref.n, pivot, ref.ray.dir);
     }
   }
 
   pdf = _recompute_pdf(
     rec, ref.ray.p0, ref.ray.dir, 
-		target_geom_array, num_target_geom,
-    hittable_pdf_weight, target_node_list, target_leaf_list, ref.ks,
+    target_geom_array, num_target_geom,
+    hittable_pdf_weight, target_node_list, target_leaf_list, ref.k,
     ref.diffuse, ref.n, ref.perfect_reflection_dir, ref
   );
 
