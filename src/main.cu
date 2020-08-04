@@ -73,6 +73,9 @@ int main(int argc, char **argv) {
 
   int im_width = input_param.image_width;
   int im_height = input_param.image_height;
+
+  int render_mode = input_param.render_mode;
+
   int pathtracing_sample_size = input_param.pathtracing_sample_size;
   int pathtracing_level = input_param.pathtracing_level;
   int dof_sample_size = input_param.dof_sample_size;
@@ -1011,95 +1014,90 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
-  //start = clock();
-	//process = "Printing target node PDF";
-  //print_start_process(process, start);
-  //print_node_pdf<<<max(1, num_target_geom[0] - 1), 1>>>(
-  //  target_node_list, num_target_geom[0] - 1, vec3(0, 0, 0),
-	//	vec3(0, 0, 1), vec3(.5, .5, .5)
-  //);
-  //checkCudaErrors(cudaGetLastError());
-  //checkCudaErrors(cudaDeviceSynchronize());
-  //print_end_process(process, start);
+  if (render_mode == 1) {
+  
+    start = clock();
+    process = "Doing first pass for SSS objects";
+    print_start_process(process, start);
+    do_sss_first_pass<<<max(1, num_sss_points), 1>>>(
+      sss_pts, num_sss_points,
+      pathtracing_sample_size,
+      pathtracing_level, sky_emission,
+      bg_height, bg_width,
+      bg_texture_r, bg_texture_g, bg_texture_b, node_list,
+      rand_state_sss, target_geom_list,
+      target_node_list,
+      target_leaf_list,
+      num_target_geom[0],
+      hittable_pdf_weight
+    );
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
 
-  start = clock();
-  process = "Doing first pass for SSS objects";
-  print_start_process(process, start);
-  do_sss_first_pass<<<max(1, num_sss_points), 1>>>(
-    sss_pts, num_sss_points,
-    pathtracing_sample_size,
-    pathtracing_level, sky_emission,
-    bg_height, bg_width,
-    bg_texture_r, bg_texture_g, bg_texture_b, node_list,
-    rand_state_sss, target_geom_list,
-    target_node_list,
-		target_leaf_list,
-    num_target_geom[0],
-    hittable_pdf_weight
-  );
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  print_end_process(process, start);
+    checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
+    dim3 blocks(im_width / tx + 1, im_height / ty + 1);
+    dim3 threads(tx, ty);
 
-  checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
-  dim3 blocks(im_width / tx + 1, im_height / ty + 1);
-  dim3 threads(tx, ty);
+    start = clock();
+    process = "Clearing image";
+    print_start_process(process, start);
+    clear_image<<<blocks, threads>>>(image_output, im_width, im_height);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
 
-  start = clock();
-  process = "Clearing image";
-  print_start_process(process, start);
-  clear_image<<<blocks, threads>>>(image_output, im_width, im_height);
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  print_end_process(process, start);
+    start = clock();
+    process = "Creating point image";
+    print_start_process(process, start);
+    create_point_image<<<num_sss_points / tx + 1, tx>>>(
+      image_output, my_camera, sss_pts, num_sss_points
+    );
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
 
-  start = clock();
-  process = "Creating point image";
-  print_start_process(process, start);
-  create_point_image<<<num_sss_points / tx + 1, tx>>>(
-    image_output, my_camera, sss_pts, num_sss_points
-  );
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  print_end_process(process, start);
+    start = clock();
+    process = "Saving pts image";
+    print_start_process(process, start);
+    save_image(
+      image_output, im_width, im_height, image_output_path + "_pts.ppm");
+    print_end_process(process, start);
+    checkCudaErrors(cudaDeviceSynchronize());
 
-  start = clock();
-  process = "Saving pts image";
-  print_start_process(process, start);
-  save_image(
-    image_output, im_width, im_height, image_output_path + "_pts.ppm");
-  print_end_process(process, start);
-  checkCudaErrors(cudaDeviceSynchronize());
+    checkCudaErrors(
+      cudaMallocManaged((void **)&rand_state_image, rand_state_image_size));
 
-  checkCudaErrors(
-    cudaMallocManaged((void **)&rand_state_image, rand_state_image_size));
+    start = clock();
+    process = "Generating curand state for rendering";
+    print_start_process(process, start);
+    init_curand_state<<<num_pixels / 8 + 1, 8>>>(num_pixels, rand_state_image);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
 
-  start = clock();
-  process = "Generating curand state for rendering";
-  print_start_process(process, start);
-  init_curand_state<<<num_pixels / 8 + 1, 8>>>(num_pixels, rand_state_image);
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  print_end_process(process, start);
-
-  start = clock();
-  process = "Rendering";
-  print_start_process(process, start);
-  render<<<blocks, threads>>>(
-    image_output, my_camera, rand_state_image, pathtracing_sample_size,
-    pathtracing_level, dof_sample_size,
-    sky_emission, bg_height, bg_width,
-    bg_texture_r, bg_texture_g, bg_texture_b, node_list, my_objects,
-    sss_pts_node_list,
-    target_node_list,
-    target_leaf_list,
-    target_geom_list, 
-    num_target_geom[0],
-    hittable_pdf_weight
-  );
-  checkCudaErrors(cudaGetLastError());
-  checkCudaErrors(cudaDeviceSynchronize());
-  print_end_process(process, start);
+    start = clock();
+    process = "Rendering";
+    print_start_process(process, start);
+    path_tracing_render<<<blocks, threads>>>(
+      image_output, my_camera, rand_state_image, pathtracing_sample_size,
+      pathtracing_level, dof_sample_size,
+      sky_emission, bg_height, bg_width,
+      bg_texture_r, bg_texture_g, bg_texture_b, node_list, my_objects,
+      sss_pts_node_list,
+      target_node_list,
+      target_leaf_list,
+      target_geom_list, 
+      num_target_geom[0],
+      hittable_pdf_weight
+    );
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+  
+  } else if (render_mode == 2) {
+  
+  } 
 
   start = clock();
   process = "Saving image";

@@ -23,7 +23,7 @@
 #include "pathtracing_sss.h"
 
 __global__
-void render(
+void path_tracing_render(
   vec3 *fb, Camera **camera, curandState *rand_state, int sample_size,
   int level, int dof_sample_size,
   vec3 sky_emission, int bg_height, int bg_width,
@@ -251,7 +251,7 @@ void do_sss_first_pass(
 }
 
 __global__
-void render(
+void path_tracing_render(
   vec3 *fb, Camera **camera, curandState *rand_state, int sample_size,
   int level, int dof_sample_size,
   vec3 sky_emission, int bg_height, int bg_width,

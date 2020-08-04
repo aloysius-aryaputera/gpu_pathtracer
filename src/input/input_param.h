@@ -27,6 +27,8 @@ class InputParam {
     float fovy, aperture, focus_dist;
 
     float sky_emission_r, sky_emission_g, sky_emission_b;
+
+    int render_mode;
 };
 
 void InputParam::extract_parameters(
@@ -53,6 +55,8 @@ void InputParam::extract_parameters(
 	  this -> image_width = std::stoi(chunks[1]);
 	} else if (chunks[0] == "image_height") {
 	  this -> image_height = std::stoi(chunks[1]);
+	} else if (chunks[0] == "render_mode") {
+	  this -> render_mode = std::stoi(chunks[1]);
 	} else if (chunks[0] == "pathtracing_sample_size") {
 	  this -> pathtracing_sample_size = std::stoi(chunks[1]);
 	} else if (chunks[0] == "pathtracing_level") {
