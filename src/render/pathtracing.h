@@ -265,13 +265,11 @@ void path_tracing_render(
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
 
-  if(
-    (j >= camera[0] -> width) || (i >= camera[0] -> height)
-  ) {
+  if((j >= camera[0] -> width) || (i >= camera[0] -> height)) {
     return;
   }
 
-  hit_record init_rec, cur_rec;
+  hit_record cur_rec;
   vec3 color = vec3(0, 0, 0), color_tmp;
   int pixel_index = i * (camera[0] -> width) + j;
   curandState local_rand_state = rand_state[pixel_index];
@@ -279,8 +277,7 @@ void path_tracing_render(
   fb[pixel_index] = color;
 
   for(int k = 0; k < dof_sample_size; k++) {
-    camera_ray = camera[0] -> compute_ray(
-      i + .5, j + .5, &local_rand_state);
+    camera_ray = camera[0] -> compute_ray(i + .5, j + .5, &local_rand_state);
     for(int idx = 0; idx < sample_size; idx++) {
       color_tmp = _compute_color(
         camera_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,

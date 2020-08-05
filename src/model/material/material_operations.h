@@ -71,8 +71,8 @@ __device__ float _recompute_pdf(
 }
 
 __device__ vec3 _pick_a_random_point_on_a_target_geom(
-	Node* target_bvh_root, vec3 origin, vec3 normal, vec3 kd, 
-	curandState *rand_state
+  Node* target_bvh_root, vec3 origin, vec3 normal, vec3 kd, 
+  curandState *rand_state
 ) {
   Primitive* selected_target;
   selected_target = traverse_bvh_to_pick_a_target(

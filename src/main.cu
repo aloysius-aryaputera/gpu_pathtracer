@@ -1014,6 +1014,19 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaDeviceSynchronize());
   print_end_process(process, start);
 
+  checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
+
+  checkCudaErrors(
+  cudaMallocManaged((void **)&rand_state_image, rand_state_image_size));
+
+  start = clock();
+  process = "Generating curand state for rendering";
+  print_start_process(process, start);
+  init_curand_state<<<num_pixels / 8 + 1, 8>>>(num_pixels, rand_state_image);
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
   if (render_mode == 1) {
   
     start = clock();
@@ -1035,7 +1048,6 @@ int main(int argc, char **argv) {
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);
 
-    checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
     dim3 blocks(im_width / tx + 1, im_height / ty + 1);
     dim3 threads(tx, ty);
 
@@ -1065,16 +1077,6 @@ int main(int argc, char **argv) {
     print_end_process(process, start);
     checkCudaErrors(cudaDeviceSynchronize());
 
-    checkCudaErrors(
-      cudaMallocManaged((void **)&rand_state_image, rand_state_image_size));
-
-    start = clock();
-    process = "Generating curand state for rendering";
-    print_start_process(process, start);
-    init_curand_state<<<num_pixels / 8 + 1, 8>>>(num_pixels, rand_state_image);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-    print_end_process(process, start);
 
     start = clock();
     process = "Rendering";
@@ -1096,7 +1098,12 @@ int main(int argc, char **argv) {
     print_end_process(process, start);
   
   } else if (render_mode == 2) {
-  
+    Point **hit_point_list;
+    checkCudaErrors(
+      cudaMallocManaged((void **)&hit_point_list, 
+      num_pixels * sizeof(Point*)));
+
+
   } 
 
   start = clock();
