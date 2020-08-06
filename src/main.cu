@@ -33,6 +33,7 @@
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
 #include "render/pathtracing_target_geom_operations.h"
+#include "render/ppm/ray_tracing_pass.h"
 #include "util/general.h"
 #include "util/image_util.h"
 #include "util/string_util.h"

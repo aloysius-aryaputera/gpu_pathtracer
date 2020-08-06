@@ -21,9 +21,10 @@ class Point {
     __device__ void assign_color(vec3 color_);
 
     vec3 location, filter, normal, color;
-    int object_idx;
+    int object_idx, accummulated_photon_count;
     BoundingBox *bounding_box;
     BoundingSphere *bounding_sphere;
+    float current_photon_radius;
 };
 
 __device__ Point::Point(

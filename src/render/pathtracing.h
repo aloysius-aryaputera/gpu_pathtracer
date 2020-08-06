@@ -102,11 +102,9 @@ __device__ vec3 _compute_color(
   reflection_record ref;
   Material* material_list[400];
   float factor = 1;
-
   int material_list_length = 0;
 
   add_new_material(material_list, material_list_length, nullptr);
-
   cur_rec.object = nullptr;
 
   for (int i = 0; i < level; i++) {
