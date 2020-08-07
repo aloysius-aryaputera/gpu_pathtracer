@@ -28,6 +28,8 @@
 #include "model/object/object_operations.h"
 #include "model/point/point.h"
 #include "model/point/point_operations.h"
+#include "model/point/ppm_hit_point.h"
+#include "model/point/sss_point.h"
 #include "model/ray/ray.h"
 #include "model/vector_and_matrix/mat3.h"
 #include "model/vector_and_matrix/vec3.h"
@@ -76,6 +78,9 @@ int main(int argc, char **argv) {
   int im_height = input_param.image_height;
 
   int render_mode = input_param.render_mode;
+
+  int ppm_num_photon_per_pass = input_param.ppm_num_photon_per_pass;
+  int ppm_num_pass = input_param.ppm_num_pass;
 
   int pathtracing_sample_size = input_param.pathtracing_sample_size;
   int pathtracing_level = input_param.pathtracing_level;
@@ -1099,12 +1104,34 @@ int main(int argc, char **argv) {
     print_end_process(process, start);
   
   } else if (render_mode == 2) {
-    Point **hit_point_list;
+    PPMHitPoint **hit_point_list;
+    Point **photon_list;
+    vec3 *hit_point_loc_1, *hit_point_loc_2, *hit_point_loc_3, \
+      *hit_point_loc_4; 
+
     checkCudaErrors(
       cudaMallocManaged((void **)&hit_point_list, 
-      num_pixels * sizeof(Point*)));
+      num_pixels * sizeof(PPMHitPoint*)));
+    checkCudaErrors(
+      cudaMallocManaged((void **)&hit_point_loc_1, 
+      num_pixels * sizeof(vec3)));
+    checkCudaErrors(
+      cudaMallocManaged((void **)&hit_point_loc_2, 
+      num_pixels * sizeof(vec3)));
+    checkCudaErrors(
+      cudaMallocManaged((void **)&hit_point_loc_3, 
+      num_pixels * sizeof(vec3)));
+    checkCudaErrors(
+      cudaMallocManaged((void **)&hit_point_loc_4, 
+      num_pixels * sizeof(vec3)));
 
+    checkCudaErrors(
+      cudaMallocManaged(
+        (void **)&photon_list, ppm_num_photon_per_pass * sizeof(Point*)
+      )
+    );
 
+    
   } 
 
   start = clock();

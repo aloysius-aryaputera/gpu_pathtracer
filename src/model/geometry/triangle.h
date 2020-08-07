@@ -22,7 +22,7 @@ class Triangle: public Primitive {
       float weight_1, float weight_2, float weight_3);
     __device__ void _compute_tangent();
     __device__ bool _check_if_light_emitting();
-		__device__ float _compute_energy();
+    __device__ float _compute_energy();
 
     float inv_tolerance, tolerance;
     vec3 t, b;

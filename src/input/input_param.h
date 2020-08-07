@@ -17,18 +17,18 @@ class InputParam {
     std::string texture_bg_path;
     std::string image_output_path;
 
-    int image_width, image_height;
+    int image_width, image_height, render_mode;
 
     int pathtracing_sample_size, pathtracing_level, dof_sample_size;
     int sss_pts_per_object;
     float hittable_pdf_weight;
 
+    int ppm_num_photon_per_pass, ppm_num_pass;
+
     float eye_x, eye_y, eye_z, center_x, center_y, center_z, up_x, up_y, up_z;
     float fovy, aperture, focus_dist;
 
     float sky_emission_r, sky_emission_g, sky_emission_b;
-
-    int render_mode;
 };
 
 void InputParam::extract_parameters(
@@ -61,7 +61,11 @@ void InputParam::extract_parameters(
 	  this -> pathtracing_sample_size = std::stoi(chunks[1]);
 	} else if (chunks[0] == "pathtracing_level") {
 	  this -> pathtracing_level = std::stoi(chunks[1]);
-	} else if (chunks[0] == "eye_x") {
+	} else if (chunks[0] == "ppm_num_photon_per_pass") {
+	  this -> ppm_num_photon_per_pass = std::stoi(chunks[1]);
+	} else if (chunks[0] == "ppm_num_pass"){
+	  this -> ppm_num_pass = std::stoi(chunks[1]);
+        } else if (chunks[0] == "eye_x") {
 	  this -> eye_x = std::stof(chunks[1]);
 	} else if (chunks[0] == "eye_y") {
 	  this -> eye_y = std::stof(chunks[1]);

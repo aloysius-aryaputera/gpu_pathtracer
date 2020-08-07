@@ -7,13 +7,13 @@
 #include "../../model/bvh/bvh.h"
 #include "../../model/camera.h"
 #include "../../model/material/material.h"
-#include "../../model/point/point.h"
+#include "../../model/point/ppm_hit_point.h"
 #include "../../model/ray/ray.h"
 #include "../material_list_operations.h"
 
 __global__
 void ray_tracing_pass(
-  Point** hit_point_list, Camera **camera, curandState *rand_state,
+  PPMHitPoint** hit_point_list, Camera **camera, curandState *rand_state,
   Node **geom_node_list
 ) {
   int j = threadIdx.x + blockIdx.x * blockDim.x;

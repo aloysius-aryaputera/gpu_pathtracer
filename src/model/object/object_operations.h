@@ -137,7 +137,7 @@ __global__ void create_sss_pts(
   vec3 filter = pts_record.object -> get_material() -> get_texture_diffuse(
     pts_record.uv_vector);
   point_array[pt_offset[object_idx] + idx] = new Point(
-    pts_record.point, filter, pts_record.normal, object_idx, true, false);
+    pts_record.point, filter, pts_record.normal, object_idx);
 }
 
 #endif
