@@ -35,6 +35,7 @@
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
 #include "render/pathtracing_target_geom_operations.h"
+#include "render/ppm/photon_pass.h"
 #include "render/ppm/ray_tracing_pass.h"
 #include "util/general.h"
 #include "util/image_util.h"
@@ -1155,6 +1156,15 @@ int main(int argc, char **argv) {
     print_start_process(process, start);
     assign_radius_to_invalid_hit_points<<<num_pixels / 8 + 1, 8>>>(
       hit_point_list, num_pixels, average_hit_point_radius[0]);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+
+    start = clock();
+    process = "Create photon list";
+    print_start_process(process, start);
+    create_photon_list<<<ppm_num_photon_per_pass / 8 + 1, 8>>>(
+      photon_list, ppm_num_photon_per_pass);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);

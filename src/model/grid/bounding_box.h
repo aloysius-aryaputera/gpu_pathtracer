@@ -44,12 +44,12 @@ class BoundingBox {
     __device__ float compute_incident_angle(vec3 point, vec3 normal);
     __device__ float compute_covering_cone_angle(vec3 point);
     __device__ float compute_minimum_angle_to_shading_point(
-		  vec3 point, vec3 cone_axis, float cone_theta_0, float theta_u 
-		);
+      vec3 point, vec3 cone_axis, float cone_theta_0, float theta_u 
+    );
 
     float x_min, x_max, y_min, y_max, z_min, z_max;
     float x_center, y_center, z_center;
-		vec3 center;
+    vec3 center;
     float length_x, length_y, length_z;
     float norm_x_center, norm_y_center, norm_z_center;
     unsigned int morton_code;
@@ -165,7 +165,7 @@ __device__ void BoundingBox::initialize(
   this -> x_center = 0.5 * (this -> x_min + this -> x_max);
   this -> y_center = 0.5 * (this -> y_min + this -> y_max);
   this -> z_center = 0.5 * (this -> z_min + this -> z_max);
-	this -> center = vec3(x_center, y_center, z_center);
+  this -> center = vec3(x_center, y_center, z_center);
 
   this -> length_x = this -> x_max - this -> x_min;
   this -> length_y = this -> y_max - this -> y_min;

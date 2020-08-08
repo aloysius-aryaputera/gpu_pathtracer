@@ -5,6 +5,7 @@
 #include <curand_kernel.h>
 
 #include "../../model/bvh/bvh.h"
+#include "../../model/bvh/bvh_traversal.h"
 #include "../../model/camera.h"
 #include "../../model/material/material.h"
 #include "../../model/point/ppm_hit_point.h"

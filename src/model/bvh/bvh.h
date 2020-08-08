@@ -17,6 +17,7 @@ class Node {
     __device__ void assign_object(
       Primitive* object_, bool bounding_cone_required=false);
     __device__ void assign_point(Point* point_);
+    __device__ void release_point(Point* point_);
     __device__ void set_left_child(Node* left_);
     __device__ void set_right_child(Node* right_);
     __device__ void set_parent(Node* parent_);
@@ -76,17 +77,17 @@ __device__ float Node::compute_importance(
     multiplier = 0;
   }
 
-	if (this -> is_leaf) {
-	  effective_energy = this -> object -> compute_directed_energy(
-			point, normal);
-	} else {
-	  effective_energy = this -> energy;
-	}
+  if (this -> is_leaf) {
+    effective_energy = this -> object -> compute_directed_energy(
+      point, normal);
+  } else {
+    effective_energy = this -> energy;
+  }
 
   return kd.length() * abs(cos(min_incident_angle)) * effective_energy * \
-		multiplier / dir.squared_length();
-	//return this -> energy / dir.squared_length();
-	//return 1;
+    multiplier / dir.squared_length();
+  //return this -> energy / dir.squared_length();
+  //return 1;
 }
 
 __device__ Primitive* Node::get_object() {
@@ -94,23 +95,29 @@ __device__ Primitive* Node::get_object() {
 }
 
 __device__ void Node::assign_object(
-	Primitive* object_, bool bounding_cone_required
+  Primitive* object_, bool bounding_cone_required
 ) {
   this -> object = object_;
   this -> bounding_box = object_ -> get_bounding_box();
   if (bounding_cone_required) {
-		this -> bounding_cone = new BoundingCone(
-			this -> object -> get_fixed_normal(), 0, M_PI / 2.0
-		);
-	}
+    this -> bounding_cone = new BoundingCone(
+      this -> object -> get_fixed_normal(), 0, M_PI / 2.0
+    );
+  }
   this -> is_leaf = true;
-	this -> energy = object_ -> get_energy();
+  this -> energy = object_ -> get_energy();
 }
 
 __device__ void Node::assign_point(Point* point_) {
   this -> point = point_;
   this -> bounding_box = point_ -> bounding_box;
   this -> is_leaf = true;
+}
+
+__device__ void Node::release_point(Point* point_) {
+  this -> point = nullptr;
+  this -> bounding_box = nullptr;
+  this -> is_leaf = false;
 }
 
 __device__ void Node::mark_visited() {
