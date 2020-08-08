@@ -14,7 +14,7 @@ struct reflection_record
 {
   Ray ray;
   vec3 k;
-  vec3 filter;
+  vec3 filter, filter_2;
   vec3 perfect_reflection_dir;
   bool diffuse, reflected, refracted, false_hit, entering;
 
@@ -289,6 +289,7 @@ __device__ reflection_record Material::_refract(
   ref.ray = generate_ray(hit_point, v_out, normal, 1, local_n_s, rand_state);
   ref.k = k;
   ref.filter = compute_phong_filter(k, local_n_s, v_out, ref.ray.dir);
+  ref.filter_2 = compute_phong_filter_2(k, local_n_s, v_out, ref.ray.dir);
   return ref;
 }
 
@@ -391,6 +392,7 @@ __device__ reflection_record _get_false_hit_parameters(
   ref.refracted = true;
   ref.ray = Ray(hit_point, v_in);
   ref.filter = vec3(1.0, 1.0, 1.0);
+  ref.filter_2 = vec3(1.0, 1.0, 1.0);
   ref.diffuse = false;
   if (dot(v_in, normal) <= 0) {
     ref.entering = true;
@@ -461,6 +463,7 @@ __device__ void Material::check_next_path(
     ref.ray = generate_ray(
       hit_point, vec3(0, 0, 0), normal, 0, 1, rand_state);
     ref.filter = actual_mat -> get_texture_diffuse(uv_vector);
+    ref.filter_2 = ref.filter;
     ref.diffuse = true;
     ref.reflected = false;
     ref.refracted = false;
@@ -480,6 +483,8 @@ __device__ void Material::check_next_path(
       hit_point, reflected_ray_dir, normal, 1, local_n_s, rand_state);
     k = actual_mat -> get_texture_specular(uv_vector);
     ref.filter = compute_phong_filter(
+      k, local_n_s, reflected_ray_dir, ref.ray.dir);
+    ref.filter_2 = compute_phong_filter_2(
       k, local_n_s, reflected_ray_dir, ref.ray.dir);
 
     ref.diffuse = false;

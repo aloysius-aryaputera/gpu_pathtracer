@@ -81,6 +81,7 @@ int main(int argc, char **argv) {
 
   int ppm_num_photon_per_pass = input_param.ppm_num_photon_per_pass;
   int ppm_num_pass = input_param.ppm_num_pass;
+  int ppm_max_bounce = input_param.ppm_max_bounce;
 
   int pathtracing_sample_size = input_param.pathtracing_sample_size;
   int pathtracing_level = input_param.pathtracing_level;
@@ -1131,7 +1132,19 @@ int main(int argc, char **argv) {
       )
     );
 
+    dim3 blocks(im_width / tx + 1, im_height / ty + 1);
+    dim3 threads(tx, ty);
     
+    start = clock();
+    process = "Ray tracing pass";
+    print_start_process(process, start);
+    ray_tracing_pass<<<blocks, threads>>>(
+      hit_point_list, my_camera, rand_state_image, node_list, true, 
+      ppm_max_bounce
+    );
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
   } 
 
   start = clock();

@@ -38,7 +38,8 @@ class vec3  {
     __host__ __device__ inline float squared_length() const { return e[0]*e[0] + e[1]*e[1] + e[2]*e[2]; }
     __host__ __device__ inline void make_unit_vector();
     __device__ inline bool vector_is_nan();
-    
+    __device__ inline bool vector_is_inf();
+
     float e[3];
 };
 
@@ -179,6 +180,10 @@ __host__ __device__ inline vec3 permute(vec3 v, int kx, int ky, int kz) {
 
 __device__ inline bool vec3::vector_is_nan() {
   return isnan(e[0]) || isnan(e[1]) || isnan(e[2]);
+}
+
+__device__ inline bool vec3::vector_is_inf() {
+  return isinf(e[0]) || isinf(e[1]) || isinf(e[2]);
 }
 
 __device__ inline vec3 abs(vec3 v) {

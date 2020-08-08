@@ -14,6 +14,9 @@ __device__ vec3 get_random_unit_vector_disk(curandState *rand_state);
 __device__ vec3 compute_phong_filter(
   vec3 k, float n, vec3 ideal_dir, vec3 dir
 );
+__device__ vec3 compute_phong_filter_2(
+  vec3 k, float n, vec3 ideal_dir, vec3 dir
+);
 __device__ vec3 reflect(vec3 v, vec3 normal);
 __device__ float compute_schlick_specular(float cos_theta);
 __device__ float compute_diffuse_sampling_pdf(
@@ -102,6 +105,18 @@ __device__ vec3 compute_phong_filter(
     filter = k * MAX_PHONG_N_S * vec3(1, 1, 1) / 2;
   } else {
     filter = k * (n + 2) * powf(fmaxf(0, dot(ideal_dir, dir)), n) / 2;
+  } 
+  return filter;
+}
+
+__device__ vec3 compute_phong_filter_2(
+  vec3 k, float n, vec3 ideal_dir, vec3 dir
+) {
+  vec3 filter;
+  if (isinf(n)) {
+    filter = k * vec3(1, 1, 1);
+  } else {
+    filter = k * powf(fmaxf(0, dot(ideal_dir, dir)), n);
   } 
   return filter;
 }
