@@ -28,6 +28,7 @@ class PPMHitPoint {
 
 __device__ void PPMHitPoint::update_radius(float radius_) {
   this -> current_photon_radius = radius_;
+  this -> bounding_sphere -> assign_new_radius(this -> current_photon_radius);
 }
 
 __device__ void PPMHitPoint::add_accummuldated_photon_count(

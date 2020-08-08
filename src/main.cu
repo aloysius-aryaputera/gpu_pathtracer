@@ -82,6 +82,7 @@ int main(int argc, char **argv) {
   int ppm_num_photon_per_pass = input_param.ppm_num_photon_per_pass;
   int ppm_num_pass = input_param.ppm_num_pass;
   int ppm_max_bounce = input_param.ppm_max_bounce;
+  float ppm_alpha = input_param.ppm_alpha;
 
   int pathtracing_sample_size = input_param.pathtracing_sample_size;
   int pathtracing_level = input_param.pathtracing_level;
@@ -1107,24 +1108,10 @@ int main(int argc, char **argv) {
   } else if (render_mode == 2) {
     PPMHitPoint **hit_point_list;
     Point **photon_list;
-    vec3 *hit_point_loc_1, *hit_point_loc_2, *hit_point_loc_3, \
-      *hit_point_loc_4; 
-
+    
     checkCudaErrors(
       cudaMallocManaged((void **)&hit_point_list, 
       num_pixels * sizeof(PPMHitPoint*)));
-    checkCudaErrors(
-      cudaMallocManaged((void **)&hit_point_loc_1, 
-      num_pixels * sizeof(vec3)));
-    checkCudaErrors(
-      cudaMallocManaged((void **)&hit_point_loc_2, 
-      num_pixels * sizeof(vec3)));
-    checkCudaErrors(
-      cudaMallocManaged((void **)&hit_point_loc_3, 
-      num_pixels * sizeof(vec3)));
-    checkCudaErrors(
-      cudaMallocManaged((void **)&hit_point_loc_4, 
-      num_pixels * sizeof(vec3)));
 
     checkCudaErrors(
       cudaMallocManaged(
@@ -1142,6 +1129,32 @@ int main(int argc, char **argv) {
       hit_point_list, my_camera, rand_state_image, node_list, true, 
       ppm_max_bounce
     );
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+
+    float *average_hit_point_radius;
+    checkCudaErrors(
+      cudaMallocManaged(
+        (void **)&average_hit_point_radius, sizeof(float)
+      )
+    );
+
+    start = clock();
+    process = "Compute average hit point radius";
+    print_start_process(process, start);
+    compute_average_radius<<<1, 1>>>(
+      hit_point_list, num_pixels, average_hit_point_radius
+    );
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+
+    start = clock();
+    process = "Assign radius to invalid hit points";
+    print_start_process(process, start);
+    assign_radius_to_invalid_hit_points<<<num_pixels / 8 + 1, 8>>>(
+      hit_point_list, num_pixels, average_hit_point_radius[0]);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);

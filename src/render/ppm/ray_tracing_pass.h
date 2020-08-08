@@ -78,6 +78,42 @@ void _get_hit_point_details(
 }
 
 __global__
+void compute_average_radius(
+  PPMHitPoint** hit_point_list, int num_hit_points, float *average_radius
+) {
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+  
+  if (i > 0) return;
+
+  float current_radius;
+  int num_valid = 0;
+  average_radius[0] = 0;
+  for (int idx = 0; idx < num_hit_points; idx++) {
+    current_radius = hit_point_list[idx] -> current_photon_radius;
+    if (!isinf(current_radius)) {
+      num_valid++;
+      average_radius[0] += current_radius;
+    }
+  }
+  average_radius[0] /= num_valid; 
+}
+
+__global__
+void assign_radius_to_invalid_hit_points(
+  PPMHitPoint** hit_point_list, int num_hit_points, float new_radius
+) {
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (i >= num_hit_points) return;
+
+  float current_radius;
+  current_radius = hit_point_list[i] -> current_photon_radius;
+  if(isinf(current_radius)) {
+    hit_point_list[i] -> update_radius(new_radius);
+  }
+}
+
+__global__
 void ray_tracing_pass(
   PPMHitPoint** hit_point_list, Camera **camera, curandState *rand_state,
   Node **geom_node_list, bool init, int max_bounce
@@ -141,7 +177,7 @@ void ray_tracing_pass(
 
   if (hit && ref.diffuse) {
     hit_point_list[pixel_index] -> update_parameters(
-      rec.point, radius, filter, vec3(0, 0, 1) 
+      rec.point, radius, filter, rec.normal 
     );
   } else {
     hit_point_list[pixel_index] -> update_parameters(

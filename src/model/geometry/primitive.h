@@ -88,14 +88,14 @@ class Primitive {
     }
 
     __device__ virtual float compute_directed_energy(
-			vec3 point, vec3 point_normal
-		) {
-		  return 0;
-		}
+      vec3 point, vec3 point_normal
+    ) {
+      return 0;
+    }
 
     __device__ virtual float get_energy() {
-		  return this -> energy;
-		}
+      return this -> energy;
+    }
 
     BoundingBox *bounding_box;
     int object_idx;
