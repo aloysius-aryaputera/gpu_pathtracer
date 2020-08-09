@@ -1026,7 +1026,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
 
   checkCudaErrors(
-  cudaMallocManaged((void **)&rand_state_image, rand_state_image_size));
+    cudaMallocManaged((void **)&rand_state_image, rand_state_image_size));
 
   start = clock();
   process = "Generating curand state for rendering";
@@ -1154,7 +1154,7 @@ int main(int argc, char **argv) {
     start = clock();
     process = "Assign radius to invalid hit points";
     print_start_process(process, start);
-    assign_radius_to_invalid_hit_points<<<num_pixels / 8 + 1, 8>>>(
+    assign_radius_to_invalid_hit_points<<<num_pixels, 1>>>(
       hit_point_list, num_pixels, average_hit_point_radius[0]);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
@@ -1163,11 +1163,31 @@ int main(int argc, char **argv) {
     start = clock();
     process = "Create photon list";
     print_start_process(process, start);
-    create_photon_list<<<ppm_num_photon_per_pass / 8 + 1, 8>>>(
+    create_photon_list<<<ppm_num_photon_per_pass, 1>>>(
       photon_list, ppm_num_photon_per_pass);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);
+
+    float *accummulated_target_geom_area;
+    checkCudaErrors(cudaMallocManaged(
+      (void **)&accummulated_target_geom_area, 
+      num_target_geom[0] * sizeof(float)));
+
+    start = clock();
+    process = "Compute accummulated light source area";
+    print_start_process(process, start);
+    compute_accummulated_light_source_area<<<1, 1>>>(
+      target_geom_list, num_target_geom[0], accummulated_target_geom_area);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+
+    curandState *rand_state_ppm;
+    size_t rand_state_ppm_size = ppm_num_photon_per_pass * sizeof(curandState);
+    checkCudaErrors(cudaMallocManaged(
+      (void **)&rand_state_ppm, rand_state_ppm_size));
+
   } 
 
   start = clock();

@@ -66,7 +66,7 @@ class Triangle: public Primitive {
 
     BoundingBox *bounding_box;
     int object_idx;
-		float energy;
+    float energy;
 
 };
 
