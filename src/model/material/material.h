@@ -180,7 +180,7 @@ __device__ bool Material::_check_if_false_hit(
 
 __device__ reflection_record Material::_refract(
   vec3 hit_point, vec3 v_in, vec3 normal,
-	vec3 uv_vector,
+  vec3 uv_vector,
   bool &sss,
   Material *highest_prioritised_material,
   Material *second_highest_prioritised_material,

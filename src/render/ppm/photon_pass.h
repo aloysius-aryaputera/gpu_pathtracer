@@ -10,6 +10,7 @@
 #include "../../model/material/material.h"
 #include "../../model/point/point.h"
 #include "../../model/ray/ray.h"
+#include "../../util/vector_util.h"
 #include "../material_list_operations.h"
 
 __global__
@@ -62,7 +63,8 @@ __device__ int pick_primitive_idx_for_sampling(
 
 __global__
 void photon_pass(
-  Primitive **target_geom_list, Node **geom_node_list, 
+  Primitive **target_geom_list, Node **geom_node_list,
+  Point **photon_list, 
   int num_light_source_geom, float *accummulated_light_source_area,
   int num_photons, int max_bounce, curandState *rand_state
 ) {
@@ -70,24 +72,32 @@ void photon_pass(
 
   if (i >= num_photons) return;
 
+  photon_list[i] -> assign_location(vec3(INFINITY, INFINITY, INFINITY));
+
+  vec3 filter, light_source_color, tex_specular, tex_diffuse;
   hit_record rec;
   reflection_record ref;
   Material* material_list[400];
   int num_bounce = 0, material_list_length = 0;
-  Ray ray;
   bool hit = false, sss = false;
   curandState local_rand_state = rand_state[i];
   int light_source_idx = pick_primitive_idx_for_sampling(
     num_light_source_geom, accummulated_light_source_area, &local_rand_state
   );
-  
+  float random_number, reflection_prob, light_source_color_length;
+
   rec = target_geom_list[light_source_idx] -> get_random_point_on_surface(
     &local_rand_state
-  ); 
-  
+  );
+  light_source_color = target_geom_list[light_source_idx] -> get_material() ->
+    get_texture_emission(rec.uv_vector);
+  light_source_color_length = light_source_color.length();
+  Ray ray = generate_ray(
+    rec.point, vec3(0, 0, 0), rec.normal, 2, 1, &local_rand_state);
+  hit = traverse_bvh(geom_node_list[0], ray, rec);
 
   if (hit) {
-    while (!(ref.diffuse) && hit && num_bounce < max_bounce) {
+    while (hit && num_bounce < max_bounce) {
       num_bounce += 1;
 
       rec.object -> get_material() -> check_next_path(
@@ -117,7 +127,19 @@ void photon_pass(
         );
      
       if (!(ref.false_hit)) {
-        filter *= ref.filter_2;
+        random_number = curand_uniform(&local_rand_state);
+	reflection_prob = ref.k.length();
+        if (random_number > reflection_prob) {
+	  if (ref.diffuse) {
+	    photon_list[i] -> assign_location(rec.point);
+	    photon_list[i] -> assign_color(light_source_color);
+	    photon_list[i] -> assign_direction(rec.coming_ray.dir);
+	  }  
+	} else {
+	  light_source_color = ref.k * light_source_color;
+	  light_source_color = light_source_color * (
+	    light_source_color_length * light_source_color.length());
+	}	
       } 
 
       ray = ref.ray;

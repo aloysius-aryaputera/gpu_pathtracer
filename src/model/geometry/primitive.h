@@ -45,7 +45,8 @@ class Primitive {
     }
 
     __device__ virtual hit_record get_random_point_on_surface(
-      curandState *rand_state);
+      curandState *rand_state
+    );
 
     __device__ virtual float get_area() {
       return this -> area;

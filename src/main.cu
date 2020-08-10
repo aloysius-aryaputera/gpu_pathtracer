@@ -1188,6 +1188,15 @@ int main(int argc, char **argv) {
     checkCudaErrors(cudaMallocManaged(
       (void **)&rand_state_ppm, rand_state_ppm_size));
 
+    start = clock();
+    process = "Generating curand state for photon shooting";
+    print_start_process(process, start);
+    init_curand_state<<<ppm_num_photon_per_pass, 1>>>(
+      ppm_num_photon_per_pass, rand_state_ppm);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+
   } 
 
   start = clock();

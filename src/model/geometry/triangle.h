@@ -11,6 +11,7 @@
 #include "../material/material.h"
 #include "../object/object.h"
 #include "../ray/ray.h"
+#include "../ray/ray_operations.h"
 #include "../vector_and_matrix/vec3.h"
 #include "primitive.h"
 
