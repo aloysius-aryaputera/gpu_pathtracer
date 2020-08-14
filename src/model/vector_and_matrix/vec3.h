@@ -61,6 +61,7 @@ __host__ __device__ inline float compute_distance(
 __host__ __device__ inline vec3 permute(vec3 v, int kx, int ky, int kz);
 __device__ inline vec3 abs(vec3 v);
 __device__ inline int max_dimension(vec3 v);
+__device__ inline float max(vec3 v);
 __device__ inline vec3 de_nan(const vec3& c);
 __host__ __device__ inline vec3 unit_vector(vec3 v);
 __host__ __device__ void print_vec3(vec3 v);
@@ -188,6 +189,16 @@ __device__ inline bool vec3::vector_is_inf() {
 
 __device__ inline vec3 abs(vec3 v) {
   return vec3(abs(v.x()), abs(v.y()), abs(v.z()));
+}
+
+__device__ inline float max(vec3 v) {
+  if (v.x() > v.y() && v.x() > v.z()) {
+    return v.x();
+  }
+  if (v.y() > v.x() && v.y() > v.z()) {
+    return v.y();
+  }
+  return v.z();
 }
 
 __device__ inline int max_dimension(vec3 v) {

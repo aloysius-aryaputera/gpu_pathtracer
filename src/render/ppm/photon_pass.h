@@ -14,6 +14,23 @@
 #include "../material_list_operations.h"
 
 __global__
+void gather_recorded_photons(
+  Point **photon_list, int num_photons, int *num_recorded_photons
+) {
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (i > 0) return;
+
+  num_recorded_photons[0] = 0;
+  for (int idx = 0; idx < num_photons; idx++) {
+    if (!(photon_list[idx] -> location.vector_is_inf())) {
+      (num_recorded_photons[0])++;
+      photon_list[(num_recorded_photons[0]) - 1] = photon_list[idx];
+    }
+  }
+}
+
+__global__
 void create_photon_list(Point **photon_list, int num_photons) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -128,7 +145,7 @@ void photon_pass(
      
       if (!(ref.false_hit)) {
         random_number = curand_uniform(&local_rand_state);
-	reflection_prob = ref.k.length();
+	reflection_prob = max(ref.k);
         if (random_number > reflection_prob) {
 	  if (ref.diffuse) {
 	    photon_list[i] -> assign_location(rec.point);

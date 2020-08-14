@@ -23,7 +23,7 @@ __global__ void set_node_relationship(
 
 __global__ void build_leaf_list(
   Node** leaf_list, Primitive **object_list, int num_objects,
-	bool bounding_cone_required=false
+  bool bounding_cone_required=false
 );
 
 __global__ void compute_morton_code_batch(
@@ -55,7 +55,7 @@ __global__ void compute_morton_code_batch(
 
 __global__ void build_leaf_list(
   Node** leaf_list, Primitive **object_list, int num_triangles,
-	bool bounding_cone_required
+  bool bounding_cone_required
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_triangles) return;

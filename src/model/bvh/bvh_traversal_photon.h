@@ -1,20 +1,16 @@
-//File: bvh_traversal_pts.h
-#ifndef BVH_TRAVERSAL_PTS_H
-#define BVH_TRAVERSAL_PTS_H
+//File: bvh_traversal_photon.h
+#ifndef BVH_TRAVERSAL_PHOTON_H
+#define BVH_TRAVERSAL_PHOTON_H
 
 #include "../grid/bounding_box.h"
 #include "../grid/bounding_sphere.h"
+#include "../point/ppm_hit_point.h"
 #include "../point/point.h"
 #include "bvh.h"
 
-__device__ bool traverse_bvh_pts(
-  Node* bvh_root, BoundingSphere bounding_sphere, //Point** point_array,
-  vec3 &color
-);
-
-__device__ bool traverse_bvh_pts(
-  Node* bvh_root, BoundingSphere bounding_sphere, //Point** point_array,
-  vec3 &color
+__device__ bool _traverse_bvh_photon(
+  Node* bvh_root, PPMHitPoint* hit_point, vec3 &iterative_flux, 
+  int &num_photons
 ) {
   Node* stack[400];
   Node *child_l, *child_r;
@@ -24,8 +20,8 @@ __device__ bool traverse_bvh_pts(
   bool pts_found = false;
   int idx_stack_top = 0;
 
-  float weight, sum_weight = 0;
-  color = vec3(0, 0, 0);
+  float factor;
+  iterative_flux = vec3(0.0, 0.0, 0.0);
 
   stack[idx_stack_top] = nullptr;
   idx_stack_top++;
@@ -36,32 +32,32 @@ __device__ bool traverse_bvh_pts(
     child_l = node -> left;
     child_r = node -> right;
 
-    intersection_l = child_l -> bounding_box -> is_intersection(bounding_sphere);
-    intersection_r = child_r -> bounding_box -> is_intersection(bounding_sphere);
+    intersection_l = child_l -> bounding_box -> is_intersection(
+      hit_point -> bounding_sphere);
+    intersection_r = child_r -> bounding_box -> is_intersection(
+      hit_point -> bounding_sphere);
 
     if (intersection_l && child_l -> is_leaf) {
-      is_inside = bounding_sphere.is_inside(child_l -> point -> location);
+      is_inside = hit_point -> bounding_sphere -> is_inside(
+        child_l -> point -> location);
       if (is_inside) {
         point = child_l -> point;
         pts_found = true;
-        weight = 1.0 / compute_distance(
-          point -> location, bounding_sphere.center);
-        weight = min(9999.99, weight);
-        sum_weight += weight;
-        color += weight * point -> color;
+	num_photons++;
+        factor = max(0.0, dot(hit_point -> normal, -point -> direction));
+        iterative_flux += factor * point -> color;
       }
     }
 
     if (intersection_r && child_r -> is_leaf) {
-      is_inside = bounding_sphere.is_inside(child_r -> point -> location);
+      is_inside = hit_point -> bounding_sphere -> is_inside(
+	child_r -> point -> location);
       if (is_inside) {
         point = child_r -> point;
         pts_found = true;
-        weight = 1.0 / compute_distance(
-          point -> location, bounding_sphere.center);
-        weight = min(9999.99, weight);
-        sum_weight += weight;
-        color += weight * point -> color;
+	num_photons++;
+        factor = max(0.0, dot(hit_point -> normal, -point -> direction));
+        iterative_flux += factor * point -> color;
       }
     }
 
@@ -98,11 +94,25 @@ __device__ bool traverse_bvh_pts(
 
   } while(idx_stack_top > 0 && idx_stack_top < 400 && node != nullptr);
 
-  if (pts_found) {
-    color /= sum_weight;
-  }
-
   return pts_found;
+}
+
+__global__
+void update_hit_point_parameters(
+  Node** photon_node_list, PPMHitPoint** hit_point_list, int num_hit_point
+) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  if (idx >= num_hit_point) return;
+  if (hit_point_list[idx] -> location.vector_is_inf()) return;
+  vec3 iterative_flux = vec3(0.0, 0.0, 0.0);
+  int extra_photons = 0;
+  bool photon_found = _traverse_bvh_photon(
+    photon_node_list[0], hit_point_list[idx], iterative_flux, extra_photons
+  );
+  if (photon_found)
+    hit_point_list[idx] -> update_accummulated_reflected_flux(
+      iterative_flux, extra_photons
+    );
 }
 
 #endif

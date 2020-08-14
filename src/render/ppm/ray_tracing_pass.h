@@ -117,7 +117,7 @@ void assign_radius_to_invalid_hit_points(
 __global__
 void ray_tracing_pass(
   PPMHitPoint** hit_point_list, Camera **camera, curandState *rand_state,
-  Node **geom_node_list, bool init, int max_bounce
+  Node **geom_node_list, bool init, int max_bounce, float ppm_alpha
 ) {
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
@@ -139,7 +139,8 @@ void ray_tracing_pass(
   if (init) {
     radius = INFINITY;
     hit_point_list[pixel_index] = new PPMHitPoint(
-     vec3(INFINITY, INFINITY, INFINITY), radius, filter, vec3(0, 0, 1)  
+     vec3(INFINITY, INFINITY, INFINITY), radius, filter, vec3(0, 0, 1),
+     ppm_alpha  
     ); 
   }
 
