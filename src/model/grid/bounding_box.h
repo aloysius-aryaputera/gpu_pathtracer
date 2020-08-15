@@ -27,6 +27,7 @@ class BoundingBox {
       float x_min_, float x_max_, float y_min_, float y_max_, float z_min_,
       float z_max_
     );
+    __device__ void reset();
     __device__ void initialize(
       float x_min_, float x_max_, float y_min_, float y_max_, float z_min_,
       float z_max_
@@ -149,6 +150,10 @@ __device__ void BoundingBox::compute_normalized_center(
 }
 
 __device__ BoundingBox::BoundingBox() {
+  this -> initialized = false;
+}
+
+__device__ void BoundingBox::reset() {
   this -> initialized = false;
 }
 

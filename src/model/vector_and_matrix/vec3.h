@@ -192,20 +192,20 @@ __device__ inline vec3 abs(vec3 v) {
 }
 
 __device__ inline float max(vec3 v) {
-  if (v.x() > v.y() && v.x() > v.z()) {
+  if (v.x() >= v.y() && v.x() >= v.z()) {
     return v.x();
   }
-  if (v.y() > v.x() && v.y() > v.z()) {
+  if (v.y() >= v.x() && v.y() >= v.z()) {
     return v.y();
   }
   return v.z();
 }
 
 __device__ inline int max_dimension(vec3 v) {
-  if (v.x() > v.y() && v.x() > v.z()) {
+  if (v.x() >= v.y() && v.x() >= v.z()) {
     return 0;
   }
-  if (v.y() > v.x() && v.y() > v.z()) {
+  if (v.y() >= v.x() && v.y() >= v.z()) {
     return 1;
   }
   return 2;

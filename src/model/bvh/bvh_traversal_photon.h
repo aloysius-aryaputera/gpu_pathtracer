@@ -109,10 +109,10 @@ void update_hit_point_parameters(
   bool photon_found = _traverse_bvh_photon(
     photon_node_list[0], hit_point_list[idx], iterative_flux, extra_photons
   );
-  if (photon_found)
-    hit_point_list[idx] -> update_accummulated_reflected_flux(
-      iterative_flux, extra_photons
-    );
+  //if (photon_found)
+  //  hit_point_list[idx] -> update_accummulated_reflected_flux(
+  //    iterative_flux, extra_photons
+  //  );
 }
 
 #endif
