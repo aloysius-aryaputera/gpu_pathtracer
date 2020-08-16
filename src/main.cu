@@ -37,6 +37,7 @@
 #include "model/vector_and_matrix/vec3.h"
 #include "render/pathtracing.h"
 #include "render/pathtracing_target_geom_operations.h"
+#include "render/ppm/image_output.h"
 #include "render/ppm/photon_pass.h"
 #include "render/ppm/ray_tracing_pass.h"
 #include "util/general.h"
@@ -1294,6 +1295,8 @@ int main(int argc, char **argv) {
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
 
+      printf("Num recorded photons after %d passes = %d\n", i + 1, num_recorded_photons[0]);
+
       start = clock();
       process = "Clearing image";
       print_start_process(process, start);
@@ -1316,7 +1319,8 @@ int main(int argc, char **argv) {
       process = "Saving photon image";
       print_start_process(process, start);
       save_image(
-        image_output, im_width, im_height, image_output_path + "_photon.ppm");
+        image_output, im_width, im_height, 
+	image_output_path + "_photon" + std::to_string(i) + ".ppm");
       print_end_process(process, start);
 
       checkCudaErrors(cudaDeviceSynchronize());
@@ -1351,7 +1355,7 @@ int main(int argc, char **argv) {
       process = "Assign photons to leaves";
       start = clock();
       print_start_process(process, start);
-      assign_photons<<<1, 1>>>(
+      assign_photons<<<max(1, num_recorded_photons[0]), 1>>>(
         photon_leaf_list, photon_list, num_recorded_photons[0]);
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
@@ -1409,7 +1413,19 @@ int main(int argc, char **argv) {
       print_end_process(process, start);
 
       printf("The average hit point radius is %f.\n", average_hit_point_radius[0]);
+
     }
+
+    process = "Compute image output";
+    start = clock();
+    print_start_process(process, start);
+    ppm_image_output<<<blocks, threads>>>(
+      ppm_num_pass, ppm_num_photon_per_pass, image_output, hit_point_list, 
+      my_camera
+    );
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
   } 
 
   start = clock();

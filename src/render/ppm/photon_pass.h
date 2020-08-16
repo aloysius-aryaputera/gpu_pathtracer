@@ -101,14 +101,14 @@ void photon_pass(
   int light_source_idx = pick_primitive_idx_for_sampling(
     num_light_source_geom, accummulated_light_source_area, &local_rand_state
   );
-  float random_number, reflection_prob, light_source_color_length;
+  float random_number, reflection_prob, light_source_color_original_length;
 
   rec = target_geom_list[light_source_idx] -> get_random_point_on_surface(
     &local_rand_state
   );
   light_source_color = target_geom_list[light_source_idx] -> get_material() ->
     get_texture_emission(rec.uv_vector);
-  light_source_color_length = light_source_color.length();
+  light_source_color_original_length = light_source_color.length();
   Ray ray = generate_ray(
     rec.point, vec3(0, 0, 0), rec.normal, 2, 1, &local_rand_state);
   hit = traverse_bvh(geom_node_list[0], ray, rec);
@@ -155,7 +155,7 @@ void photon_pass(
 	} else {
 	  light_source_color = ref.k * light_source_color;
 	  light_source_color = light_source_color * (
-	    light_source_color_length * light_source_color.length());
+	    light_source_color_original_length / light_source_color.length());
 	}	
       } 
 

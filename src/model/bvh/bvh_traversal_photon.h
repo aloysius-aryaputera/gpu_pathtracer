@@ -44,8 +44,10 @@ __device__ bool _traverse_bvh_photon(
         point = child_l -> point;
         pts_found = true;
 	num_photons++;
-        factor = max(0.0, dot(hit_point -> normal, -point -> direction));
+        factor = max(0.0, dot(hit_point -> normal, -(point -> direction)));
         iterative_flux += factor * point -> color;
+	//printf("factor = %f, point -> color = (%f, %f, %f)", 
+	//       factor, point -> color.r(), point -> color.g(), point -> color.b());
       }
     }
 
@@ -56,8 +58,10 @@ __device__ bool _traverse_bvh_photon(
         point = child_r -> point;
         pts_found = true;
 	num_photons++;
-        factor = max(0.0, dot(hit_point -> normal, -point -> direction));
+        factor = max(0.0, dot(hit_point -> normal, -(point -> direction)));
         iterative_flux += factor * point -> color;
+	//printf("factor = %f, point -> color = (%f, %f, %f)", 
+	//	factor, point -> color.r(), point -> color.g(), point -> color.b());
       }
     }
 
@@ -109,10 +113,12 @@ void update_hit_point_parameters(
   bool photon_found = _traverse_bvh_photon(
     photon_node_list[0], hit_point_list[idx], iterative_flux, extra_photons
   );
-  //if (photon_found)
-  //  hit_point_list[idx] -> update_accummulated_reflected_flux(
-  //    iterative_flux, extra_photons
-  //  );
+  if (photon_found)
+    hit_point_list[idx] -> update_accummulated_reflected_flux(
+      iterative_flux, extra_photons
+    );
+//    printf("iterative_flux = (%f, %f, %f)\n", 
+//		    iterative_flux.r(), iterative_flux.g(), iterative_flux.b());
 }
 
 #endif

@@ -28,7 +28,14 @@ class PPMHitPoint {
     __device__ void update_radius(float radius_);
     __device__ void update_accummulated_reflected_flux(
       vec3 iterative_total_photon_flux, int extra_photons);
+    __device__ vec3 compute_pixel_color(int num_emitted_photons);
 };
+
+__device__ vec3 PPMHitPoint::compute_pixel_color(int num_emitted_photons) {
+  return this -> accummulated_reflected_flux / (
+    float(num_emitted_photons) * M_PI * 
+    powf(this -> current_photon_radius, 2));
+}
 
 __device__ void PPMHitPoint::update_radius(float radius_) {
   this -> current_photon_radius = radius_;
@@ -39,8 +46,8 @@ __device__ void PPMHitPoint::update_accummulated_reflected_flux(
   vec3 iterative_total_photon_flux, int extra_photons
 ) {
   float new_radius = this -> current_photon_radius * powf(
-    (this -> accummulated_photon_count + this -> ppm_alpha * extra_photons) /
-    (this -> accummulated_photon_count + extra_photons),
+    (this -> accummulated_photon_count + extra_photons + this -> ppm_alpha * extra_photons) /
+    (this -> accummulated_photon_count + extra_photons + extra_photons),
     0.5
   );
   this -> accummulated_photon_count += extra_photons;
@@ -61,6 +68,7 @@ __device__ PPMHitPoint::PPMHitPoint(
   this -> normal = normal_;
   this -> ppm_alpha = ppm_alpha_;
   this -> accummulated_reflected_flux = vec3(0.0, 0.0, 0.0);
+  this -> accummulated_photon_count = 0;
 
   this -> _create_bounding_sphere();
 }
