@@ -35,6 +35,8 @@ __device__ vec3 PPMHitPoint::compute_pixel_color(int num_emitted_photons) {
   return this -> accummulated_reflected_flux / (
     float(num_emitted_photons) * M_PI * 
     powf(this -> current_photon_radius, 2));
+  
+  //return this -> accummulated_reflected_flux / (float(num_emitted_photons));
 }
 
 __device__ void PPMHitPoint::update_radius(float radius_) {

@@ -25,7 +25,12 @@ void gather_recorded_photons(
   for (int idx = 0; idx < num_photons; idx++) {
     if (!(photon_list[idx] -> location.vector_is_inf())) {
       (num_recorded_photons[0])++;
-      photon_list[(num_recorded_photons[0]) - 1] = photon_list[idx];
+      photon_list[(num_recorded_photons[0]) - 1] -> assign_location(
+         photon_list[idx] -> location);
+      photon_list[(num_recorded_photons[0]) - 1] -> assign_color(
+         photon_list[idx] -> color);
+      photon_list[(num_recorded_photons[0]) - 1] -> assign_direction(
+         photon_list[idx] -> direction);
     }
   }
 }
@@ -103,6 +108,10 @@ void photon_pass(
   );
   float random_number, reflection_prob, light_source_color_original_length;
 
+  //if (i == 0 || i == 100) {
+  //  printf("i = %d and light_source_idx = %d\n", i, light_source_idx);
+  //}
+
   rec = target_geom_list[light_source_idx] -> get_random_point_on_surface(
     &local_rand_state
   );
@@ -146,7 +155,7 @@ void photon_pass(
       if (!(ref.false_hit)) {
         random_number = curand_uniform(&local_rand_state);
 	reflection_prob = max(ref.k);
-        if (random_number > reflection_prob) {
+        if (random_number > reflection_prob || num_bounce == max_bounce - 1) {
 	  if (ref.diffuse) {
 	    photon_list[i] -> assign_location(rec.point);
 	    photon_list[i] -> assign_color(light_source_color);

@@ -29,8 +29,8 @@ void _get_hit_point_details(
 
   add_new_material(material_list, material_list_length, nullptr);
   ray = camera[0] -> compute_ray(
-    pixel_width_index + camera_width_offset, 
-    pixel_height_index + camera_height_offset, rand_state);
+    pixel_height_index + camera_height_offset, 
+    pixel_width_index + camera_width_offset, rand_state);
   hit = false;
   rec.object = nullptr;
   ref.diffuse = false;
@@ -72,8 +72,10 @@ void _get_hit_point_details(
         filter *= ref.filter_2;
       } 
 
-      ray = ref.ray;
-      hit = traverse_bvh(geom_node_list[0], ray, rec);
+      if (!(ref.diffuse)) {
+        ray = ref.ray;
+        hit = traverse_bvh(geom_node_list[0], ray, rec);
+      }
     }
   }
 }
@@ -112,6 +114,7 @@ void assign_radius_to_invalid_hit_points(
   if(isinf(current_radius)) {
     hit_point_list[i] -> update_radius(new_radius);
   }
+  //hit_point_list[i] -> update_radius(2);
 }
 
 __global__
@@ -146,14 +149,14 @@ void ray_tracing_pass(
 
   radius = hit_point_list[pixel_index] -> current_photon_radius;
   _get_hit_point_details(
-    ref, rec, filter, camera, i, j, geom_node_list, max_bounce, 0.5, 0.5, hit, 
+    ref, rec, filter, camera, j, i, geom_node_list, max_bounce, 0.5, 0.5, hit, 
     &local_rand_state
   );
 
   if (init) {
     for (int idx = 0; idx < 4; idx++) {
       _get_hit_point_details(
-        ref_2, rec_2, filter, camera, i, j, geom_node_list, max_bounce, 
+        ref_2, rec_2, filter, camera, j, i, geom_node_list, max_bounce, 
 	camera_width_offset[idx], camera_height_offset[idx], hit_2, 
         &local_rand_state
       );

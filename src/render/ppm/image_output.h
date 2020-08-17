@@ -23,6 +23,14 @@ void ppm_image_output(
     ppm_pass * num_photon_per_pass
   );
 
+  if (fb[pixel_index].vector_is_inf()) {
+    printf("idx (%d, %d) is inf.\n", j, i);
+  }
+
+  if (fb[pixel_index].vector_is_nan()) {
+    printf("idx (%d, %d) is nan.\n", j, i);
+  }
+
   //printf(
   //  "(%f, %f, %f), %d, pixel[%d, %d] = (%f, %f, %f)\n", 
   //  hit_point_list[pixel_index] -> accummulated_reflected_flux.r(),

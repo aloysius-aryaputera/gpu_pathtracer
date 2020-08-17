@@ -1264,16 +1264,16 @@ int main(int argc, char **argv) {
 
       printf("PPM Pass %d.\n", i);
 
-      start = clock();
-      process = "Ray tracing pass";
-      print_start_process(process, start);
-      ray_tracing_pass<<<blocks, threads>>>(
-        hit_point_list, my_camera, rand_state_image, node_list, false, 
-        ppm_max_bounce, ppm_alpha
-      );
-      checkCudaErrors(cudaGetLastError());
-      checkCudaErrors(cudaDeviceSynchronize());
-      print_end_process(process, start);
+      //start = clock();
+      //process = "Ray tracing pass";
+      //print_start_process(process, start);
+      //ray_tracing_pass<<<blocks, threads>>>(
+      //  hit_point_list, my_camera, rand_state_image, node_list, false, 
+      //  ppm_max_bounce, ppm_alpha
+      //);
+      //checkCudaErrors(cudaGetLastError());
+      //checkCudaErrors(cudaDeviceSynchronize());
+      //print_end_process(process, start);
 
       start = clock();
       process = "Photon pass";
@@ -1413,6 +1413,24 @@ int main(int argc, char **argv) {
       print_end_process(process, start);
 
       printf("The average hit point radius is %f.\n", average_hit_point_radius[0]);
+
+      process = "Compute image output";
+      start = clock();
+      print_start_process(process, start);
+      ppm_image_output<<<blocks, threads>>>(
+        ppm_num_pass, ppm_num_photon_per_pass, image_output, hit_point_list, 
+        my_camera
+      );
+      checkCudaErrors(cudaGetLastError());
+      checkCudaErrors(cudaDeviceSynchronize());
+      print_end_process(process, start);
+
+      start = clock();
+      process = "Saving image";
+      print_start_process(process, start);
+      save_image(image_output, im_width, im_height, image_output_path + ".ppm");
+      print_end_process(process, start);
+      checkCudaErrors(cudaDeviceSynchronize());
 
     }
 
