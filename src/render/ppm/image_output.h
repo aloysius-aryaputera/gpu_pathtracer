@@ -20,15 +20,37 @@ void ppm_image_output(
   int pixel_index = i * (camera[0] -> width) + j;
 
   fb[pixel_index] = hit_point_list[pixel_index] -> compute_pixel_color(
-    ppm_pass * num_photon_per_pass
+    ppm_pass, num_photon_per_pass
   );
 
   if (fb[pixel_index].vector_is_inf()) {
-    printf("idx (%d, %d) is inf.\n", j, i);
+    printf("idx %d (%d, %d) has values (%f, %f, %f), filter = (%f, %f, %f), and  %d photons.\n", 
+		    pixel_index, j, i, 
+		    fb[pixel_index].r(), fb[pixel_index].g(), fb[pixel_index].b(), 
+		    hit_point_list[pixel_index] -> filter.r(),
+                    hit_point_list[pixel_index] -> filter.g(),
+		    hit_point_list[pixel_index] -> filter.b(),
+		    hit_point_list[pixel_index] -> accummulated_photon_count);
   }
 
   if (fb[pixel_index].vector_is_nan()) {
-    printf("idx (%d, %d) is nan.\n", j, i);
+    printf("idx %d (%d, %d) has values (%f, %f, %f), filter = (%f, %f, %f), and  %d photons.\n", 
+		    pixel_index, j, i, 
+		    fb[pixel_index].r(), fb[pixel_index].g(), fb[pixel_index].b(), 
+		    hit_point_list[pixel_index] -> filter.r(),
+                    hit_point_list[pixel_index] -> filter.g(),
+		    hit_point_list[pixel_index] -> filter.b(),
+		    hit_point_list[pixel_index] -> accummulated_photon_count);
+  }
+
+  if (fb[pixel_index].r() < 1E-6 && fb[pixel_index].g() < 1E-6 && fb[pixel_index].b() < 1E-6 && hit_point_list[pixel_index] -> accummulated_photon_count > 0) {
+    printf("idx %d (%d, %d) has values (%f, %f, %f), filter = (%f, %f, %f), and  %d photons.\n", 
+		    pixel_index, j, i, 
+		    fb[pixel_index].r(), fb[pixel_index].g(), fb[pixel_index].b(), 
+		    hit_point_list[pixel_index] -> filter.r(),
+                    hit_point_list[pixel_index] -> filter.g(),
+		    hit_point_list[pixel_index] -> filter.b(),
+		    hit_point_list[pixel_index] -> accummulated_photon_count);
   }
 
   //printf(

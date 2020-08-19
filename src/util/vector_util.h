@@ -115,7 +115,7 @@ __device__ vec3 compute_phong_filter_2(
 ) {
   vec3 filter;
   if (isinf(n)) {
-    filter = k * vec3(1, 1, 1);
+    filter = k;
   } else {
     filter = k * powf(fmaxf(0, dot(ideal_dir, dir)), n);
   } 

@@ -87,6 +87,7 @@ int main(int argc, char **argv) {
   int ppm_num_pass = input_param.ppm_num_pass;
   int ppm_max_bounce = input_param.ppm_max_bounce;
   float ppm_alpha = input_param.ppm_alpha;
+  float ppm_intensity_scaling_factor = input_param.ppm_intensity_scaling_factor;
 
   int pathtracing_sample_size = input_param.pathtracing_sample_size;
   int pathtracing_level = input_param.pathtracing_level;
@@ -1029,7 +1030,8 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaMallocManaged((void **)&image_output, image_size));
 
   checkCudaErrors(
-    cudaMallocManaged((void **)&rand_state_image, rand_state_image_size));
+    cudaMallocManaged(
+      (void **)&rand_state_image, num_pixels * sizeof(curandState)));
 
   start = clock();
   process = "Generating curand state for rendering";
@@ -1130,7 +1132,12 @@ int main(int argc, char **argv) {
     print_start_process(process, start);
     ray_tracing_pass<<<blocks, threads>>>(
       hit_point_list, my_camera, rand_state_image, node_list, true, 
-      ppm_max_bounce, ppm_alpha
+      ppm_max_bounce, ppm_alpha, 0,
+      num_target_geom[0],
+      target_geom_list,
+      target_node_list,
+      target_leaf_list,
+      pathtracing_sample_size
     );
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
@@ -1144,7 +1151,7 @@ int main(int argc, char **argv) {
     );
 
     start = clock();
-    process = "Compute average hit point radius";
+    process = "Compute max hit point radius";
     print_start_process(process, start);
     compute_average_radius<<<1, 1>>>(
       hit_point_list, num_pixels, average_hit_point_radius
@@ -1152,8 +1159,6 @@ int main(int argc, char **argv) {
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);
-
-    printf("The average hit point radius is %f.\n", average_hit_point_radius[0]);
 
     start = clock();
     process = "Assign radius to invalid hit points";
@@ -1264,16 +1269,21 @@ int main(int argc, char **argv) {
 
       printf("PPM Pass %d.\n", i);
 
-      //start = clock();
-      //process = "Ray tracing pass";
-      //print_start_process(process, start);
-      //ray_tracing_pass<<<blocks, threads>>>(
-      //  hit_point_list, my_camera, rand_state_image, node_list, false, 
-      //  ppm_max_bounce, ppm_alpha
-      //);
-      //checkCudaErrors(cudaGetLastError());
-      //checkCudaErrors(cudaDeviceSynchronize());
-      //print_end_process(process, start);
+      start = clock();
+      process = "Ray tracing pass";
+      print_start_process(process, start);
+      ray_tracing_pass<<<blocks, threads>>>(
+        hit_point_list, my_camera, rand_state_image, node_list, false, 
+        ppm_max_bounce, ppm_alpha, i,
+        num_target_geom[0],
+        target_geom_list,
+	target_node_list,
+        target_leaf_list,
+        pathtracing_sample_size
+      );
+      checkCudaErrors(cudaGetLastError());
+      checkCudaErrors(cudaDeviceSynchronize());
+      print_end_process(process, start);
 
       start = clock();
       process = "Photon pass";
@@ -1281,7 +1291,7 @@ int main(int argc, char **argv) {
       photon_pass<<<ppm_num_photon_per_pass, 1>>>(
         target_geom_list, node_list, photon_list, num_target_geom[0],
         accummulated_target_geom_area, ppm_num_photon_per_pass,
-        ppm_max_bounce, rand_state_ppm);
+        ppm_max_bounce, ppm_intensity_scaling_factor, i, rand_state_ppm);
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
@@ -1297,31 +1307,31 @@ int main(int argc, char **argv) {
 
       printf("Num recorded photons after %d passes = %d\n", i + 1, num_recorded_photons[0]);
 
-      start = clock();
-      process = "Clearing image";
-      print_start_process(process, start);
-      clear_image<<<blocks, threads>>>(image_output, im_width, im_height);
-      checkCudaErrors(cudaGetLastError());
-      checkCudaErrors(cudaDeviceSynchronize());
-      print_end_process(process, start);
+      //start = clock();
+      //process = "Clearing image";
+      //print_start_process(process, start);
+      //clear_image<<<blocks, threads>>>(image_output, im_width, im_height);
+      //checkCudaErrors(cudaGetLastError());
+      //checkCudaErrors(cudaDeviceSynchronize());
+      //print_end_process(process, start);
 
-      start = clock();
-      process = "Creating photon image";
-      print_start_process(process, start);
-      create_point_image<<<num_recorded_photons[0] / tx + 1, tx>>>(
-        image_output, my_camera, photon_list, num_recorded_photons[0]
-      );
-      checkCudaErrors(cudaGetLastError());
-      checkCudaErrors(cudaDeviceSynchronize());
-      print_end_process(process, start);
+      //start = clock();
+      //process = "Creating photon image";
+      //print_start_process(process, start);
+      //create_point_image<<<num_recorded_photons[0] / tx + 1, tx>>>(
+      //  image_output, my_camera, photon_list, num_recorded_photons[0]
+      //);
+      //checkCudaErrors(cudaGetLastError());
+      //checkCudaErrors(cudaDeviceSynchronize());
+      //print_end_process(process, start);
 
-      start = clock();
-      process = "Saving photon image";
-      print_start_process(process, start);
-      save_image(
-        image_output, im_width, im_height, 
-	image_output_path + "_photon" + std::to_string(i) + ".ppm");
-      print_end_process(process, start);
+      //start = clock();
+      //process = "Saving photon image";
+      //print_start_process(process, start);
+      //save_image(
+      //  image_output, im_width, im_height, 
+      //  image_output_path + "_photon_" + std::to_string(i) + ".ppm");
+      //print_end_process(process, start);
 
       checkCudaErrors(cudaDeviceSynchronize());
       start = clock();

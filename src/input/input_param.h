@@ -24,7 +24,7 @@ class InputParam {
     float hittable_pdf_weight;
 
     int ppm_num_photon_per_pass, ppm_num_pass, ppm_max_bounce;
-    float ppm_alpha;
+    float ppm_alpha, ppm_intensity_scaling_factor;
 
     float eye_x, eye_y, eye_z, center_x, center_y, center_z, up_x, up_y, up_z;
     float fovy, aperture, focus_dist;
@@ -70,6 +70,8 @@ void InputParam::extract_parameters(
           this -> ppm_max_bounce = std::stoi(chunks[1]);
 	} else if (chunks[0] == "ppm_alpha") {
 	  this -> ppm_alpha = std::stof(chunks[1]);
+	} else if (chunks[0] == "ppm_intensity_scaling_factor") {
+	  this -> ppm_intensity_scaling_factor = std::stof(chunks[1]);
         } else if (chunks[0] == "eye_x") {
 	  this -> eye_x = std::stof(chunks[1]);
 	} else if (chunks[0] == "eye_y") {

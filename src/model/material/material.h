@@ -455,11 +455,11 @@ __device__ void Material::check_next_path(
 
   float kd_length = actual_mat -> get_texture_diffuse(uv_vector).length();
   float ks_length = actual_mat -> get_texture_specular(uv_vector).length();
-  float factor = kd_length / (kd_length + ks_length);
+  float factor = ks_length / (kd_length + ks_length);
   float local_n_s = actual_mat -> _get_texture_n_s(uv_vector);
   vec3 k;
 
-  if (random_number <= factor) {
+  if (random_number > factor) {
     ref.ray = generate_ray(
       hit_point, vec3(0, 0, 0), normal, 0, 1, rand_state);
     ref.filter = actual_mat -> get_texture_diffuse(uv_vector);

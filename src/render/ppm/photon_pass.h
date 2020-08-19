@@ -88,7 +88,8 @@ void photon_pass(
   Primitive **target_geom_list, Node **geom_node_list,
   Point **photon_list, 
   int num_light_source_geom, float *accummulated_light_source_area,
-  int num_photons, int max_bounce, curandState *rand_state
+  int num_photons, int max_bounce, float intensity_scaling_factor,
+  int pass_iteration, curandState *rand_state
 ) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -100,23 +101,28 @@ void photon_pass(
   hit_record rec;
   reflection_record ref;
   Material* material_list[400];
-  int num_bounce = 0, material_list_length = 0;
+  int num_bounce = 0, material_list_length = 0, light_source_idx;
   bool hit = false, sss = false;
   curandState local_rand_state = rand_state[i];
-  int light_source_idx = pick_primitive_idx_for_sampling(
-    num_light_source_geom, accummulated_light_source_area, &local_rand_state
-  );
   float random_number, reflection_prob, light_source_color_original_length;
 
-  //if (i == 0 || i == 100) {
-  //  printf("i = %d and light_source_idx = %d\n", i, light_source_idx);
-  //}
+  for (int idx = 0; idx < pass_iteration; idx++) {
+    curand_uniform(&local_rand_state);
+  }
+
+  light_source_idx = pick_primitive_idx_for_sampling(
+    num_light_source_geom, accummulated_light_source_area, &local_rand_state
+  );
+  if (i == 0 || i == 100) {
+    printf("i = %d and light_source_idx = %d and random_number = %f\n", 
+		    i, light_source_idx, curand_uniform(&local_rand_state));
+  }
 
   rec = target_geom_list[light_source_idx] -> get_random_point_on_surface(
     &local_rand_state
   );
   light_source_color = target_geom_list[light_source_idx] -> get_material() ->
-    get_texture_emission(rec.uv_vector);
+    get_texture_emission(rec.uv_vector) * intensity_scaling_factor;
   light_source_color_original_length = light_source_color.length();
   Ray ray = generate_ray(
     rec.point, vec3(0, 0, 0), rec.normal, 2, 1, &local_rand_state);
@@ -155,8 +161,8 @@ void photon_pass(
       if (!(ref.false_hit)) {
         random_number = curand_uniform(&local_rand_state);
 	reflection_prob = max(ref.k);
-        if (random_number > reflection_prob || num_bounce == max_bounce - 1) {
-	  if (ref.diffuse) {
+        if (random_number > reflection_prob) {
+	  if (ref.diffuse && num_bounce > 1) {
 	    photon_list[i] -> assign_location(rec.point);
 	    photon_list[i] -> assign_color(light_source_color);
 	    photon_list[i] -> assign_direction(rec.coming_ray.dir);
