@@ -26,10 +26,11 @@ void _get_hit_point_details(
   Node **target_node_list,
   Node **target_leaf_list,
   int num_light_source_sampling,
-  curandState *rand_state 
+  curandState *rand_state,
+  int pixel_idx 
 ) {
   
-  hit_record rec_2;
+  hit_record rec_2, rec_3;
   reflection_record ref_2, ref_3;
   bool sss = false;
   Ray ray;
@@ -39,6 +40,7 @@ void _get_hit_point_details(
   int pixel_index = pixel_height_index * (camera[0] -> width) + pixel_width_index;
   vec3 emittance = vec3(0.0, 0.0, 0.0);
   direct_radiance = vec3(0.0, 0.0, 0.0);
+  vec3 add_direct_radiance;
 
   add_new_material(material_list, material_list_length, nullptr);
   ray = camera[0] -> compute_ray(
@@ -97,9 +99,14 @@ void _get_hit_point_details(
       if (ref.diffuse) {
         emittance = filter * rec.object -> get_material(
         ) -> get_texture_emission(rec.uv_vector);
+	
+        rec.object -> get_material() -> check_next_path(
+          rec.coming_ray, rec.point, rec.normal, rec.uv_vector,
+          sss, material_list, material_list_length,
+          ref_2, rand_state
+        );
         for (int idx = 0; idx < num_light_source_sampling; idx++) {
 	  factor = 1;
-	  ref_2 = ref;
 	  change_ref_ray(
 	    rec, 
 	    ref_2, 
@@ -118,16 +125,38 @@ void _get_hit_point_details(
 	      rec_2.coming_ray, rec_2.point, rec_2.normal, rec_2.uv_vector,
 	      sss, material_list, material_list_length, ref_3, rand_state
 	    );
-            direct_radiance += (
-	      filter * ref_2.filter * clamp(0, .9999, factor)
+	    add_direct_radiance = (filter * ref_2.filter * clamp(0, .9999, factor)
 	    ) * rec_2.object -> get_material() -> get_texture_emission(
 	      rec_2.uv_vector
             );
+	    direct_radiance += add_direct_radiance;
+          if (emittance.vector_is_nan() || add_direct_radiance.vector_is_nan() || direct_radiance.vector_is_nan()) {
+            printf(
+	      "1) pixel_idx = %d, emittance = (%f, %f, %f), add_direct_radiance = (%f, %f, %f), ref_2.filter = (%f, %f, %f), factor = %f\n", 
+	      pixel_idx, 
+	      emittance.r(), emittance.g(), emittance.b(), 
+	      add_direct_radiance.r(), add_direct_radiance.g(), add_direct_radiance.b(),
+	      ref_2.filter.r(), ref_2.filter.g(), ref_2.filter.b(),
+	      factor
+	    );
+      } 
 	  }
 	}
-        direct_radiance /= float(num_light_source_sampling);	
+        direct_radiance /= max(1.0, float(num_light_source_sampling));	
 	direct_radiance += emittance;
-      } 
+
+
+          if (emittance.vector_is_nan() || add_direct_radiance.vector_is_nan() || direct_radiance.vector_is_nan()) {
+            printf(
+	      "2) pixel_idx = %d, emittance = (%f, %f, %f), add_direct_radiance = (%f, %f, %f), ref_2.filter = (%f, %f, %f), factor = %f\n", 
+	      pixel_idx, 
+	      emittance.r(), emittance.g(), emittance.b(), 
+	      add_direct_radiance.r(), add_direct_radiance.g(), add_direct_radiance.b(),
+	      ref_2.filter.r(), ref_2.filter.g(), ref_2.filter.b(),
+	      factor
+	    );
+	  }
+      }
 
       if (!(ref.diffuse)) {
         ray = ref.ray;
@@ -206,12 +235,12 @@ void ray_tracing_pass(
     return;
   }
 
-  bool hit = false, hit_2 = false;
+  bool hit = false, hit_2 = false, write = false;
   hit_record rec, rec_2;
   reflection_record ref, ref_2;
   Ray ray;
   vec3 filter = vec3(1.0, 1.0, 1.0), hit_loc[4];
-  vec3 direct_radiance = vec3(0.0, 0.0, 0.0);
+  vec3 direct_radiance = vec3(0.0, 0.0, 0.0), direct_radiance_dummy;
   int pixel_index = i * (camera[0] -> width) + j;
   curandState local_rand_state = rand_state[pixel_index];
   float radius, radius_tmp, camera_width_offset[4] = {0, 0, 1, 1}, \
@@ -234,17 +263,17 @@ void ray_tracing_pass(
     ref, rec, filter, direct_radiance,
     camera, j, i, geom_node_list, max_bounce, 0.5, 0.5, hit, 
     target_geom_list, num_target_geom, target_node_list, target_leaf_list,
-    sample_size, &local_rand_state
+    sample_size, &local_rand_state, pixel_index
   );
 
   if (init) {
     for (int idx = 0; idx < 4; idx++) {
       _get_hit_point_details(
-        ref_2, rec_2, filter, direct_radiance,
+        ref_2, rec_2, filter, direct_radiance_dummy,
 	camera, j, i, geom_node_list, max_bounce, 
 	camera_width_offset[idx], camera_height_offset[idx], hit_2,
         target_geom_list, num_target_geom, target_node_list, target_leaf_list,
-        0, &local_rand_state
+        0, &local_rand_state, pixel_index
       );
       if (hit_2 && ref_2.diffuse) {
         hit_loc[idx] = rec_2.point;
