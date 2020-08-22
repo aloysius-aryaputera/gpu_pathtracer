@@ -14,7 +14,8 @@ __device__ void change_ref_ray(
   int num_target_geom, float &factor, 
   Node **target_node_list,
   Node **target_leaf_list,
-  curandState *rand_state_mis
+  curandState *rand_state_mis,
+  bool write
 );
 
 __device__ vec3 _pick_a_random_point_on_a_target_geom(
@@ -26,7 +27,7 @@ __device__ float _recompute_pdf(
   hit_record rec, vec3 origin, vec3 dir, Primitive **target_geom_array,
   int num_target_geom, float hittable_pdf_weight, Node **target_node_list,
   Node **target_leaf_list, vec3 kd, bool diffuse, float n, 
-  vec3 perfect_reflection_dir, reflection_record ref
+  vec3 perfect_reflection_dir, reflection_record ref, bool write=false
 ) {
   float hittable_pdf = 0, sampling_pdf;
   float node_pdf = 0;
@@ -49,10 +50,14 @@ __device__ float _recompute_pdf(
 
   for(int i = 0; i < num_potential_targets; i++) {
     node_pdf = get_node_pdf(
-      target_leaf_list[potential_target_idx[i]], origin, pivot, kd);
+      target_leaf_list[potential_target_idx[i]], origin, pivot, kd, write);
     hittable_pdf += node_pdf * target_geom_array[potential_target_idx[i]] ->
-      get_hittable_pdf(rec.point, dir);
+      get_hittable_pdf(rec.point, dir, write);
     if (node_pdf > 1) printf("node_pdf = %f\n", node_pdf);
+
+    if (write) {
+      printf("ray.dir = (%f, %f, %f), node_pdf %d = %f; hittable_pdf %d = %f.\n", dir.x(), dir.y(), dir.z(), i, node_pdf, i, hittable_pdf);
+    }
   }
 
   if (ref.diffuse) {
@@ -72,11 +77,11 @@ __device__ float _recompute_pdf(
 
 __device__ vec3 _pick_a_random_point_on_a_target_geom(
   Node* target_bvh_root, vec3 origin, vec3 normal, vec3 kd, 
-  curandState *rand_state
+  curandState *rand_state, bool write
 ) {
   Primitive* selected_target;
   selected_target = traverse_bvh_to_pick_a_target(
-    target_bvh_root, origin, normal, kd, rand_state
+    target_bvh_root, origin, normal, kd, rand_state, write
   );
   hit_record random_hit_record = selected_target -> 
     get_random_point_on_surface(rand_state);
@@ -88,7 +93,8 @@ __device__ void change_ref_ray(
   Primitive **target_geom_array,
   int num_target_geom, float &factor, Node **target_node_list,
   Node **target_leaf_list,
-  float hittable_pdf_weight, curandState *rand_state_mis
+  float hittable_pdf_weight, curandState *rand_state_mis,
+  bool write=false
 ) {
   float random_number = curand_uniform(rand_state_mis);
   float pdf, scattering_pdf;
@@ -107,7 +113,7 @@ __device__ void change_ref_ray(
 
     new_target_point = _pick_a_random_point_on_a_target_geom(
       target_node_list[0], default_ray.p0, pivot, ref.k,
-      rand_state_mis	
+      rand_state_mis, write	
     );
 
     new_dir = new_target_point - default_ray.p0;
@@ -123,7 +129,7 @@ __device__ void change_ref_ray(
     rec, ref.ray.p0, ref.ray.dir, 
     target_geom_array, num_target_geom,
     hittable_pdf_weight, target_node_list, target_leaf_list, ref.k,
-    ref.diffuse, ref.n, ref.perfect_reflection_dir, ref
+    ref.diffuse, ref.n, ref.perfect_reflection_dir, ref, write
   );
 
   if (ref.diffuse) {
@@ -138,7 +144,12 @@ __device__ void change_ref_ray(
       (dot_prod_1 <= 0 && dot_prod_2 <= 0 && ref.refracted)
     );
   }
+
   factor = scattering_pdf / M_PI / pdf;
+
+  if (write) {
+    printf("scattering_pdf = %f, pdf = %f, factor = %f.\n", scattering_pdf, pdf, factor);
+  }
 }
 
 #endif

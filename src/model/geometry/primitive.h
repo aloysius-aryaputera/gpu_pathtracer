@@ -84,23 +84,23 @@ class Primitive {
 
     }
 
-    __device__ virtual float get_hittable_pdf(vec3 origin, vec3 dir) {
+    __device__ virtual float get_hittable_pdf(vec3 origin, vec3 dir, bool write) {
       return 0;
     }
 
-    __device__ virtual float compute_directed_energy(
+    __device__ virtual vec3 compute_directed_energy(
       vec3 point, vec3 point_normal
     ) {
-      return 0;
+      return vec3(0.0, 0.0, 0.0);
     }
 
-    __device__ virtual float get_energy() {
+    __device__ virtual vec3 get_energy() {
       return this -> energy;
     }
 
     BoundingBox *bounding_box;
     int object_idx;
-    float energy;
+    vec3 energy;
 };
 
 struct hit_record

@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
 
   int tx = 8, ty = 8;
 
-  BoundingBox **world_bounding_box;
+  BoundingBox **world_bounding_box, **target_world_bounding_box;
   Primitive **my_geom;
   Primitive **target_geom_list;
   Object **my_objects;
@@ -936,6 +936,29 @@ int main(int argc, char **argv) {
   print_start_process(process, start);
   collect_target_geom<<<1, 1>>>(
     my_geom, num_triangles[0], target_geom_list
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&target_world_bounding_box, sizeof(BoundingBox *)));
+
+  start = clock();
+  process = "Computing the target world bounding box";
+  print_start_process(process, start);
+  compute_world_bounding_box<<<1, 1>>>(
+    target_world_bounding_box, target_geom_list, num_target_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Computing the morton code of every target geometry bounding box";
+  print_start_process(process, start);
+  compute_morton_code_batch<<<blocks_world, threads_world>>>(
+    target_geom_list, target_world_bounding_box, num_target_geom[0]
   );
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());

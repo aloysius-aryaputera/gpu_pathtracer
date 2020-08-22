@@ -38,9 +38,10 @@ void _get_hit_point_details(
   int material_list_length = 0, num_bounce = 0;
   float factor;
   int pixel_index = pixel_height_index * (camera[0] -> width) + pixel_width_index;
-  vec3 emittance = vec3(0.0, 0.0, 0.0);
+  vec3 emittance = vec3(0.0, 0.0, 0.0), filter_lag = vec3(1.0, 1.0, 1.0);
   direct_radiance = vec3(0.0, 0.0, 0.0);
   vec3 add_direct_radiance;
+  bool write;
 
   add_new_material(material_list, material_list_length, nullptr);
   ray = camera[0] -> compute_ray(
@@ -50,6 +51,23 @@ void _get_hit_point_details(
   rec.object = nullptr;
   ref.diffuse = false;
   filter = vec3(1.0, 1.0, 1.0);
+
+  //if (pixel_index == 0) {
+  //  for (int idx_2 = 0; idx_2 < num_target_geom; idx_2++) {
+  //    printf("light source %d = (%f, %f, %f), (%f, %f, %f), (%f, %f, %f).\n",
+  //      idx_2, 
+  //      target_leaf_list[idx_2] -> object -> get_material() -> get_texture_emission(vec3(0, 0, 0)).r(), 
+  //      target_leaf_list[idx_2] -> object -> get_material() -> get_texture_emission(vec3(0, 0, 0)).g(), 
+  //      target_leaf_list[idx_2] -> object -> get_material() -> get_texture_emission(vec3(0, 0, 0)).b(),
+  //     target_geom_array[idx_2] -> get_material() -> get_texture_emission(vec3(0, 0, 0)).r(),
+  //     target_geom_array[idx_2] -> get_material() -> get_texture_emission(vec3(0, 0, 0)).g(),
+  //     target_geom_array[idx_2] -> get_material() -> get_texture_emission(vec3(0, 0, 0)).b(),
+  //     target_geom_array[idx_2] -> get_fixed_normal().x(),
+  //     target_geom_array[idx_2] -> get_fixed_normal().y(),
+  //     target_geom_array[idx_2] -> get_fixed_normal().z()
+  //      );
+  //  }
+  //}
 
   hit = traverse_bvh(geom_node_list[0], ray, rec);
   
@@ -84,20 +102,21 @@ void _get_hit_point_details(
         );
      
       if (!(ref.false_hit)) {
-	if (pixel_index == 28873) {
-	  printf("pixel %d has filter = (%f, %f, %f) and filter_2 = (%f, %f, %f), diffuse = %d, reflected = %d, refracted = %d, random_number = %f\n",
-			  pixel_index,
-			  filter.r(), filter.g(), filter.b(),
-			  ref.filter_2.r(), ref.filter_2.g(), ref.filter_2.b(),
-			  ref.diffuse, ref.reflected, ref.refracted,
-			  curand_uniform(&rand_state[0])
-			  );
-	}
+	//if (pixel_index == 28873) {
+	//  printf("pixel %d has filter = (%f, %f, %f) and filter_2 = (%f, %f, %f), diffuse = %d, reflected = %d, refracted = %d, random_number = %f\n",
+	//		  pixel_index,
+	//		  filter.r(), filter.g(), filter.b(),
+	//		  ref.filter_2.r(), ref.filter_2.g(), ref.filter_2.b(),
+	//		  ref.diffuse, ref.reflected, ref.refracted,
+	//		  curand_uniform(&rand_state[0])
+	//		  );
+	//}
+	filter_lag = filter;
         filter *= ref.filter_2;
       }
 
       if (ref.diffuse) {
-        emittance = filter * rec.object -> get_material(
+        emittance = filter_lag * rec.object -> get_material(
         ) -> get_texture_emission(rec.uv_vector);
 	
         rec.object -> get_material() -> check_next_path(
@@ -107,6 +126,14 @@ void _get_hit_point_details(
         );
         for (int idx = 0; idx < num_light_source_sampling; idx++) {
 	  factor = 1;
+
+          //if (pixel_index == 27785) {
+	  if (pixel_index == 25310) {
+	    write = true;
+	  } else {
+	    write = false;
+	  }
+
 	  change_ref_ray(
 	    rec, 
 	    ref_2, 
@@ -116,46 +143,35 @@ void _get_hit_point_details(
             target_node_list,
 	    target_leaf_list,
 	    1,
-	    rand_state
+	    rand_state,
+	    write
 	  );
 	  ray = ref_2.ray;
 	  hit = traverse_bvh(geom_node_list[0], ray, rec_2);
+
+          //if (pixel_index == 27785) {
+          if (pixel_index == 25310) {
+	    printf("ray dir for pixel_index %d = (%f, %f, %f), hit = %d, factor = %f.\n", 
+			    pixel_idx, 
+			    ray.dir.x(), ray.dir.y(), ray.dir.z(),
+			    hit, factor); 
+	  }
+
 	  if (hit) {
 	    rec_2.object -> get_material() -> check_next_path(
 	      rec_2.coming_ray, rec_2.point, rec_2.normal, rec_2.uv_vector,
 	      sss, material_list, material_list_length, ref_3, rand_state
 	    );
-	    add_direct_radiance = (filter * ref_2.filter * clamp(0, .9999, factor)
+	    add_direct_radiance = (filter_lag * ref_2.filter * clamp(0, .9999, factor)
 	    ) * rec_2.object -> get_material() -> get_texture_emission(
 	      rec_2.uv_vector
             );
 	    direct_radiance += add_direct_radiance;
-          if (emittance.vector_is_nan() || add_direct_radiance.vector_is_nan() || direct_radiance.vector_is_nan()) {
-            printf(
-	      "1) pixel_idx = %d, emittance = (%f, %f, %f), add_direct_radiance = (%f, %f, %f), ref_2.filter = (%f, %f, %f), factor = %f\n", 
-	      pixel_idx, 
-	      emittance.r(), emittance.g(), emittance.b(), 
-	      add_direct_radiance.r(), add_direct_radiance.g(), add_direct_radiance.b(),
-	      ref_2.filter.r(), ref_2.filter.g(), ref_2.filter.b(),
-	      factor
-	    );
-      } 
 	  }
 	}
         direct_radiance /= max(1.0, float(num_light_source_sampling));	
 	direct_radiance += emittance;
 
-
-          if (emittance.vector_is_nan() || add_direct_radiance.vector_is_nan() || direct_radiance.vector_is_nan()) {
-            printf(
-	      "2) pixel_idx = %d, emittance = (%f, %f, %f), add_direct_radiance = (%f, %f, %f), ref_2.filter = (%f, %f, %f), factor = %f\n", 
-	      pixel_idx, 
-	      emittance.r(), emittance.g(), emittance.b(), 
-	      add_direct_radiance.r(), add_direct_radiance.g(), add_direct_radiance.b(),
-	      ref_2.filter.r(), ref_2.filter.g(), ref_2.filter.b(),
-	      factor
-	    );
-	  }
       }
 
       if (!(ref.diffuse)) {
