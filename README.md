@@ -1,5 +1,7 @@
 # GPU Pathtracer
 
+![](images/20200823_caustics.jpg)
+
 ![](images/20200707_t_rex_scene_3.jpg)
 
 ![](images/20200501_cars.jpg)
@@ -37,6 +39,8 @@
 * E. Lengyel, "Chapter 7: Shading," *Foundations of Game Engine Development, Vol. 2*, 2019.
 * A. C. Estevez and C. Kulla, "Importance Sampling of Many Lights with Adaptive Tree Splitting," *Proc. ACM Comput.Graph. Interact. Tech.*, 2018.
 * E. P. Lafortune and Y. D. Willems, "Using the Modified Phong Reflectance Model for Physically Based Rendering," *Report CW 197*, 1994.
+* T. Hachisuka, S. Ogaki, and H. W. Jensen, "Progressive Photon Mapping," *ACM Transactions on Graphics*, 2008.
+* T. Hachisuka and H. W. Jensen, "Stochastic Progressive Photon Mapping," *ACM Transactions on Graphics*, 2009.
 
 
 ## Credits
@@ -51,8 +55,9 @@
 * The Koenigsegg Jesco model was by [Steven Grey](https://sketchfab.com/Steven007).
 * The gecko model was by [DigitalLife3D](https://sketchfab.com/DigitalLife3D).
 * The mechanical shark and the ship in a bottle were by [Loïc Norgeot](https://sketchfab.com/norgeotloic).
-* Glass 1 was by [Pedro Caio](https://free3d.com/user/pedrocaio442).
-* Glass 2 was by [pledg](https://www.cgtrader.com/pledg).
+* Glass 1 was by [Yashar](https://free3d.com/user/yashar1374).
+* Glass 2 was by [Pedro Caio](https://free3d.com/user/pedrocaio442).
+* Glass 3 was by [pledg](https://www.cgtrader.com/pledg).
 * The doughnut was by [Mada Syauqy](https://free3d.com/user/masmada).
 * The vase of flower was by [IvanMasanin](https://www.turbosquid.com/Search/Artists/IvanMasanin).
 * The apple was by [Giiman](https://www.turbosquid.com/Search/Artists/Giimann).
