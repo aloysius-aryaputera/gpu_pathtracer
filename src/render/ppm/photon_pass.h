@@ -47,37 +47,37 @@ void create_photon_list(Point **photon_list, int num_photons) {
 }
 
 __global__
-void compute_accummulated_light_source_area(
+void compute_accummulated_light_source_energy(
   Primitive** light_source_geom_list, int num_light_source_geom,
-  float *accummulated_light_source_area
+  float *accummulated_light_source_energy
 ) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   if (i > 0) return;
 
   float acc = 0;
-  float new_area = 0;
+  float new_energy = 0;
   for (int i = 0; i < num_light_source_geom; i++) {
-    new_area = de_nan(light_source_geom_list[i] -> get_area());
-    acc += new_area;
-    accummulated_light_source_area[i] = acc;
+    new_energy = de_nan(light_source_geom_list[i] -> get_energy().length());
+    acc += new_energy;
+    accummulated_light_source_energy[i] = acc;
   }
 }
 
 __device__ int pick_primitive_idx_for_sampling(
-  int num_light_source_geom, float *accummulated_light_source_area, 
+  int num_light_source_geom, float *accummulated_light_source_energy, 
   curandState *rand_state
 ) {
   float random_number = curand_uniform(&rand_state[0]);
   int idx = 0;
-  float accummulated_area = accummulated_light_source_area[idx];
-  float random_number_2 = random_number * accummulated_light_source_area[
+  float accummulated_energy = accummulated_light_source_energy[idx];
+  float random_number_2 = random_number * accummulated_light_source_energy[
     num_light_source_geom - 1];
 
   while(
-    random_number_2 > accummulated_area && idx < (num_light_source_geom - 1)
+    random_number_2 > accummulated_energy && idx < (num_light_source_geom - 1)
   ) {
     idx++;
-    accummulated_area = accummulated_light_source_area[idx];
+    accummulated_energy = accummulated_light_source_energy[idx];
   }
 
   return idx;
@@ -87,7 +87,7 @@ __global__
 void photon_pass(
   Primitive **target_geom_list, Node **geom_node_list,
   Point **photon_list, 
-  int num_light_source_geom, float *accummulated_light_source_area,
+  int num_light_source_geom, float *accummulated_light_source_energy,
   int num_photons, int max_bounce, float intensity_scaling_factor,
   int pass_iteration, curandState *rand_state
 ) {
@@ -104,14 +104,16 @@ void photon_pass(
   int num_bounce = 0, material_list_length = 0, light_source_idx;
   bool hit = false, sss = false;
   curandState local_rand_state = rand_state[i];
-  float random_number, reflection_prob, light_source_color_original_length;
+  float random_number, reflection_prob;
+  float light_source_original_energy, light_source_area;
+  float max_energy = accummulated_light_source_energy[num_light_source_geom - 1];
 
   for (int idx = 0; idx < pass_iteration; idx++) {
     curand_uniform(&local_rand_state);
   }
 
   light_source_idx = pick_primitive_idx_for_sampling(
-    num_light_source_geom, accummulated_light_source_area, &local_rand_state
+    num_light_source_geom, accummulated_light_source_energy, &local_rand_state
   );
   if (i == 0 || i == 100) {
     printf("i = %d and light_source_idx = %d and random_number = %f\n", 
@@ -121,9 +123,11 @@ void photon_pass(
   rec = target_geom_list[light_source_idx] -> get_random_point_on_surface(
     &local_rand_state
   );
+  light_source_original_energy = target_geom_list[light_source_idx] -> get_energy().length();
+  light_source_area = target_geom_list[light_source_idx] -> get_area();
   light_source_color = target_geom_list[light_source_idx] -> get_material() ->
-    get_texture_emission(rec.uv_vector) * intensity_scaling_factor;
-  light_source_color_original_length = light_source_color.length();
+    get_texture_emission(rec.uv_vector);
+  light_source_color *= max_energy / light_source_color.length();
   Ray ray = generate_ray(
     rec.point, vec3(0, 0, 0), rec.normal, 2, 1, &local_rand_state);
   hit = traverse_bvh(geom_node_list[0], ray, rec);
@@ -170,7 +174,7 @@ void photon_pass(
 	} else {
 	  light_source_color = ref.k * light_source_color;
 	  light_source_color = light_source_color * (
-	    light_source_color_original_length / light_source_color.length());
+	    max_energy / light_source_color.length());
 	}	
       } 
 

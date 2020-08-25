@@ -1233,9 +1233,9 @@ int main(int argc, char **argv) {
       (ppm_num_photon_per_pass - 1) * sizeof(Node *)));
     checkCudaErrors(cudaMallocManaged(
       (void **)&photon_leaf_list, ppm_num_photon_per_pass * sizeof(Node *)));
-    float *accummulated_target_geom_area;
+    float *accummulated_target_geom_energy;
     checkCudaErrors(cudaMallocManaged(
-      (void **)&accummulated_target_geom_area, 
+      (void **)&accummulated_target_geom_energy, 
       num_target_geom[0] * sizeof(float)));
 
     start = clock();
@@ -1257,10 +1257,10 @@ int main(int argc, char **argv) {
     print_end_process(process, start);
 
     start = clock();
-    process = "Compute accummulated light source area";
+    process = "Compute accummulated light source energy";
     print_start_process(process, start);
-    compute_accummulated_light_source_area<<<1, 1>>>(
-      target_geom_list, num_target_geom[0], accummulated_target_geom_area);
+    compute_accummulated_light_source_energy<<<1, 1>>>(
+      target_geom_list, num_target_geom[0], accummulated_target_geom_energy);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);
@@ -1313,7 +1313,7 @@ int main(int argc, char **argv) {
       print_start_process(process, start);
       photon_pass<<<ppm_num_photon_per_pass, 1>>>(
         target_geom_list, node_list, photon_list, num_target_geom[0],
-        accummulated_target_geom_area, ppm_num_photon_per_pass,
+        accummulated_target_geom_energy, ppm_num_photon_per_pass,
         ppm_max_bounce, ppm_intensity_scaling_factor, i, rand_state_ppm);
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
@@ -1330,31 +1330,31 @@ int main(int argc, char **argv) {
 
       printf("Num recorded photons after %d passes = %d\n", i + 1, num_recorded_photons[0]);
 
-      //start = clock();
-      //process = "Clearing image";
-      //print_start_process(process, start);
-      //clear_image<<<blocks, threads>>>(image_output, im_width, im_height);
-      //checkCudaErrors(cudaGetLastError());
-      //checkCudaErrors(cudaDeviceSynchronize());
-      //print_end_process(process, start);
+      start = clock();
+      process = "Clearing image";
+      print_start_process(process, start);
+      clear_image<<<blocks, threads>>>(image_output, im_width, im_height);
+      checkCudaErrors(cudaGetLastError());
+      checkCudaErrors(cudaDeviceSynchronize());
+      print_end_process(process, start);
 
-      //start = clock();
-      //process = "Creating photon image";
-      //print_start_process(process, start);
-      //create_point_image<<<num_recorded_photons[0] / tx + 1, tx>>>(
-      //  image_output, my_camera, photon_list, num_recorded_photons[0]
-      //);
-      //checkCudaErrors(cudaGetLastError());
-      //checkCudaErrors(cudaDeviceSynchronize());
-      //print_end_process(process, start);
+      start = clock();
+      process = "Creating photon image";
+      print_start_process(process, start);
+      create_point_image<<<num_recorded_photons[0] / tx + 1, tx>>>(
+        image_output, my_camera, photon_list, num_recorded_photons[0]
+      );
+      checkCudaErrors(cudaGetLastError());
+      checkCudaErrors(cudaDeviceSynchronize());
+      print_end_process(process, start);
 
-      //start = clock();
-      //process = "Saving photon image";
-      //print_start_process(process, start);
-      //save_image(
-      //  image_output, im_width, im_height, 
-      //  image_output_path + "_photon_" + std::to_string(i) + ".ppm");
-      //print_end_process(process, start);
+      start = clock();
+      process = "Saving photon image";
+      print_start_process(process, start);
+      save_image(
+        image_output, im_width, im_height, 
+        image_output_path + "_photon.ppm");
+      print_end_process(process, start);
 
       checkCudaErrors(cudaDeviceSynchronize());
       start = clock();

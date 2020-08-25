@@ -124,7 +124,7 @@ __device__ vec3 Triangle::_compute_energy() {
     this -> tex_3);
   vec3 avg_emission_tex = (
     emission_tex_1 + emission_tex_2 + emission_tex_3) / 3.0;
-  return avg_emission_tex * this -> area;
+  return 2 * M_PI * avg_emission_tex * this -> area;
 }
 
 __device__ bool Triangle::_check_if_light_emitting() {

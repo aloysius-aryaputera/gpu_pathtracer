@@ -43,6 +43,12 @@ void _get_hit_point_details(
   vec3 add_direct_radiance;
   bool write;
 
+  if (pixel_index == 8864)
+    write = true;
+  else
+    write = false;
+
+  max_bounce = 64;
   add_new_material(material_list, material_list_length, nullptr);
   ray = camera[0] -> compute_ray(
     pixel_height_index + camera_height_offset, 
@@ -78,7 +84,7 @@ void _get_hit_point_details(
       rec.object -> get_material() -> check_next_path(
         rec.coming_ray, rec.point, rec.normal, rec.uv_vector,
         sss, material_list, material_list_length,
-        ref, rand_state
+        ref, rand_state, write
       );
 
       if (ref.false_hit && ref.entering)
@@ -102,15 +108,18 @@ void _get_hit_point_details(
         );
      
       if (!(ref.false_hit)) {
-	//if (pixel_index == 28873) {
-	//  printf("pixel %d has filter = (%f, %f, %f) and filter_2 = (%f, %f, %f), diffuse = %d, reflected = %d, refracted = %d, random_number = %f\n",
-	//		  pixel_index,
-	//		  filter.r(), filter.g(), filter.b(),
-	//		  ref.filter_2.r(), ref.filter_2.g(), ref.filter_2.b(),
-	//		  ref.diffuse, ref.reflected, ref.refracted,
-	//		  curand_uniform(&rand_state[0])
-	//		  );
-	//}
+	if (pixel_index == 8864) {
+	  printf("pixel %d has filter = (%f, %f, %f) and filter_2 = (%f, %f, %f),\npoint = (%f, %f, %f), coming_dir = (%f, %f, %f), normal = (%f, %f, %f),\ndiffuse = %d, reflected = %d, refracted = %d, random_number = %f\n\n",
+			  pixel_index,
+			  filter.r(), filter.g(), filter.b(),
+			  ref.filter_2.r(), ref.filter_2.g(), ref.filter_2.b(),
+			  rec.point.x(), rec.point.y(), rec.point.z(),
+			  rec.coming_ray.dir.x(), rec.coming_ray.dir.y(), rec.coming_ray.dir.z(),
+			  rec.normal.x(), rec.normal.y(), rec.normal.z(),
+			  ref.diffuse, ref.reflected, ref.refracted,
+			  curand_uniform(&rand_state[0])
+			  );
+	}
 	filter_lag = filter;
         filter *= ref.filter_2;
       }
@@ -128,11 +137,11 @@ void _get_hit_point_details(
 	  factor = 1;
 
           //if (pixel_index == 27785) {
-	  if (pixel_index == 25310) {
-	    write = true;
-	  } else {
-	    write = false;
-	  }
+	  //if (pixel_index == 25310) {
+	  //  write = true;
+	  //} else {
+	  //  write = false;
+	  //}
 
 	  change_ref_ray(
 	    rec, 
@@ -144,18 +153,18 @@ void _get_hit_point_details(
 	    target_leaf_list,
 	    1,
 	    rand_state,
-	    write
+	    false
 	  );
 	  ray = ref_2.ray;
 	  hit = traverse_bvh(geom_node_list[0], ray, rec_2);
 
           //if (pixel_index == 27785) {
-          if (pixel_index == 25310) {
-	    printf("ray dir for pixel_index %d = (%f, %f, %f), hit = %d, factor = %f.\n", 
-			    pixel_idx, 
-			    ray.dir.x(), ray.dir.y(), ray.dir.z(),
-			    hit, factor); 
-	  }
+          //if (pixel_index == 25310) {
+	  //  printf("ray dir for pixel_index %d = (%f, %f, %f), hit = %d, factor = %f.\n", 
+	  //		    pixel_idx, 
+	  //		    ray.dir.x(), ray.dir.y(), ray.dir.z(),
+	  //		    hit, factor); 
+	  //}
 
 	  if (hit) {
 	    rec_2.object -> get_material() -> check_next_path(
