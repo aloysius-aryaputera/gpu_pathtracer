@@ -1160,7 +1160,8 @@ int main(int argc, char **argv) {
       target_geom_list,
       target_node_list,
       target_leaf_list,
-      pathtracing_sample_size
+      pathtracing_sample_size,
+      ppm_intensity_scaling_factor
     );
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
@@ -1302,7 +1303,8 @@ int main(int argc, char **argv) {
         target_geom_list,
 	target_node_list,
         target_leaf_list,
-        pathtracing_sample_size
+        pathtracing_sample_size,
+	ppm_intensity_scaling_factor
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
@@ -1314,7 +1316,7 @@ int main(int argc, char **argv) {
       photon_pass<<<ppm_num_photon_per_pass, 1>>>(
         target_geom_list, node_list, photon_list, num_target_geom[0],
         accummulated_target_geom_energy, ppm_num_photon_per_pass,
-        ppm_max_bounce, ppm_intensity_scaling_factor, i, rand_state_ppm);
+        ppm_max_bounce, i, rand_state_ppm);
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
@@ -1447,62 +1449,61 @@ int main(int argc, char **argv) {
 
       printf("The average hit point radius is %f.\n", average_hit_point_radius[0]);
 
+      process = "Compute image output";
+      start = clock();
+      print_start_process(process, start);
+      ppm_image_output<<<blocks, threads>>>(
+        i + 1, ppm_num_photon_per_pass, image_output, hit_point_list, 
+        my_camera, 0
+      );
+      checkCudaErrors(cudaGetLastError());
+      checkCudaErrors(cudaDeviceSynchronize());
+      print_end_process(process, start);
+
+      start = clock();
+      process = "Saving image";
+      print_start_process(process, start);
+      save_image(image_output, im_width, im_height, image_output_path + "_direct.ppm");
+      print_end_process(process, start);
+      checkCudaErrors(cudaDeviceSynchronize());
+
+      process = "Compute image output";
+      start = clock();
+      print_start_process(process, start);
+      ppm_image_output<<<blocks, threads>>>(
+        ppm_num_pass, ppm_num_photon_per_pass, image_output, hit_point_list, 
+        my_camera, 1
+      );
+      checkCudaErrors(cudaGetLastError());
+      checkCudaErrors(cudaDeviceSynchronize());
+      print_end_process(process, start);
+
+      start = clock();
+      process = "Saving image";
+      print_start_process(process, start);
+      save_image(image_output, im_width, im_height, image_output_path + "_indirect.ppm");
+      print_end_process(process, start);
+      checkCudaErrors(cudaDeviceSynchronize());
+
+      process = "Compute image output";
+      start = clock();
+      print_start_process(process, start);
+      ppm_image_output<<<blocks, threads>>>(
+        ppm_num_pass, ppm_num_photon_per_pass, image_output, hit_point_list, 
+        my_camera, 2
+      );
+      checkCudaErrors(cudaGetLastError());
+      checkCudaErrors(cudaDeviceSynchronize());
+      print_end_process(process, start);
+
+      start = clock();
+      process = "Saving image";
+      print_start_process(process, start);
+      save_image(image_output, im_width, im_height, image_output_path + "_global.ppm");
+      print_end_process(process, start);
+      checkCudaErrors(cudaDeviceSynchronize());
+
     }
-
-    process = "Compute image output";
-    start = clock();
-    print_start_process(process, start);
-    ppm_image_output<<<blocks, threads>>>(
-      ppm_num_pass, ppm_num_photon_per_pass, image_output, hit_point_list, 
-      my_camera, 0
-    );
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-    print_end_process(process, start);
-
-    start = clock();
-    process = "Saving image";
-    print_start_process(process, start);
-    save_image(image_output, im_width, im_height, image_output_path + "_direct.ppm");
-    print_end_process(process, start);
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    process = "Compute image output";
-    start = clock();
-    print_start_process(process, start);
-    ppm_image_output<<<blocks, threads>>>(
-      ppm_num_pass, ppm_num_photon_per_pass, image_output, hit_point_list, 
-      my_camera, 1
-    );
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-    print_end_process(process, start);
-
-    start = clock();
-    process = "Saving image";
-    print_start_process(process, start);
-    save_image(image_output, im_width, im_height, image_output_path + "_indirect.ppm");
-    print_end_process(process, start);
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    process = "Compute image output";
-    start = clock();
-    print_start_process(process, start);
-    ppm_image_output<<<blocks, threads>>>(
-      ppm_num_pass, ppm_num_photon_per_pass, image_output, hit_point_list, 
-      my_camera, 2
-    );
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-    print_end_process(process, start);
-
-    start = clock();
-    process = "Saving image";
-    print_start_process(process, start);
-    save_image(image_output, im_width, im_height, image_output_path + "_global.ppm");
-    print_end_process(process, start);
-    checkCudaErrors(cudaDeviceSynchronize());
-
   } 
 
   start = clock();

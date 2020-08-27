@@ -1,4 +1,4 @@
-# GPU Pathtracer
+# GPU Renderer
 
 ![](images/20200823_caustics.jpg)
 
@@ -16,6 +16,8 @@
 
 
 ## Features
+* Path tracing
+* Stochastic progressive photon mapping
 * OBJ file reader
 * Bounding volume hierarchy acceleration structure
 * Diffuse, metal, and dieletric materials

@@ -238,12 +238,12 @@ void assign_radius_to_invalid_hit_points(
 
   if (i >= num_hit_points) return;
 
-  //float current_radius;
-  //current_radius = hit_point_list[i] -> current_photon_radius;
-  //if(isinf(current_radius)) {
-  //  hit_point_list[i] -> update_radius(new_radius);
-  //}
-  hit_point_list[i] -> update_radius(new_radius);
+  float current_radius;
+  current_radius = hit_point_list[i] -> current_photon_radius;
+  if(isinf(current_radius)) {
+    hit_point_list[i] -> update_radius(new_radius);
+  }
+  //hit_point_list[i] -> update_radius(new_radius);
 }
 
 __global__
@@ -251,7 +251,8 @@ void ray_tracing_pass(
   PPMHitPoint** hit_point_list, Camera **camera, curandState *rand_state,
   Node **geom_node_list, bool init, int max_bounce, float ppm_alpha,
   int pass_iteration, int num_target_geom, Primitive** target_geom_list,
-  Node** target_node_list, Node** target_leaf_list, int sample_size
+  Node** target_node_list, Node** target_leaf_list, int sample_size,
+  float radius_multiplier
 ) {
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
@@ -318,7 +319,7 @@ void ray_tracing_pass(
 	}
       }
     }
-    radius *= 5.0;
+    radius *= radius_multiplier;
   }
 
   if (hit && ref.diffuse) {

@@ -88,7 +88,7 @@ void photon_pass(
   Primitive **target_geom_list, Node **geom_node_list,
   Point **photon_list, 
   int num_light_source_geom, float *accummulated_light_source_energy,
-  int num_photons, int max_bounce, float intensity_scaling_factor,
+  int num_photons, int max_bounce,
   int pass_iteration, curandState *rand_state
 ) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
