@@ -43,11 +43,11 @@ __device__ vec3 PPMHitPoint::compute_pixel_color(
     num_emitted_photons * M_PI * powf(this -> current_photon_radius, 2));
 
   if (type == 0) {
-    return mean_direct_radiance;
+    return de_nan(mean_direct_radiance);
   } else if (type == 1) {
-    return mean_indirect_radiance;
+    return de_nan(mean_indirect_radiance);
   } else {
-    return mean_direct_radiance + mean_indirect_radiance;
+    return de_nan(mean_direct_radiance) + de_nan(mean_indirect_radiance);
   }
   
   //return this -> accummulated_reflected_flux / (float(num_emitted_photons));
@@ -59,7 +59,7 @@ __device__ void PPMHitPoint::update_radius(float radius_) {
 }
 
 __device__ void PPMHitPoint::update_direct_radiance(vec3 extra_direct_radiance) {
-  this -> direct_radiance += extra_direct_radiance;
+  this -> direct_radiance += de_nan(extra_direct_radiance);
 }
 
 __device__ void PPMHitPoint::update_accummulated_reflected_flux(
@@ -73,7 +73,7 @@ __device__ void PPMHitPoint::update_accummulated_reflected_flux(
   this -> accummulated_photon_count += (this -> ppm_alpha * extra_photons);
   this -> accummulated_reflected_flux = (
     this -> accummulated_reflected_flux +
-    this -> filter * iterative_total_photon_flux
+    de_nan(this -> filter * iterative_total_photon_flux)
   ) * powf(new_radius / this -> current_photon_radius, 2);
   this -> current_photon_radius = new_radius;
   this -> bounding_sphere -> assign_new_radius(new_radius);

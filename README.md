@@ -1,6 +1,6 @@
 # GPU Renderer
 
-![](images/20200823_caustics.jpg)
+![](images/20200828_caustics.jpg)
 
 ![](images/20200707_t_rex_scene_3.jpg)
 

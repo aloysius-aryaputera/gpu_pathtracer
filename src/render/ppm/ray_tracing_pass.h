@@ -50,6 +50,7 @@ void _get_hit_point_details(
 
   max_bounce = 64;
   add_new_material(material_list, material_list_length, nullptr);
+
   ray = camera[0] -> compute_ray(
     pixel_height_index + camera_height_offset, 
     pixel_width_index + camera_width_offset, rand_state);
@@ -108,7 +109,7 @@ void _get_hit_point_details(
         );
      
       if (!(ref.false_hit)) {
-	if (pixel_index == 8864) {
+	if (pixel_index == 179681) {
 	  printf("pixel %d has filter = (%f, %f, %f) and filter_2 = (%f, %f, %f),\npoint = (%f, %f, %f), coming_dir = (%f, %f, %f), normal = (%f, %f, %f),\ndiffuse = %d, reflected = %d, refracted = %d, random_number = %f\n\n",
 			  pixel_index,
 			  filter.r(), filter.g(), filter.b(),
@@ -240,7 +241,10 @@ void assign_radius_to_invalid_hit_points(
 
   float current_radius;
   current_radius = hit_point_list[i] -> current_photon_radius;
-  if(isinf(current_radius)) {
+  if(
+    isinf(current_radius) || isinf(1.0 / powf(current_radius, 2)) ||
+    isnan(current_radius)
+  ) {
     hit_point_list[i] -> update_radius(new_radius);
   }
   //hit_point_list[i] -> update_radius(new_radius);
@@ -271,6 +275,7 @@ void ray_tracing_pass(
   curandState local_rand_state = rand_state[pixel_index];
   float radius, radius_tmp, camera_width_offset[4] = {0, 0, 1, 1}, \
     camera_height_offset[4] = {0, 1, 0, 1};
+  float main_camera_width_offset = .5, main_camera_height_offset = .5;
 
   for (int idx = 0; idx < pass_iteration; idx++) {
     curand_uniform(&local_rand_state);
@@ -282,14 +287,19 @@ void ray_tracing_pass(
      vec3(INFINITY, INFINITY, INFINITY), radius, filter, vec3(0, 0, 1),
      ppm_alpha  
     ); 
+  } else {
+    main_camera_height_offset = curand_uniform(&rand_state[0]);
+    main_camera_width_offset = curand_uniform(&rand_state[0]);
   }
 
   radius = hit_point_list[pixel_index] -> current_photon_radius;
+
   _get_hit_point_details(
     ref, rec, filter, direct_radiance,
-    camera, j, i, geom_node_list, max_bounce, 0.5, 0.5, hit, 
-    target_geom_list, num_target_geom, target_node_list, target_leaf_list,
-    sample_size, &local_rand_state, pixel_index
+    camera, j, i, geom_node_list, max_bounce, main_camera_width_offset, 
+    main_camera_height_offset, hit, target_geom_list, num_target_geom, 
+    target_node_list, target_leaf_list, sample_size, &local_rand_state, 
+    pixel_index
   );
 
   if (init) {
