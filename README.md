@@ -47,6 +47,7 @@
 
 ## Credits
 
+* The table lamp was from https://www.lugher3d.com/free-3d-models/table-lamp-fendi.
 * The Dr.Booms Exo model was by [LDsanya](https://www.blendswap.com/profile/740888).
 * The leaf neon light was by [colinquinn](https://free3d.com/user/colinquinn).
 * The neon sign was by [Alexander](https://www.cgtrader.com/alexbes).
@@ -57,9 +58,8 @@
 * The Koenigsegg Jesco model was by [Steven Grey](https://sketchfab.com/Steven007).
 * The gecko model was by [DigitalLife3D](https://sketchfab.com/DigitalLife3D).
 * The mechanical shark and the ship in a bottle were by [Loïc Norgeot](https://sketchfab.com/norgeotloic).
-* Glass 1 was by [Yashar](https://free3d.com/user/yashar1374).
-* Glass 2 was by [Pedro Caio](https://free3d.com/user/pedrocaio442).
-* Glass 3 was by [pledg](https://www.cgtrader.com/pledg).
+* Glass 1 was by [Pedro Caio](https://free3d.com/user/pedrocaio442).
+* Glass 2 was by [pledg](https://www.cgtrader.com/pledg).
 * The doughnut was by [Mada Syauqy](https://free3d.com/user/masmada).
 * The vase of flower was by [IvanMasanin](https://www.turbosquid.com/Search/Artists/IvanMasanin).
 * The apple was by [Giiman](https://www.turbosquid.com/Search/Artists/Giimann).
