@@ -65,11 +65,16 @@ __device__ void PPMHitPoint::update_direct_radiance(vec3 extra_direct_radiance) 
 __device__ void PPMHitPoint::update_accummulated_reflected_flux(
   vec3 iterative_total_photon_flux, int extra_photons
 ) {
-  float new_radius = this -> current_photon_radius * powf(
-    (this -> accummulated_photon_count + this -> ppm_alpha * extra_photons) /
-    (this -> accummulated_photon_count + extra_photons),
-    0.5
-  );
+  float new_radius;
+  if (extra_photons > 0) {
+    this -> current_photon_radius * powf(
+      (this -> accummulated_photon_count + this -> ppm_alpha * extra_photons) /
+      (this -> accummulated_photon_count + extra_photons),
+      0.5
+    );
+  } else {
+    new_radius = this -> current_photon_radius;
+  }
   this -> accummulated_photon_count += (this -> ppm_alpha * extra_photons);
   this -> accummulated_reflected_flux = (
     this -> accummulated_reflected_flux +

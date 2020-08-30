@@ -109,9 +109,9 @@ void _get_hit_point_details(
         );
      
       if (!(ref.false_hit)) {
-	if (pixel_index == 179681) {
+	if (pixel_index == 76152) {
 	  printf("pixel %d has filter = (%f, %f, %f) and filter_2 = (%f, %f, %f),\npoint = (%f, %f, %f), coming_dir = (%f, %f, %f), normal = (%f, %f, %f),\ndiffuse = %d, reflected = %d, refracted = %d, random_number = %f\n\n",
-			  pixel_index,
+			  pixel_index, 
 			  filter.r(), filter.g(), filter.b(),
 			  ref.filter_2.r(), ref.filter_2.g(), ref.filter_2.b(),
 			  rec.point.x(), rec.point.y(), rec.point.z(),
@@ -324,10 +324,21 @@ void ray_tracing_pass(
 	hit && ref.diffuse
       ) {
         radius_tmp = compute_distance(hit_loc[idx], rec.point);
-	if (radius > radius_tmp) {
+	if (radius > radius_tmp && radius_tmp > 0) {
 	  radius = radius_tmp;
 	}
       }
+
+      for (int idx_2 = idx; idx_2 < 4; idx_2++) {
+        if(!(hit_loc[idx_2].vector_is_inf()) && !(hit_loc[idx].vector_is_inf())
+	) {
+          radius_tmp = compute_distance(hit_loc[idx], hit_loc[idx_2]);
+	  if (radius > radius_tmp && radius_tmp > 0) {
+	    radius = radius_tmp;
+	  }
+	}
+      }
+
     }
     radius *= radius_multiplier;
   }
@@ -337,6 +348,14 @@ void ray_tracing_pass(
       rec.point, radius, filter, rec.normal 
     );
     hit_point_list[pixel_index] -> update_direct_radiance(direct_radiance);
+    if (pixel_index == 76152 || pixel_index == 76652) {
+      printf("pixel_index %d has %d photons, radius %f, accummulated reflected flux = (%f, %f, %f), and direct radiance = (%f, %f, %f)\n", pixel_index, hit_point_list[pixel_index] -> accummulated_photon_count, hit_point_list[pixel_index] -> current_photon_radius, hit_point_list[pixel_index] -> accummulated_reflected_flux.r(), hit_point_list[pixel_index] -> accummulated_reflected_flux.g(), hit_point_list[pixel_index] -> accummulated_reflected_flux.b(), hit_point_list[pixel_index] -> direct_radiance.r(), hit_point_list[pixel_index] -> direct_radiance.g(), hit_point_list[pixel_index] -> direct_radiance.b());
+      vec3 pixel_color = hit_point_list[pixel_index] -> compute_pixel_color(
+        pass_iteration + 1, 100000, 3		      
+      );
+      printf("pixel_index %d has color = (%f, %f, %f).\n", pixel_index, 
+		      pixel_color.r(), pixel_color.g(), pixel_color.b());
+    }
   } else {
     hit_point_list[pixel_index] -> update_parameters(
       vec3(INFINITY, INFINITY, INFINITY), radius, filter, vec3(0, 0, 1)
