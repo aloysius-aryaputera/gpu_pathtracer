@@ -259,7 +259,7 @@ void _extract_single_material_data(
     *(n_s + idx) = 0;
     *(n_i + idx) = 0;
     *(t_r + idx) = 0;
-		*(bm + idx) = 1;
+    *(bm + idx) = 1;
 
     *(material_priority + idx) = -1;
 
@@ -323,7 +323,7 @@ void _extract_single_material_data(
           *(n_s + idx) = 0;
           *(n_i + idx) = 0;
           *(t_r + idx) = 1;
-					*(bm + idx) = 1;
+	  *(bm + idx) = 1;
 
           *(material_priority + idx) = -1;
 

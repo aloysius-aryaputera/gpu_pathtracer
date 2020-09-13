@@ -23,7 +23,7 @@ __global__ void set_node_relationship(
 
 __global__ void build_leaf_list(
   Node** leaf_list, Primitive **object_list, int num_objects,
-	bool bounding_cone_required=false
+  bool bounding_cone_required=false
 );
 
 __global__ void compute_morton_code_batch(
@@ -55,7 +55,7 @@ __global__ void compute_morton_code_batch(
 
 __global__ void build_leaf_list(
   Node** leaf_list, Primitive **object_list, int num_triangles,
-	bool bounding_cone_required
+  bool bounding_cone_required
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_triangles) return;
@@ -269,7 +269,8 @@ __global__ void compute_node_bounding_cones(
 
   Node* current_node = leaf_list[idx];
 	vec3 new_axis; 
-  float new_theta_0, new_theta_e, energy;
+  float new_theta_0, new_theta_e;
+  vec3 energy;
 
   if (current_node -> parent == nullptr) {
     printf("Leaf %d has no parent.\n", idx);

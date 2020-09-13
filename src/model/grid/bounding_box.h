@@ -27,12 +27,14 @@ class BoundingBox {
       float x_min_, float x_max_, float y_min_, float y_max_, float z_min_,
       float z_max_
     );
+    __device__ void reset();
     __device__ void initialize(
       float x_min_, float x_max_, float y_min_, float y_max_, float z_min_,
       float z_max_
     );
     __device__ bool is_intersection(Ray ray, float &t);
     __device__ bool is_intersection(BoundingSphere bounding_sphere);
+    __device__ bool is_intersection(BoundingSphere *bounding_sphere);
     __device__ bool is_inside(vec3 position);
     __device__ void compute_normalized_center(BoundingBox *world_bounding_box);
     __device__ void compute_normalized_center(
@@ -44,12 +46,12 @@ class BoundingBox {
     __device__ float compute_incident_angle(vec3 point, vec3 normal);
     __device__ float compute_covering_cone_angle(vec3 point);
     __device__ float compute_minimum_angle_to_shading_point(
-		  vec3 point, vec3 cone_axis, float cone_theta_0, float theta_u 
-		);
+      vec3 point, vec3 cone_axis, float cone_theta_0, float theta_u 
+    );
 
     float x_min, x_max, y_min, y_max, z_min, z_max;
     float x_center, y_center, z_center;
-		vec3 center;
+    vec3 center;
     float length_x, length_y, length_z;
     float norm_x_center, norm_y_center, norm_z_center;
     unsigned int morton_code;
@@ -151,6 +153,10 @@ __device__ BoundingBox::BoundingBox() {
   this -> initialized = false;
 }
 
+__device__ void BoundingBox::reset() {
+  this -> initialized = false;
+}
+
 __device__ void BoundingBox::initialize(
   float x_min_, float x_max_, float y_min_, float y_max_, float z_min_,
   float z_max_
@@ -165,7 +171,7 @@ __device__ void BoundingBox::initialize(
   this -> x_center = 0.5 * (this -> x_min + this -> x_max);
   this -> y_center = 0.5 * (this -> y_min + this -> y_max);
   this -> z_center = 0.5 * (this -> z_min + this -> z_max);
-	this -> center = vec3(x_center, y_center, z_center);
+  this -> center = vec3(x_center, y_center, z_center);
 
   this -> length_x = this -> x_max - this -> x_min;
   this -> length_y = this -> y_max - this -> y_min;
@@ -264,6 +270,24 @@ __device__ bool BoundingBox::is_intersection(Ray ray, float &t) {
     }
   }
   return false;
+}
+
+__device__ bool BoundingBox::is_intersection(BoundingSphere *bounding_sphere) {
+  float x_dist = abs(this -> x_center - bounding_sphere -> center.x());
+  float y_dist = abs(this -> y_center - bounding_sphere -> center.y());
+  float z_dist = abs(this -> z_center - bounding_sphere -> center.z());
+  float half_x_ext = this -> x_max - this -> x_center;
+  float half_y_ext = this -> y_max - this -> y_center;
+  float half_z_ext = this -> z_max - this -> z_center;
+  if (
+    x_dist <= (half_x_ext + bounding_sphere -> r) &&
+    y_dist <= (half_y_ext + bounding_sphere -> r) &&
+    z_dist <= (half_z_ext + bounding_sphere -> r)
+  ) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 __device__ bool BoundingBox::is_intersection(BoundingSphere bounding_sphere) {

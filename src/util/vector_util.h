@@ -9,9 +9,13 @@
 
 __device__ vec3 get_random_unit_vector_hemisphere_cos_pdf(
   curandState *rand_state);
+__device__ vec3 get_random_unit_vector_hemisphere(curandState *rand_state);
 __device__ vec3 get_random_unit_vector_phong(curandState *rand_state);
 __device__ vec3 get_random_unit_vector_disk(curandState *rand_state);
 __device__ vec3 compute_phong_filter(
+  vec3 k, float n, vec3 ideal_dir, vec3 dir
+);
+__device__ vec3 compute_phong_filter_2(
   vec3 k, float n, vec3 ideal_dir, vec3 dir
 );
 __device__ vec3 reflect(vec3 v, vec3 normal);
@@ -106,6 +110,18 @@ __device__ vec3 compute_phong_filter(
   return filter;
 }
 
+__device__ vec3 compute_phong_filter_2(
+  vec3 k, float n, vec3 ideal_dir, vec3 dir
+) {
+  vec3 filter;
+  if (isinf(n)) {
+    filter = k;
+  } else {
+    filter = k * powf(fmaxf(0, dot(ideal_dir, dir)), n);
+  } 
+  return filter;
+}
+
 __device__ vec3 get_random_unit_vector_phong(float n, curandState *rand_state) {
   vec3 output_vector;
   if (isinf(n)) {
@@ -119,6 +135,16 @@ __device__ vec3 get_random_unit_vector_phong(float n, curandState *rand_state) {
     output_vector = vec3(x, y, z);
     output_vector.make_unit_vector();
   }
+  return output_vector;
+}
+
+__device__ vec3 get_random_unit_vector_hemisphere(curandState *rand_state) {
+  float sin_theta = curand_uniform(&rand_state[0]);
+  float cos_theta = sqrt(1 - sin_theta * sin_theta);
+  float phi = curand_uniform(&rand_state[0]) * 2 * M_PI;
+  vec3 output_vector = vec3(
+    sin_theta * cos(phi), sin_theta * sin(phi), cos_theta);
+  output_vector.make_unit_vector();
   return output_vector;
 }
 

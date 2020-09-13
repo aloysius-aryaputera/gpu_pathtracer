@@ -23,7 +23,7 @@
 #include "pathtracing_sss.h"
 
 __global__
-void render(
+void path_tracing_render(
   vec3 *fb, Camera **camera, curandState *rand_state, int sample_size,
   int level, int dof_sample_size,
   vec3 sky_emission, int bg_height, int bg_width,
@@ -102,11 +102,9 @@ __device__ vec3 _compute_color(
   reflection_record ref;
   Material* material_list[400];
   float factor = 1;
-
   int material_list_length = 0;
 
   add_new_material(material_list, material_list_length, nullptr);
-
   cur_rec.object = nullptr;
 
   for (int i = 0; i < level; i++) {
@@ -251,7 +249,7 @@ void do_sss_first_pass(
 }
 
 __global__
-void render(
+void path_tracing_render(
   vec3 *fb, Camera **camera, curandState *rand_state, int sample_size,
   int level, int dof_sample_size,
   vec3 sky_emission, int bg_height, int bg_width,
@@ -265,13 +263,11 @@ void render(
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
 
-  if(
-    (j >= camera[0] -> width) || (i >= camera[0] -> height)
-  ) {
+  if((j >= camera[0] -> width) || (i >= camera[0] -> height)) {
     return;
   }
 
-  hit_record init_rec, cur_rec;
+  hit_record cur_rec;
   vec3 color = vec3(0, 0, 0), color_tmp;
   int pixel_index = i * (camera[0] -> width) + j;
   curandState local_rand_state = rand_state[pixel_index];
@@ -279,8 +275,7 @@ void render(
   fb[pixel_index] = color;
 
   for(int k = 0; k < dof_sample_size; k++) {
-    camera_ray = camera[0] -> compute_ray(
-      i + .5, j + .5, &local_rand_state);
+    camera_ray = camera[0] -> compute_ray(i + .5, j + .5, &local_rand_state);
     for(int idx = 0; idx < sample_size; idx++) {
       color_tmp = _compute_color(
         camera_ray, level, sky_emission, bg_height, bg_width, bg_r, bg_g,

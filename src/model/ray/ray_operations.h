@@ -23,13 +23,14 @@ __device__ Ray generate_ray(
   if (mode == 0) {
     new_xyz_system = CartesianSystem(normal);
     v3_rand = get_random_unit_vector_hemisphere_cos_pdf(rand_state);
-    v3_rand_world = new_xyz_system.to_world_system(v3_rand);
-    dir = unit_vector(v3_rand_world);
-  } else {
+  } else if (mode == 1) {
     new_xyz_system = CartesianSystem(main_dir);
     v3_rand = get_random_unit_vector_phong(n, rand_state);
-    v3_rand_world = new_xyz_system.to_world_system(v3_rand);
+  } else {
+    new_xyz_system = CartesianSystem(normal);
+    v3_rand = get_random_unit_vector_hemisphere(rand_state);
   }
+  v3_rand_world = new_xyz_system.to_world_system(v3_rand);
 
   return Ray(init_point, v3_rand_world);
 }

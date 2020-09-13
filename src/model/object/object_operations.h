@@ -132,7 +132,6 @@ __global__ void create_sss_pts(
   curandState local_rand_state = rand_state[idx];
   int primitive_idx = (object[object_idx]) -> pick_primitive_idx_for_sampling(
     &local_rand_state);
-	//printf("primitive_idx[%d] = %d\n", idx, primitive_idx);
   hit_record pts_record = geom_array[primitive_idx] -> get_random_point_on_surface(
     rand_state);
   vec3 filter = pts_record.object -> get_material() -> get_texture_diffuse(

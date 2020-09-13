@@ -1,10 +1,14 @@
-# GPU Pathtracer
+# GPU Renderer
+
+![](images/20200902_caustics.jpg)
+
+![](images/20200828_caustics.jpg)
 
 ![](images/20200707_t_rex_scene_3.jpg)
 
 ![](images/20200501_cars.jpg)
 
-![](images/20200319_ship.jpg)
+![](images/20200913_ship.jpg)
 
 ![](images/20200426_glass.jpg)
 
@@ -14,6 +18,8 @@
 
 
 ## Features
+* Path tracing
+* Stochastic progressive photon mapping
 * OBJ file reader
 * Bounding volume hierarchy acceleration structure
 * Diffuse, metal, and dieletric materials
@@ -37,10 +43,13 @@
 * E. Lengyel, "Chapter 7: Shading," *Foundations of Game Engine Development, Vol. 2*, 2019.
 * A. C. Estevez and C. Kulla, "Importance Sampling of Many Lights with Adaptive Tree Splitting," *Proc. ACM Comput.Graph. Interact. Tech.*, 2018.
 * E. P. Lafortune and Y. D. Willems, "Using the Modified Phong Reflectance Model for Physically Based Rendering," *Report CW 197*, 1994.
+* T. Hachisuka, S. Ogaki, and H. W. Jensen, "Progressive Photon Mapping," *ACM Transactions on Graphics*, 2008.
+* T. Hachisuka and H. W. Jensen, "Stochastic Progressive Photon Mapping," *ACM Transactions on Graphics*, 2009.
 
 
 ## Credits
 
+* The table lamp was from https://www.lugher3d.com/free-3d-models/table-lamp-fendi.
 * The Dr.Booms Exo model was by [LDsanya](https://www.blendswap.com/profile/740888).
 * The leaf neon light was by [colinquinn](https://free3d.com/user/colinquinn).
 * The neon sign was by [Alexander](https://www.cgtrader.com/alexbes).

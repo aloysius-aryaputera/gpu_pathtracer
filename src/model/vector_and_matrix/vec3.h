@@ -38,7 +38,8 @@ class vec3  {
     __host__ __device__ inline float squared_length() const { return e[0]*e[0] + e[1]*e[1] + e[2]*e[2]; }
     __host__ __device__ inline void make_unit_vector();
     __device__ inline bool vector_is_nan();
-    
+    __device__ inline bool vector_is_inf();
+
     float e[3];
 };
 
@@ -60,6 +61,7 @@ __host__ __device__ inline float compute_distance(
 __host__ __device__ inline vec3 permute(vec3 v, int kx, int ky, int kz);
 __device__ inline vec3 abs(vec3 v);
 __device__ inline int max_dimension(vec3 v);
+__device__ inline float max(vec3 v);
 __device__ inline vec3 de_nan(const vec3& c);
 __host__ __device__ inline vec3 unit_vector(vec3 v);
 __host__ __device__ void print_vec3(vec3 v);
@@ -181,15 +183,29 @@ __device__ inline bool vec3::vector_is_nan() {
   return isnan(e[0]) || isnan(e[1]) || isnan(e[2]);
 }
 
+__device__ inline bool vec3::vector_is_inf() {
+  return isinf(e[0]) || isinf(e[1]) || isinf(e[2]);
+}
+
 __device__ inline vec3 abs(vec3 v) {
   return vec3(abs(v.x()), abs(v.y()), abs(v.z()));
 }
 
+__device__ inline float max(vec3 v) {
+  if (v.x() >= v.y() && v.x() >= v.z()) {
+    return v.x();
+  }
+  if (v.y() >= v.x() && v.y() >= v.z()) {
+    return v.y();
+  }
+  return v.z();
+}
+
 __device__ inline int max_dimension(vec3 v) {
-  if (v.x() > v.y() && v.x() > v.z()) {
+  if (v.x() >= v.y() && v.x() >= v.z()) {
     return 0;
   }
-  if (v.y() > v.x() && v.y() > v.z()) {
+  if (v.y() >= v.x() && v.y() >= v.z()) {
     return 1;
   }
   return 2;

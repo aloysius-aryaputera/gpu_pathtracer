@@ -17,11 +17,14 @@ class InputParam {
     std::string texture_bg_path;
     std::string image_output_path;
 
-    int image_width, image_height;
+    int image_width, image_height, render_mode;
 
     int pathtracing_sample_size, pathtracing_level, dof_sample_size;
     int sss_pts_per_object;
     float hittable_pdf_weight;
+
+    int ppm_num_photon_per_pass, ppm_num_pass, ppm_max_bounce;
+    float ppm_alpha, ppm_intensity_scaling_factor;
 
     float eye_x, eye_y, eye_z, center_x, center_y, center_z, up_x, up_y, up_z;
     float fovy, aperture, focus_dist;
@@ -53,11 +56,23 @@ void InputParam::extract_parameters(
 	  this -> image_width = std::stoi(chunks[1]);
 	} else if (chunks[0] == "image_height") {
 	  this -> image_height = std::stoi(chunks[1]);
+	} else if (chunks[0] == "render_mode") {
+	  this -> render_mode = std::stoi(chunks[1]);
 	} else if (chunks[0] == "pathtracing_sample_size") {
 	  this -> pathtracing_sample_size = std::stoi(chunks[1]);
 	} else if (chunks[0] == "pathtracing_level") {
 	  this -> pathtracing_level = std::stoi(chunks[1]);
-	} else if (chunks[0] == "eye_x") {
+	} else if (chunks[0] == "ppm_num_photon_per_pass") {
+	  this -> ppm_num_photon_per_pass = std::stoi(chunks[1]);
+	} else if (chunks[0] == "ppm_num_pass"){
+	  this -> ppm_num_pass = std::stoi(chunks[1]);
+	} else if (chunks[0] == "ppm_max_bounce") {
+          this -> ppm_max_bounce = std::stoi(chunks[1]);
+	} else if (chunks[0] == "ppm_alpha") {
+	  this -> ppm_alpha = std::stof(chunks[1]);
+	} else if (chunks[0] == "ppm_intensity_scaling_factor") {
+	  this -> ppm_intensity_scaling_factor = std::stof(chunks[1]);
+        } else if (chunks[0] == "eye_x") {
 	  this -> eye_x = std::stof(chunks[1]);
 	} else if (chunks[0] == "eye_y") {
 	  this -> eye_y = std::stof(chunks[1]);

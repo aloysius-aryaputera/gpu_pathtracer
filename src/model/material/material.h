@@ -14,7 +14,7 @@ struct reflection_record
 {
   Ray ray;
   vec3 k;
-  vec3 filter;
+  vec3 filter, filter_2;
   vec3 perfect_reflection_dir;
   bool diffuse, reflected, refracted, false_hit, entering;
 
@@ -38,7 +38,8 @@ class Material {
       bool &sss,
       Material *highest_prioritised_material,
       Material *second_highest_prioritised_material,
-      curandState *rand_state
+      curandState *rand_state,
+      bool write
     );
     __device__ bool _check_if_false_hit(
       Material** material_list, int material_list_length,
@@ -98,7 +99,7 @@ class Material {
       Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
       bool &sss,
       Material** material_list, int material_list_length,
-      reflection_record &ref, curandState *rand_state
+      reflection_record &ref, curandState *rand_state, bool write
     );
     __device__ vec3 get_texture_emission(vec3 uv_vector);
     __device__ vec3 get_texture_diffuse(vec3 uv_vector);
@@ -180,11 +181,12 @@ __device__ bool Material::_check_if_false_hit(
 
 __device__ reflection_record Material::_refract(
   vec3 hit_point, vec3 v_in, vec3 normal,
-	vec3 uv_vector,
+  vec3 uv_vector,
   bool &sss,
   Material *highest_prioritised_material,
   Material *second_highest_prioritised_material,
-  curandState *rand_state
+  curandState *rand_state,
+  bool write=false
 ) {
   reflection_record ref;
   float random_number = curand_uniform(&rand_state[0]);
@@ -204,6 +206,8 @@ __device__ reflection_record Material::_refract(
     float reflection_probability = compute_schlick_specular(
       cos_theta_1, highest_prioritised_material_ref_idx, this -> n_i
     );
+    if (write)
+      printf("reflection_probability outside = %f, random_number = %f\n", reflection_probability, random_number);
 
     if (random_number >= reflection_probability) {
       float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
@@ -248,6 +252,10 @@ __device__ reflection_record Material::_refract(
     float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
     float reflection_probability = compute_schlick_specular(
       cos_theta_1, this -> n_i, second_highest_prioritised_material_ref_idx);
+    if (write)
+      printf("reflection_probability inside = %f, random_number = %f, sin_theta_1 = %f, sin_theta_1_max = %f\n", 
+		      reflection_probability, random_number, sin_theta_1, sin_theta_1_max);
+
     if (
       sin_theta_1 >= sin_theta_1_max | random_number <= reflection_probability
     ) {
@@ -289,6 +297,7 @@ __device__ reflection_record Material::_refract(
   ref.ray = generate_ray(hit_point, v_out, normal, 1, local_n_s, rand_state);
   ref.k = k;
   ref.filter = compute_phong_filter(k, local_n_s, v_out, ref.ray.dir);
+  ref.filter_2 = compute_phong_filter_2(k, local_n_s, v_out, ref.ray.dir);
   return ref;
 }
 
@@ -391,6 +400,7 @@ __device__ reflection_record _get_false_hit_parameters(
   ref.refracted = true;
   ref.ray = Ray(hit_point, v_in);
   ref.filter = vec3(1.0, 1.0, 1.0);
+  ref.filter_2 = vec3(1.0, 1.0, 1.0);
   ref.diffuse = false;
   if (dot(v_in, normal) <= 0) {
     ref.entering = true;
@@ -404,7 +414,7 @@ __device__ void Material::check_next_path(
   Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
   bool &sss,
   Material** material_list, int material_list_length,
-  reflection_record &ref, curandState *rand_state
+  reflection_record &ref, curandState *rand_state, bool write=false
 ) {
 
   Material *highest_prioritised_material = nullptr;
@@ -432,11 +442,12 @@ __device__ void Material::check_next_path(
   ) {
     ref = this -> _refract(
       hit_point, coming_ray.dir, normal,
-			uv_vector,
+      uv_vector,
       sss,
       highest_prioritised_material,
       second_highest_prioritised_material,
-      rand_state
+      rand_state,
+      write
     );
     return;
   }
@@ -453,14 +464,15 @@ __device__ void Material::check_next_path(
 
   float kd_length = actual_mat -> get_texture_diffuse(uv_vector).length();
   float ks_length = actual_mat -> get_texture_specular(uv_vector).length();
-  float factor = kd_length / (kd_length + ks_length);
+  float factor = ks_length / (kd_length + ks_length);
   float local_n_s = actual_mat -> _get_texture_n_s(uv_vector);
   vec3 k;
 
-  if (random_number <= factor) {
+  if (random_number > factor) {
     ref.ray = generate_ray(
       hit_point, vec3(0, 0, 0), normal, 0, 1, rand_state);
     ref.filter = actual_mat -> get_texture_diffuse(uv_vector);
+    ref.filter_2 = ref.filter;
     ref.diffuse = true;
     ref.reflected = false;
     ref.refracted = false;
@@ -480,6 +492,8 @@ __device__ void Material::check_next_path(
       hit_point, reflected_ray_dir, normal, 1, local_n_s, rand_state);
     k = actual_mat -> get_texture_specular(uv_vector);
     ref.filter = compute_phong_filter(
+      k, local_n_s, reflected_ray_dir, ref.ray.dir);
+    ref.filter_2 = compute_phong_filter_2(
       k, local_n_s, reflected_ray_dir, ref.ray.dir);
 
     ref.diffuse = false;
