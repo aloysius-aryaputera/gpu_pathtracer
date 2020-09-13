@@ -67,7 +67,7 @@ __device__ void PPMHitPoint::update_accummulated_reflected_flux(
 ) {
   float new_radius;
   if (extra_photons > 0) {
-    this -> current_photon_radius * powf(
+    new_radius = this -> current_photon_radius * powf(
       (this -> accummulated_photon_count + this -> ppm_alpha * extra_photons) /
       (this -> accummulated_photon_count + extra_photons),
       0.5

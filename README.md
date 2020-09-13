@@ -8,7 +8,7 @@
 
 ![](images/20200501_cars.jpg)
 
-![](images/20200902_ship.jpg)
+![](images/20200913_ship.jpg)
 
 ![](images/20200426_glass.jpg)
 
