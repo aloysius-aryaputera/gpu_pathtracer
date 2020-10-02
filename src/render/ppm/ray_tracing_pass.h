@@ -348,14 +348,6 @@ void ray_tracing_pass(
       rec.point, radius, filter, rec.normal 
     );
     hit_point_list[pixel_index] -> update_direct_radiance(direct_radiance);
-    if (pixel_index == 76152 || pixel_index == 76652) {
-      printf("pixel_index %d has %d photons, radius %f, accummulated reflected flux = (%f, %f, %f), and direct radiance = (%f, %f, %f)\n", pixel_index, hit_point_list[pixel_index] -> accummulated_photon_count, hit_point_list[pixel_index] -> current_photon_radius, hit_point_list[pixel_index] -> accummulated_reflected_flux.r(), hit_point_list[pixel_index] -> accummulated_reflected_flux.g(), hit_point_list[pixel_index] -> accummulated_reflected_flux.b(), hit_point_list[pixel_index] -> direct_radiance.r(), hit_point_list[pixel_index] -> direct_radiance.g(), hit_point_list[pixel_index] -> direct_radiance.b());
-      vec3 pixel_color = hit_point_list[pixel_index] -> compute_pixel_color(
-        pass_iteration + 1, 100000, 3		      
-      );
-      printf("pixel_index %d has color = (%f, %f, %f).\n", pixel_index, 
-		      pixel_color.r(), pixel_color.g(), pixel_color.b());
-    }
   } else {
     hit_point_list[pixel_index] -> update_parameters(
       vec3(INFINITY, INFINITY, INFINITY), radius, filter, vec3(0, 0, 1)

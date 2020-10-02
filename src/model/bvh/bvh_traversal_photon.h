@@ -103,7 +103,8 @@ __device__ bool _traverse_bvh_photon(
 
 __global__
 void update_hit_point_parameters(
-  Node** photon_node_list, PPMHitPoint** hit_point_list, int num_hit_point
+  int iteration, Node** photon_node_list, PPMHitPoint** hit_point_list, 
+  int num_hit_point, int emitted_photon_per_pass
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_hit_point) return;
@@ -115,10 +116,8 @@ void update_hit_point_parameters(
   );
   if (photon_found)
     hit_point_list[idx] -> update_accummulated_reflected_flux(
-      iterative_flux, extra_photons
+      iteration, iterative_flux, extra_photons, emitted_photon_per_pass
     );
-//    printf("iterative_flux = (%f, %f, %f)\n", 
-//		    iterative_flux.r(), iterative_flux.g(), iterative_flux.b());
 }
 
 #endif

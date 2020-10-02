@@ -1431,7 +1431,8 @@ int main(int argc, char **argv) {
       start = clock();
       print_start_process(process, start);
       update_hit_point_parameters<<<num_pixels, 1>>>(
-        photon_node_list, hit_point_list, num_pixels
+        i + 1, photon_node_list, hit_point_list, num_pixels, 
+	ppm_num_photon_per_pass
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
