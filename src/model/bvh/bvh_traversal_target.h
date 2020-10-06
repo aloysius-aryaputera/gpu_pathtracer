@@ -20,7 +20,7 @@ __device__ Primitive* traverse_bvh_to_pick_a_target(
 ); 
 
 __device__ float get_node_pdf(
-  Node* selected_node, vec3 shading_point, vec3 normal, vec3 kd, bool write
+  Node* selected_node, vec3 shading_point, vec3 normal, vec3 kd
 );
 
 __global__ void print_node_pdf(
@@ -46,7 +46,7 @@ __global__ void print_node_pdf(
 }
 
 __device__ float get_node_pdf(
-  Node* selected_node, vec3 shading_point, vec3 normal, vec3 kd, bool write=false
+  Node* selected_node, vec3 shading_point, vec3 normal, vec3 kd
 ){
   Node* it_node = selected_node, *another_node;
   float pdf = 1.0, it_pdf, it_tot_pdf, importance_1, importance_2;
@@ -62,13 +62,6 @@ __device__ float get_node_pdf(
     importance_2 = another_node -> compute_importance(
       shading_point, normal, kd
     );
-
-    if (write) {
-      printf("====================================================\n");
-      printf("importance_1 = %f\n", importance_1);
-      printf("importance_2 = %f\n", importance_2);
-      printf("====================================================\n");
-    }
 
     it_tot_pdf = importance_1 + importance_2;
     it_pdf = importance_1 / it_tot_pdf;

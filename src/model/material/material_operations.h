@@ -27,7 +27,7 @@ __device__ float _recompute_pdf(
   hit_record rec, vec3 origin, vec3 dir, Primitive **target_geom_array,
   int num_target_geom, float hittable_pdf_weight, Node **target_node_list,
   Node **target_leaf_list, vec3 kd, bool diffuse, float n, 
-  vec3 perfect_reflection_dir, reflection_record ref, bool write=false
+  vec3 perfect_reflection_dir, reflection_record ref
 ) {
   float hittable_pdf = 0, sampling_pdf;
   float node_pdf = 0;
@@ -50,14 +50,10 @@ __device__ float _recompute_pdf(
 
   for(int i = 0; i < num_potential_targets; i++) {
     node_pdf = get_node_pdf(
-      target_leaf_list[potential_target_idx[i]], origin, pivot, kd, write);
+      target_leaf_list[potential_target_idx[i]], origin, pivot, kd);
     hittable_pdf += node_pdf * target_geom_array[potential_target_idx[i]] ->
-      get_hittable_pdf(rec.point, dir, write);
+      get_hittable_pdf(rec.point, dir);
     if (node_pdf > 1) printf("node_pdf = %f\n", node_pdf);
-
-    if (write) {
-      printf("ray.dir = (%f, %f, %f), node_pdf %d = %f; hittable_pdf %d = %f.\n", dir.x(), dir.y(), dir.z(), i, node_pdf, i, hittable_pdf);
-    }
   }
 
   if (ref.diffuse) {
@@ -129,7 +125,7 @@ __device__ void change_ref_ray(
     rec, ref.ray.p0, ref.ray.dir, 
     target_geom_array, num_target_geom,
     hittable_pdf_weight, target_node_list, target_leaf_list, ref.k,
-    ref.diffuse, ref.n, ref.perfect_reflection_dir, ref, write
+    ref.diffuse, ref.n, ref.perfect_reflection_dir, ref
   );
 
   if (ref.diffuse) {

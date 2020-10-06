@@ -206,8 +206,6 @@ __device__ reflection_record Material::_refract(
     float reflection_probability = compute_schlick_specular(
       cos_theta_1, highest_prioritised_material_ref_idx, this -> n_i
     );
-    if (write)
-      printf("reflection_probability outside = %f, random_number = %f\n", reflection_probability, random_number);
 
     if (random_number >= reflection_probability) {
       float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
@@ -252,9 +250,6 @@ __device__ reflection_record Material::_refract(
     float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
     float reflection_probability = compute_schlick_specular(
       cos_theta_1, this -> n_i, second_highest_prioritised_material_ref_idx);
-    if (write)
-      printf("reflection_probability inside = %f, random_number = %f, sin_theta_1 = %f, sin_theta_1_max = %f\n", 
-		      reflection_probability, random_number, sin_theta_1, sin_theta_1_max);
 
     if (
       sin_theta_1 >= sin_theta_1_max | random_number <= reflection_probability

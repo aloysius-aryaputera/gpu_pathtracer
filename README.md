@@ -1,14 +1,14 @@
 # GPU Renderer
 
-![](images/20200902_caustics.jpg)
+![](images/20201005_green_dragon.jpg)
 
-![](images/20200828_caustics.jpg)
+![](images/20201005_crystal_lamp.jpg)
 
 ![](images/20200707_t_rex_scene_3.jpg)
 
 ![](images/20200501_cars.jpg)
 
-![](images/20200913_ship.jpg)
+![](images/20201005_ship.jpg)
 
 ![](images/20200426_glass.jpg)
 

@@ -61,7 +61,7 @@ class Triangle: public Primitive {
     __device__ int get_point_2_idx();
     __device__ int get_point_3_idx();
     __device__ void assign_tangent(vec3 tangent_, int idx);
-    __device__ float get_hittable_pdf(vec3 origin, vec3 dir, bool write);
+    __device__ float get_hittable_pdf(vec3 origin, vec3 dir);
     __device__ vec3 compute_directed_energy(vec3 point, vec3 point_normal);
     __device__ vec3 get_energy();
 
@@ -89,7 +89,7 @@ __device__ vec3 Triangle::compute_directed_energy(
    //return fmaxf(0, this -> energy * dot(avg_normal, dir));
 }
 
-__device__ float Triangle::get_hittable_pdf(vec3 origin, vec3 dir, bool write=false) {
+__device__ float Triangle::get_hittable_pdf(vec3 origin, vec3 dir) {
   hit_record rec;
   bool hit_;
 
@@ -100,15 +100,6 @@ __device__ float Triangle::get_hittable_pdf(vec3 origin, vec3 dir, bool write=fa
   if (hit_) {
     float distance_squared = rec.t * rec.t;
     float cosine_value = fabs(dot(dir, rec.normal));
-    if (write) {
-      printf("distance_squared = %f, cosine_value = %f, dir = (%f, %f, %f), normal = (%f, %f, %f), area = %f, pdf = %f.\n",
-		  distance_squared,
-		  cosine_value,
-		  dir.x(), dir.y(), dir.z(),
-		  rec.normal.x(), rec.normal.y(), rec.normal.z(),
-		  this -> area, distance_squared / (cosine_value * this -> area)
-	);
-    }
     return distance_squared / (cosine_value * this -> area);
   } else {
     return 0;
