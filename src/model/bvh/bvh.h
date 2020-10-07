@@ -68,15 +68,15 @@ __device__ float Node::compute_importance(
   this -> bounding_box -> compute_minimum_angle_to_shading_point(
     point, this -> bounding_cone -> axis, this -> bounding_cone -> theta_0, 
     cone_angle);
-  float multiplier, importance;
+  //float multiplier;
   vec3 effective_energy;
 
-  if (min_angle_to_point < this -> bounding_cone -> theta_e) {
-    //multiplier = fmaxf(cos(min_angle_to_point), 0);
-    multiplier = cos(min_angle_to_point);
-  } else {
-    multiplier = 0;
-  }
+  //if (min_angle_to_point < this -> bounding_cone -> theta_e) {
+  //  //multiplier = fmaxf(cos(min_angle_to_point), 0);
+  //  multiplier = cos(min_angle_to_point);
+  //} else {
+  //  multiplier = 0;
+  //}
 
   if (this -> is_leaf) {
     effective_energy = this -> object -> compute_directed_energy(
@@ -85,9 +85,9 @@ __device__ float Node::compute_importance(
     effective_energy = this -> energy;
   }
 
-  importance =  (
-    kd * abs(cos(min_incident_angle)) * effective_energy * \
-    multiplier / dir.squared_length()).length();
+  //importance =  (
+  //  kd * abs(cos(min_incident_angle)) * effective_energy * \
+  //  multiplier / dir.squared_length()).length();
   //return importance;
   return effective_energy.length() / dir.squared_length();
   //return 1;

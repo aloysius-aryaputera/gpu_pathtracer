@@ -37,7 +37,6 @@ void _get_hit_point_details(
   Material* material_list[400];
   int material_list_length = 0, num_bounce = 0;
   float factor;
-  int pixel_index = pixel_height_index * (camera[0] -> width) + pixel_width_index;
   vec3 emittance = vec3(0.0, 0.0, 0.0), filter_lag = vec3(1.0, 1.0, 1.0);
   direct_radiance = vec3(0.0, 0.0, 0.0);
   vec3 add_direct_radiance;
@@ -190,8 +189,8 @@ void assign_radius_to_invalid_hit_points(
 
   if (i >= num_hit_points) return;
 
-  float current_radius;
-  current_radius = hit_point_list[i] -> current_photon_radius;
+  //float current_radius;
+  //current_radius = hit_point_list[i] -> current_photon_radius;
   //if(
   //  isinf(current_radius) || isinf(1.0 / powf(current_radius, 2)) ||
   //  isnan(current_radius)
@@ -216,7 +215,7 @@ void ray_tracing_pass(
     return;
   }
 
-  bool hit = false, hit_2 = false, write = false;
+  bool hit = false, hit_2 = false;
   hit_record rec, rec_2;
   reflection_record ref, ref_2;
   Ray ray;

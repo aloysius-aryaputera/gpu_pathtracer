@@ -32,22 +32,16 @@ class PPMHitPoint {
       int emitted_photon_per_pass
     );
     __device__ void update_direct_radiance(vec3 extra_direct_radiance);
-    __device__ vec3 compute_pixel_color(
-      int num_passes, int emitted_photon_per_pass, int type);
+    __device__ vec3 compute_pixel_color(int num_passes, int type);
 };
 
-__device__ vec3 PPMHitPoint::compute_pixel_color(
-  int num_passes, int emitted_photon_per_pass, int type
-) {
-  float num_emitted_photons = num_passes * emitted_photon_per_pass;
+__device__ vec3 PPMHitPoint::compute_pixel_color(int num_passes, int type) {
   vec3 mean_radiance, mean_direct_radiance, mean_indirect_radiance;
 
   mean_radiance = (
     this -> direct_radiance + this -> accummulated_indirect_radiance
   ) / float(num_passes);
   mean_direct_radiance = this -> direct_radiance / float(num_passes);
-  //mean_indirect_radiance = this -> accummulated_reflected_flux / (
-  //  num_emitted_photons * M_PI * powf(this -> current_photon_radius, 2));
   mean_indirect_radiance = this -> accummulated_indirect_radiance / float(
     num_passes);
 

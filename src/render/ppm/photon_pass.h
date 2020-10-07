@@ -105,7 +105,6 @@ void photon_pass(
   bool hit = false, sss = false;
   curandState local_rand_state = rand_state[i];
   float random_number, reflection_prob;
-  float light_source_original_energy, light_source_area;
   float max_energy = accummulated_light_source_energy[num_light_source_geom - 1];
 
   for (int idx = 0; idx < pass_iteration; idx++) {
@@ -115,16 +114,10 @@ void photon_pass(
   light_source_idx = pick_primitive_idx_for_sampling(
     num_light_source_geom, accummulated_light_source_energy, &local_rand_state
   );
-  if (i == 0 || i == 100) {
-    printf("i = %d and light_source_idx = %d and random_number = %f\n", 
-		    i, light_source_idx, curand_uniform(&local_rand_state));
-  }
 
   rec = target_geom_list[light_source_idx] -> get_random_point_on_surface(
     &local_rand_state
   );
-  light_source_original_energy = target_geom_list[light_source_idx] -> get_energy().length();
-  light_source_area = target_geom_list[light_source_idx] -> get_area();
   light_source_color = target_geom_list[light_source_idx] -> get_material() ->
     get_texture_emission(rec.uv_vector);
   light_source_color *= max_energy / light_source_color.length();

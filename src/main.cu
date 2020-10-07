@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
   int ppm_num_pass = input_param.ppm_num_pass;
   int ppm_max_bounce = input_param.ppm_max_bounce;
   float ppm_alpha = input_param.ppm_alpha;
-  float ppm_intensity_scaling_factor = input_param.ppm_intensity_scaling_factor;
+  float ppm_radius_scaling_factor = input_param.ppm_radius_scaling_factor;
 
   int pathtracing_sample_size = input_param.pathtracing_sample_size;
   int pathtracing_level = input_param.pathtracing_level;
@@ -130,7 +130,6 @@ int main(int argc, char **argv) {
   int *num_sss_objects, *num_target_geom;
   size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state_sss, *rand_state_image;
-  size_t rand_state_image_size = num_pixels * sizeof(curandState);
 
   bool *sss_object_marker_array;
   int *pt_offset_array, *num_pt_array;
@@ -1161,7 +1160,7 @@ int main(int argc, char **argv) {
       target_node_list,
       target_leaf_list,
       pathtracing_sample_size,
-      ppm_intensity_scaling_factor
+      ppm_radius_scaling_factor
     );
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
@@ -1304,7 +1303,7 @@ int main(int argc, char **argv) {
 	target_node_list,
         target_leaf_list,
         pathtracing_sample_size,
-	ppm_intensity_scaling_factor
+	ppm_radius_scaling_factor
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
@@ -1453,9 +1452,8 @@ int main(int argc, char **argv) {
       process = "Compute direct lighting image output";
       start = clock();
       print_start_process(process, start);
-      ppm_image_output<<<blocks, threads>>>(
-        i + 1, ppm_num_photon_per_pass, image_output, hit_point_list, 
-        my_camera, 0
+      get_ppm_image_output<<<blocks, threads>>>(
+        i + 1, image_output, hit_point_list, my_camera, 0
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
@@ -1471,9 +1469,8 @@ int main(int argc, char **argv) {
       process = "Compute indirect lighting image output";
       start = clock();
       print_start_process(process, start);
-      ppm_image_output<<<blocks, threads>>>(
-        i + 1, ppm_num_photon_per_pass, image_output, hit_point_list, 
-        my_camera, 1
+      get_ppm_image_output<<<blocks, threads>>>(
+        i + 1, image_output, hit_point_list, my_camera, 1
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
@@ -1489,9 +1486,8 @@ int main(int argc, char **argv) {
       process = "Compute image output";
       start = clock();
       print_start_process(process, start);
-      ppm_image_output<<<blocks, threads>>>(
-        i + 1, ppm_num_photon_per_pass, image_output, hit_point_list, 
-        my_camera, 2
+      get_ppm_image_output<<<blocks, threads>>>(
+        i + 1, image_output, hit_point_list, my_camera, 2
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());

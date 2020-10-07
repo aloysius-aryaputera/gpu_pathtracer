@@ -6,9 +6,9 @@
 #include "../../model/point/ppm_hit_point.h"
 
 __global__
-void ppm_image_output(
-  int ppm_pass, int num_photon_per_pass, vec3 *fb, 
-  PPMHitPoint** hit_point_list, Camera **camera, int image_mode
+void get_ppm_image_output(
+  int ppm_pass, vec3 *fb, PPMHitPoint** hit_point_list, Camera **camera, 
+  int image_mode
 ) {
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
@@ -20,7 +20,7 @@ void ppm_image_output(
   int pixel_index = i * (camera[0] -> width) + j;
 
   fb[pixel_index] = hit_point_list[pixel_index] -> compute_pixel_color(
-    ppm_pass, num_photon_per_pass, image_mode
+    ppm_pass, image_mode
   );
 
 }
