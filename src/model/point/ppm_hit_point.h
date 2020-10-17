@@ -7,7 +7,7 @@
 
 class PPMHitPoint {
   private:
-    float ppm_alpha;
+    float ppm_alpha, pdf;
 
     __device__ void _create_bounding_sphere();
 
@@ -24,7 +24,8 @@ class PPMHitPoint {
       float ppm_alpha_
     ); 
     __device__ void update_parameters(
-      vec3 location_, float radius_, vec3 filter_, vec3 normal_
+      vec3 location_, float radius_, vec3 filter_, vec3 normal_,
+      float pdf_
     );
     __device__ void update_radius(float radius_);
     __device__ void update_accummulated_reflected_flux(
@@ -111,6 +112,7 @@ __device__ PPMHitPoint::PPMHitPoint(
   this -> accummulated_indirect_radiance = vec3(0.0, 0.0, 0.0);
   this -> direct_radiance = vec3(0.0, 0.0, 0.0);
   this -> accummulated_photon_count = 0;
+  this -> pdf = 1;
 
   this -> _create_bounding_sphere();
 }
@@ -122,12 +124,13 @@ __device__ void PPMHitPoint::_create_bounding_sphere() {
 }
 
 __device__ void PPMHitPoint::update_parameters(
-  vec3 location_, float radius_, vec3 filter_, vec3 normal_
+  vec3 location_, float radius_, vec3 filter_, vec3 normal_, float pdf_
 ) {
   this -> location = location_;
   this -> current_photon_radius = radius_;
   this -> filter = filter_;
   this -> normal = normal_;
+  this -> pdf = pdf_;
 
   this -> bounding_sphere -> assign_new_center(this -> location);
   this -> bounding_sphere -> assign_new_radius(

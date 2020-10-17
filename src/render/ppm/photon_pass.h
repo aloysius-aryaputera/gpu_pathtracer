@@ -104,7 +104,7 @@ void photon_pass(
   int num_bounce = 0, material_list_length = 0, light_source_idx;
   bool hit = false, sss = false;
   curandState local_rand_state = rand_state[i];
-  float random_number, reflection_prob;
+  float random_number, reflection_prob, mean_color, mean_color_tmp;
   float max_energy = accummulated_light_source_energy[num_light_source_geom - 1];
 
   for (int idx = 0; idx < pass_iteration; idx++) {
@@ -121,6 +121,9 @@ void photon_pass(
   light_source_color = target_geom_list[light_source_idx] -> get_material() ->
     get_texture_emission(rec.uv_vector);
   light_source_color *= max_energy / light_source_color.length();
+  mean_color = (
+    light_source_color.r() + light_source_color.g() + light_source_color.b()
+  ) / 3;
   Ray ray = generate_ray(
     rec.point, vec3(0, 0, 0), rec.normal, 2, 1, &local_rand_state);
   hit = traverse_bvh(geom_node_list[0], ray, rec);
@@ -166,8 +169,13 @@ void photon_pass(
 	  }  
 	} else {
 	  light_source_color = ref.k * light_source_color;
-	  light_source_color = light_source_color * (
-	    max_energy / light_source_color.length());
+	  //light_source_color = light_source_color * (
+	  //  max_energy / light_source_color.length());
+	  mean_color_tmp = (
+	    light_source_color.r() + light_source_color.g() + 
+	    light_source_color.b()
+	  ) / 3;
+	  light_source_color *= (mean_color / mean_color_tmp);
 	}	
       } 
 

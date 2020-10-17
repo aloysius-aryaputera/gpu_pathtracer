@@ -128,18 +128,22 @@ __device__ void change_ref_ray(
     ref.diffuse, ref.n, ref.perfect_reflection_dir, ref
   );
 
-  if (ref.diffuse) {
-    scattering_pdf = fmaxf(0.0, dot(rec.normal, ref.ray.dir));
-  } else {
-    float dot_prod_1 = dot(rec.coming_ray.dir, rec.normal);
-    float dot_prod_2 = dot(ref.ray.dir, rec.normal);
-    scattering_pdf = (
-      (dot_prod_1 >= 0 && dot_prod_2 <= 0 && ref.reflected) ||
-      (dot_prod_1 <= 0 && dot_prod_2 >= 0 && ref.reflected) ||
-      (dot_prod_1 >= 0 && dot_prod_2 >= 0 && ref.refracted) ||
-      (dot_prod_1 <= 0 && dot_prod_2 <= 0 && ref.refracted)
-    );
-  }
+  scattering_pdf = compute_scattering_pdf(
+    rec.normal, ref.ray.dir, ref.diffuse, rec.coming_ray.dir, ref.refracted
+  );
+
+  //if (ref.diffuse) {
+  //  scattering_pdf = fmaxf(0.0, dot(rec.normal, ref.ray.dir));
+  //} else {
+  //  float dot_prod_1 = dot(rec.coming_ray.dir, rec.normal);
+  //  float dot_prod_2 = dot(ref.ray.dir, rec.normal);
+  //  scattering_pdf = (
+  //    (dot_prod_1 >= 0 && dot_prod_2 <= 0 && ref.reflected) ||
+  //    (dot_prod_1 <= 0 && dot_prod_2 >= 0 && ref.reflected) ||
+  //    (dot_prod_1 >= 0 && dot_prod_2 >= 0 && ref.refracted) ||
+  //    (dot_prod_1 <= 0 && dot_prod_2 <= 0 && ref.refracted)
+  //  );
+  //}
 
   factor = scattering_pdf / M_PI / pdf;
 

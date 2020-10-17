@@ -39,7 +39,7 @@ __device__ bool _traverse_bvh_photon(
 
     if (intersection_l && child_l -> is_leaf) {
       is_inside = hit_point -> bounding_sphere -> is_inside(
-        child_l -> point -> location);
+        child_l -> point -> location, hit_point -> normal);
       if (is_inside) {
         point = child_l -> point;
         pts_found = true;
@@ -53,7 +53,7 @@ __device__ bool _traverse_bvh_photon(
 
     if (intersection_r && child_r -> is_leaf) {
       is_inside = hit_point -> bounding_sphere -> is_inside(
-	child_r -> point -> location);
+	child_r -> point -> location, hit_point -> normal);
       if (is_inside) {
         point = child_r -> point;
         pts_found = true;

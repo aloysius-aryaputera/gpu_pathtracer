@@ -88,6 +88,7 @@ int main(int argc, char **argv) {
   int ppm_max_bounce = input_param.ppm_max_bounce;
   float ppm_alpha = input_param.ppm_alpha;
   float ppm_radius_scaling_factor = input_param.ppm_radius_scaling_factor;
+  int ppm_image_output_iteration = input_param.ppm_image_output_iteration;
 
   int pathtracing_sample_size = input_param.pathtracing_sample_size;
   int pathtracing_level = input_param.pathtracing_level;
@@ -549,7 +550,9 @@ int main(int argc, char **argv) {
   start = clock();
   process = "Creating the objects";
   print_start_process(process, start);
-  create_objects<<<1, num_objects>>>(
+  dim3 blocks_object(num_objects + 1);
+  dim3 threads_object(1);
+  create_objects<<<blocks_object, threads_object>>>(
     my_objects, object_num_primitives, object_primitive_offset_idx,
     triangle_area, accumulated_triangle_area, num_objects
   );
@@ -651,7 +654,7 @@ int main(int argc, char **argv) {
   process = "Allocating " + std::to_string(num_sss_points) + \
     " points for SSS objects";
   print_start_process(process, start);
-  allocate_pts_sss<<<1, num_objects>>>(
+  allocate_pts_sss<<<num_objects, 1>>>(
     my_objects, sss_pts, pt_offset_array, num_objects);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
@@ -1135,7 +1138,12 @@ int main(int argc, char **argv) {
   } else if (render_mode == 2) {
     PPMHitPoint **hit_point_list;
     Point **photon_list;
-    
+    vec3 *image_dir, *image_indir, *image_photon;
+
+    checkCudaErrors(cudaMallocManaged((void **)&image_dir, image_size));
+    checkCudaErrors(cudaMallocManaged((void **)&image_indir, image_size));
+    checkCudaErrors(cudaMallocManaged((void **)&image_photon, image_size));
+
     checkCudaErrors(
       cudaMallocManaged((void **)&hit_point_list, 
       num_pixels * sizeof(PPMHitPoint*)));
@@ -1173,8 +1181,18 @@ int main(int argc, char **argv) {
       )
     );
 
+    //start = clock();
+    //process = "Compute hit point radius";
+    //print_start_process(process, start);
+    //compute_radius<<<blocks, threads>>>(
+    //  hit_point_list, my_camera, ppm_radius_scaling_factor
+    //);
+    //checkCudaErrors(cudaGetLastError());
+    //checkCudaErrors(cudaDeviceSynchronize());
+    //print_end_process(process, start);
+
     start = clock();
-    process = "Compute max hit point radius";
+    process = "Compute average hit point radius";
     print_start_process(process, start);
     compute_average_radius<<<1, 1>>>(
       hit_point_list, num_pixels, average_hit_point_radius
@@ -1334,7 +1352,7 @@ int main(int argc, char **argv) {
       start = clock();
       process = "Clearing image";
       print_start_process(process, start);
-      clear_image<<<blocks, threads>>>(image_output, im_width, im_height);
+      clear_image<<<blocks, threads>>>(image_photon, im_width, im_height);
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
@@ -1343,18 +1361,10 @@ int main(int argc, char **argv) {
       process = "Creating photon image";
       print_start_process(process, start);
       create_point_image<<<num_recorded_photons[0] / tx + 1, tx>>>(
-        image_output, my_camera, photon_list, num_recorded_photons[0]
+        image_photon, my_camera, photon_list, num_recorded_photons[0]
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
-      print_end_process(process, start);
-
-      start = clock();
-      process = "Saving photon image";
-      print_start_process(process, start);
-      save_image(
-        image_output, im_width, im_height, 
-        image_output_path + "_photon.ppm");
       print_end_process(process, start);
 
       checkCudaErrors(cudaDeviceSynchronize());
@@ -1453,35 +1463,21 @@ int main(int argc, char **argv) {
       start = clock();
       print_start_process(process, start);
       get_ppm_image_output<<<blocks, threads>>>(
-        i + 1, image_output, hit_point_list, my_camera, 0
+        i + 1, image_dir, hit_point_list, my_camera, 0
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
-
-      start = clock();
-      process = "Saving image";
-      print_start_process(process, start);
-      save_image(image_output, im_width, im_height, image_output_path + "_direct.ppm");
-      print_end_process(process, start);
-      checkCudaErrors(cudaDeviceSynchronize());
 
       process = "Compute indirect lighting image output";
       start = clock();
       print_start_process(process, start);
       get_ppm_image_output<<<blocks, threads>>>(
-        i + 1, image_output, hit_point_list, my_camera, 1
+        i + 1, image_indir, hit_point_list, my_camera, 1
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
-
-      start = clock();
-      process = "Saving image";
-      print_start_process(process, start);
-      save_image(image_output, im_width, im_height, image_output_path + "_indirect.ppm");
-      print_end_process(process, start);
-      checkCudaErrors(cudaDeviceSynchronize());
 
       process = "Compute image output";
       start = clock();
@@ -1493,12 +1489,36 @@ int main(int argc, char **argv) {
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
 
-      start = clock();
-      process = "Saving image";
-      print_start_process(process, start);
-      save_image(image_output, im_width, im_height, image_output_path + "_global.ppm");
-      print_end_process(process, start);
-      checkCudaErrors(cudaDeviceSynchronize());
+      if (i % ppm_image_output_iteration == 0) {
+          start = clock();
+          process = "Saving photon image";
+          print_start_process(process, start);
+          save_image(
+            image_photon, im_width, im_height, 
+            image_output_path + "_photon.ppm");
+          print_end_process(process, start);
+
+          start = clock();
+          process = "Saving direct radiance image";
+          print_start_process(process, start);
+          save_image(image_dir, im_width, im_height, image_output_path + "_direct.ppm");
+          print_end_process(process, start);
+          checkCudaErrors(cudaDeviceSynchronize());
+
+          start = clock();
+          process = "Saving indirect radiance image";
+          print_start_process(process, start);
+          save_image(image_indir, im_width, im_height, image_output_path + "_indirect.ppm");
+          print_end_process(process, start);
+          checkCudaErrors(cudaDeviceSynchronize());
+
+          start = clock();
+          process = "Saving image";
+          print_start_process(process, start);
+          save_image(image_output, im_width, im_height, image_output_path + "_global.ppm");
+          print_end_process(process, start);
+          checkCudaErrors(cudaDeviceSynchronize());
+      }
 
     }
   } 
