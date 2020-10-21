@@ -57,7 +57,7 @@ void compute_accummulated_light_source_energy(
   float acc = 0;
   float new_energy = 0;
   for (int i = 0; i < num_light_source_geom; i++) {
-    new_energy = de_nan(light_source_geom_list[i] -> get_energy().length());
+    new_energy = de_nan(light_source_geom_list[i] -> get_energy().mean());
     acc += new_energy;
     accummulated_light_source_energy[i] = acc;
   }
@@ -97,7 +97,7 @@ void photon_pass(
 
   photon_list[i] -> assign_location(vec3(INFINITY, INFINITY, INFINITY));
 
-  vec3 filter, light_source_color, tex_specular, tex_diffuse;
+  vec3 filter, light_source_color, tex_specular, tex_diffuse, prev_location;
   hit_record rec;
   reflection_record ref;
   Material* material_list[400];
@@ -120,12 +120,13 @@ void photon_pass(
   );
   light_source_color = target_geom_list[light_source_idx] -> get_material() ->
     get_texture_emission(rec.uv_vector);
-  light_source_color *= max_energy / light_source_color.length();
-  mean_color = (
-    light_source_color.r() + light_source_color.g() + light_source_color.b()
-  ) / 3;
+  light_source_color *= max_energy / light_source_color.mean();
+  mean_color = light_source_color.mean();
   Ray ray = generate_ray(
     rec.point, vec3(0, 0, 0), rec.normal, 2, 1, &local_rand_state);
+  
+  prev_location = rec.point;
+  photon_list[i] -> assign_prev_location(prev_location);
   hit = traverse_bvh(geom_node_list[0], ray, rec);
 
   if (hit) {
@@ -163,6 +164,7 @@ void photon_pass(
 	reflection_prob = max(ref.k);
         if (random_number > reflection_prob) {
 	  if (ref.diffuse && num_bounce > 1) {
+	    photon_list[i] -> assign_prev_location(prev_location);
 	    photon_list[i] -> assign_location(rec.point);
 	    photon_list[i] -> assign_color(light_source_color);
 	    photon_list[i] -> assign_direction(rec.coming_ray.dir);
@@ -180,7 +182,9 @@ void photon_pass(
       } 
 
       ray = ref.ray;
+      prev_location = rec.point;
       hit = traverse_bvh(geom_node_list[0], ray, rec);
+      
     }
   }
 }

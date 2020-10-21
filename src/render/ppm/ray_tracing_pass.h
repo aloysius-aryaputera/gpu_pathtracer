@@ -285,8 +285,8 @@ void ray_tracing_pass(
      ppm_alpha  
     ); 
   } else {
-    main_camera_height_offset = curand_uniform(&rand_state[0]);
-    main_camera_width_offset = curand_uniform(&rand_state[0]);
+    main_camera_height_offset = curand_uniform(&local_rand_state);
+    main_camera_width_offset = curand_uniform(&local_rand_state);
   }
 
   radius = hit_point_list[pixel_index] -> current_photon_radius;

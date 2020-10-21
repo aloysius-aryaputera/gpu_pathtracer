@@ -34,6 +34,7 @@ class vec3  {
     __host__ __device__ inline vec3& operator*=(const float t);
     __host__ __device__ inline vec3& operator/=(const float t);
 
+    __host__ __device__ inline float mean() const { return (e[0] + e[1] + e[2]) / 3; }
     __host__ __device__ inline float length() const { return sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]); }
     __host__ __device__ inline float squared_length() const { return e[0]*e[0] + e[1]*e[1] + e[2]*e[2]; }
     __host__ __device__ inline void make_unit_vector();
