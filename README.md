@@ -2,7 +2,7 @@
 
 ![](images/20201005_green_dragon.jpg)
 
-![](images/20201005_crystal_lamp.jpg)
+![](images/20201023_skyhawk.jpg)
 
 ![](images/20200707_t_rex_scene_3.jpg)
 
@@ -13,8 +13,6 @@
 ![](images/20200426_glass.jpg)
 
 ![](images/20200311_dragon.jpg)
-
-![](images/20200110_dragon.jpg)
 
 
 ## Features
@@ -45,11 +43,14 @@
 * E. P. Lafortune and Y. D. Willems, "Using the Modified Phong Reflectance Model for Physically Based Rendering," *Report CW 197*, 1994.
 * T. Hachisuka, S. Ogaki, and H. W. Jensen, "Progressive Photon Mapping," *ACM Transactions on Graphics*, 2008.
 * T. Hachisuka and H. W. Jensen, "Stochastic Progressive Photon Mapping," *ACM Transactions on Graphics*, 2009.
+* C. Knaus and M. Zwicker, "Progressive Photon Mapping: A Probabilistic Approach," *ACM Transactions on Graphics*, 2011.
+* R. Perrot, *et al.*, "Photon Mapping with Visible Kernel Domains," *Visual Computer*, 2019.
 
 
 ## Credits
 
 * The table lamp was from https://www.lugher3d.com/free-3d-models/table-lamp-fendi.
+* The Douglas A-4 Skyhawk model was from https://done3d.com/douglas-a-4-skyhawk/.
 * The Dr.Booms Exo model was by [LDsanya](https://www.blendswap.com/profile/740888).
 * The leaf neon light was by [colinquinn](https://free3d.com/user/colinquinn).
 * The neon sign was by [Alexander](https://www.cgtrader.com/alexbes).

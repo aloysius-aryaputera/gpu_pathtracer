@@ -51,7 +51,9 @@ __device__ bool _traverse_bvh_photon(
 	ray_dir = point -> prev_location - hit_point -> location;
 	ray = Ray(hit_point -> location, ray_dir);
 	geom_hit = traverse_bvh(geom_bvh_root, ray, rec);
-	if (geom_hit && abs(rec.t - ray_dir.length()) < SMALL_DOUBLE) {
+	if (
+	  geom_hit && abs(rec.t - ray_dir.length()) < SMALL_DOUBLE
+	) {
           pts_found = true;
 	  num_photons++;
           factor = max(0.0, dot(hit_point -> normal, -(point -> direction)));
@@ -68,7 +70,9 @@ __device__ bool _traverse_bvh_photon(
 	ray_dir = point -> prev_location - hit_point -> location;
 	ray = Ray(hit_point -> location, ray_dir);
 	geom_hit = traverse_bvh(geom_bvh_root, ray, rec);
-	if (geom_hit && abs(rec.t - ray_dir.length()) < SMALL_DOUBLE) {
+	if (
+	  geom_hit && abs(rec.t - ray_dir.length()) < SMALL_DOUBLE
+	) {
           pts_found = true;
 	  num_photons++;
           factor = max(0.0, dot(hit_point -> normal, -(point -> direction)));
