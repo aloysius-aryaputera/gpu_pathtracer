@@ -57,7 +57,7 @@ void compute_accummulated_light_source_energy(
   float acc = 0;
   float new_energy = 0;
   for (int i = 0; i < num_light_source_geom; i++) {
-    new_energy = de_nan(light_source_geom_list[i] -> get_energy().length());
+    new_energy = de_nan(light_source_geom_list[i] -> get_energy().mean());
     acc += new_energy;
     accummulated_light_source_energy[i] = acc;
   }
@@ -97,15 +97,14 @@ void photon_pass(
 
   photon_list[i] -> assign_location(vec3(INFINITY, INFINITY, INFINITY));
 
-  vec3 filter, light_source_color, tex_specular, tex_diffuse;
+  vec3 filter, light_source_color, tex_specular, tex_diffuse, prev_location;
   hit_record rec;
   reflection_record ref;
   Material* material_list[400];
   int num_bounce = 0, material_list_length = 0, light_source_idx;
   bool hit = false, sss = false;
   curandState local_rand_state = rand_state[i];
-  float random_number, reflection_prob;
-  float light_source_original_energy, light_source_area;
+  float random_number, reflection_prob, mean_color, mean_color_tmp;
   float max_energy = accummulated_light_source_energy[num_light_source_geom - 1];
 
   for (int idx = 0; idx < pass_iteration; idx++) {
@@ -115,21 +114,19 @@ void photon_pass(
   light_source_idx = pick_primitive_idx_for_sampling(
     num_light_source_geom, accummulated_light_source_energy, &local_rand_state
   );
-  if (i == 0 || i == 100) {
-    printf("i = %d and light_source_idx = %d and random_number = %f\n", 
-		    i, light_source_idx, curand_uniform(&local_rand_state));
-  }
 
   rec = target_geom_list[light_source_idx] -> get_random_point_on_surface(
     &local_rand_state
   );
-  light_source_original_energy = target_geom_list[light_source_idx] -> get_energy().length();
-  light_source_area = target_geom_list[light_source_idx] -> get_area();
   light_source_color = target_geom_list[light_source_idx] -> get_material() ->
     get_texture_emission(rec.uv_vector);
-  light_source_color *= max_energy / light_source_color.length();
+  light_source_color *= max_energy / light_source_color.mean();
+  mean_color = light_source_color.mean();
   Ray ray = generate_ray(
     rec.point, vec3(0, 0, 0), rec.normal, 2, 1, &local_rand_state);
+  
+  prev_location = rec.point;
+  photon_list[i] -> assign_prev_location(prev_location);
   hit = traverse_bvh(geom_node_list[0], ray, rec);
 
   if (hit) {
@@ -167,19 +164,27 @@ void photon_pass(
 	reflection_prob = max(ref.k);
         if (random_number > reflection_prob) {
 	  if (ref.diffuse && num_bounce > 1) {
+	    photon_list[i] -> assign_prev_location(prev_location);
 	    photon_list[i] -> assign_location(rec.point);
 	    photon_list[i] -> assign_color(light_source_color);
 	    photon_list[i] -> assign_direction(rec.coming_ray.dir);
 	  }  
 	} else {
 	  light_source_color = ref.k * light_source_color;
-	  light_source_color = light_source_color * (
-	    max_energy / light_source_color.length());
+	  //light_source_color = light_source_color * (
+	  //  max_energy / light_source_color.length());
+	  mean_color_tmp = (
+	    light_source_color.r() + light_source_color.g() + 
+	    light_source_color.b()
+	  ) / 3;
+	  light_source_color *= (mean_color / mean_color_tmp);
 	}	
       } 
 
       ray = ref.ray;
+      prev_location = rec.point;
       hit = traverse_bvh(geom_node_list[0], ray, rec);
+      
     }
   }
 }

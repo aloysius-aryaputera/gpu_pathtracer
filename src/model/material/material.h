@@ -16,6 +16,7 @@ struct reflection_record
   vec3 k;
   vec3 filter, filter_2;
   vec3 perfect_reflection_dir;
+  float pdf;
   bool diffuse, reflected, refracted, false_hit, entering;
 
   float n;
@@ -206,8 +207,6 @@ __device__ reflection_record Material::_refract(
     float reflection_probability = compute_schlick_specular(
       cos_theta_1, highest_prioritised_material_ref_idx, this -> n_i
     );
-    if (write)
-      printf("reflection_probability outside = %f, random_number = %f\n", reflection_probability, random_number);
 
     if (random_number >= reflection_probability) {
       float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
@@ -252,9 +251,6 @@ __device__ reflection_record Material::_refract(
     float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
     float reflection_probability = compute_schlick_specular(
       cos_theta_1, this -> n_i, second_highest_prioritised_material_ref_idx);
-    if (write)
-      printf("reflection_probability inside = %f, random_number = %f, sin_theta_1 = %f, sin_theta_1_max = %f\n", 
-		      reflection_probability, random_number, sin_theta_1, sin_theta_1_max);
 
     if (
       sin_theta_1 >= sin_theta_1_max | random_number <= reflection_probability
@@ -298,6 +294,16 @@ __device__ reflection_record Material::_refract(
   ref.k = k;
   ref.filter = compute_phong_filter(k, local_n_s, v_out, ref.ray.dir);
   ref.filter_2 = compute_phong_filter_2(k, local_n_s, v_out, ref.ray.dir);
+
+  float sampling_pdf = compute_sampling_pdf_2(
+    normal, ref.ray.dir, ref.diffuse, ref.n, v_in, ref.perfect_reflection_dir,
+    ref.refracted
+  );
+  float scattering_pdf = compute_scattering_pdf(
+    normal, ref.ray.dir, ref.diffuse, v_in, ref.refracted
+  );
+  ref.pdf = sampling_pdf * M_PI / scattering_pdf; 
+
   return ref;
 }
 
@@ -401,6 +407,7 @@ __device__ reflection_record _get_false_hit_parameters(
   ref.ray = Ray(hit_point, v_in);
   ref.filter = vec3(1.0, 1.0, 1.0);
   ref.filter_2 = vec3(1.0, 1.0, 1.0);
+  ref.pdf = 1;
   ref.diffuse = false;
   if (dot(v_in, normal) <= 0) {
     ref.entering = true;
@@ -504,6 +511,15 @@ __device__ void Material::check_next_path(
     ref.k = k;
     sss = false;
   }
+
+  float sampling_pdf = compute_sampling_pdf_2(
+    normal, ref.ray.dir, ref.diffuse, local_n_s, v_in, 
+    ref.perfect_reflection_dir, ref.refracted
+  );
+  float scattering_pdf = compute_scattering_pdf(
+    normal, ref.ray.dir, ref.diffuse, v_in, ref.refracted
+  );
+  ref.pdf = sampling_pdf * M_PI / scattering_pdf;
 
   return;
 }

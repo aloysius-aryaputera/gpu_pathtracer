@@ -17,9 +17,10 @@ class Point {
     );
     __device__ void assign_color(vec3 color_);
     __device__ void assign_location(vec3 location_);
+    __device__ void assign_prev_location(vec3 location_);
     __device__ void assign_direction(vec3 direction_);
 
-    vec3 location, filter, normal, color, direction;
+    vec3 location, filter, normal, color, direction, prev_location;
     int object_idx;
     BoundingBox *bounding_box;
 };
@@ -32,6 +33,10 @@ __device__ Point::Point(
   this -> filter = filter_;
   this -> normal = normal_;
   this -> _create_bounding_box();
+}
+
+__device__ void Point::assign_prev_location(vec3 location_) {
+  this -> prev_location = location_;
 }
 
 __device__ void Point::assign_location(vec3 location_) {

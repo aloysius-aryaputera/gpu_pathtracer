@@ -8,6 +8,7 @@ class BoundingSphere {
   public:
     __device__ BoundingSphere(vec3 center, float r);
     __device__ bool is_inside(vec3 coordinate);
+    __device__ bool is_inside(vec3 coordinate, vec3 normal);
     __device__ void assign_new_radius(float r_);
     __device__ void assign_new_center(vec3 center_);
 
@@ -31,6 +32,20 @@ __device__ void BoundingSphere::assign_new_radius(float r_) {
 __device__ bool BoundingSphere::is_inside(vec3 coordinate) {
   float distance = compute_distance(this -> center, coordinate);
   if (distance <= this -> r) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+__device__ bool BoundingSphere::is_inside(vec3 coordinate, vec3 normal) {
+  float distance = compute_distance(this -> center, coordinate);
+  if (distance > this -> r) {
+    return false;
+  }
+  vec3 r_dir = coordinate - this -> center;
+  float parallel_dir = dot(r_dir, normal);
+  if (abs(parallel_dir) <= 0.1 * this -> r) {
     return true;
   } else {
     return false;

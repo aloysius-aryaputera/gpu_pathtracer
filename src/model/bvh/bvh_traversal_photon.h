@@ -2,23 +2,29 @@
 #ifndef BVH_TRAVERSAL_PHOTON_H
 #define BVH_TRAVERSAL_PHOTON_H
 
+#include "../../param.h"
+#include "../geometry/primitive.h"
 #include "../grid/bounding_box.h"
 #include "../grid/bounding_sphere.h"
 #include "../point/ppm_hit_point.h"
 #include "../point/point.h"
 #include "bvh.h"
+#include "bvh_traversal.h"
 
 __device__ bool _traverse_bvh_photon(
-  Node* bvh_root, PPMHitPoint* hit_point, vec3 &iterative_flux, 
-  int &num_photons
+  Node* bvh_root, Node* geom_bvh_root, PPMHitPoint* hit_point, 
+  vec3 &iterative_flux, int &num_photons
 ) {
   Node* stack[400];
   Node *child_l, *child_r;
   Point *point;
-  bool intersection_l, intersection_r, traverse_l, traverse_r;
+  Ray ray;
+  vec3 ray_dir;
+  bool intersection_l, intersection_r, traverse_l, traverse_r, geom_hit;
   bool is_inside = false;
   bool pts_found = false;
   int idx_stack_top = 0;
+  hit_record rec;
 
   float factor;
   iterative_flux = vec3(0.0, 0.0, 0.0);
@@ -41,13 +47,18 @@ __device__ bool _traverse_bvh_photon(
       is_inside = hit_point -> bounding_sphere -> is_inside(
         child_l -> point -> location);
       if (is_inside) {
-        point = child_l -> point;
-        pts_found = true;
-	num_photons++;
-        factor = max(0.0, dot(hit_point -> normal, -(point -> direction)));
-        iterative_flux += factor * point -> color;
-	//printf("factor = %f, point -> color = (%f, %f, %f)", 
-	//       factor, point -> color.r(), point -> color.g(), point -> color.b());
+	point = child_l -> point;
+	ray_dir = point -> prev_location - hit_point -> location;
+	ray = Ray(hit_point -> location, ray_dir);
+	geom_hit = traverse_bvh(geom_bvh_root, ray, rec);
+	if (
+	  geom_hit && abs(rec.t - ray_dir.length()) < SMALL_DOUBLE
+	) {
+          pts_found = true;
+	  num_photons++;
+          factor = max(0.0, dot(hit_point -> normal, -(point -> direction)));
+          iterative_flux += factor * point -> color;
+	}
       }
     }
 
@@ -56,12 +67,17 @@ __device__ bool _traverse_bvh_photon(
 	child_r -> point -> location);
       if (is_inside) {
         point = child_r -> point;
-        pts_found = true;
-	num_photons++;
-        factor = max(0.0, dot(hit_point -> normal, -(point -> direction)));
-        iterative_flux += factor * point -> color;
-	//printf("factor = %f, point -> color = (%f, %f, %f)", 
-	//	factor, point -> color.r(), point -> color.g(), point -> color.b());
+	ray_dir = point -> prev_location - hit_point -> location;
+	ray = Ray(hit_point -> location, ray_dir);
+	geom_hit = traverse_bvh(geom_bvh_root, ray, rec);
+	if (
+	  geom_hit && abs(rec.t - ray_dir.length()) < SMALL_DOUBLE
+	) {
+          pts_found = true;
+	  num_photons++;
+          factor = max(0.0, dot(hit_point -> normal, -(point -> direction)));
+          iterative_flux += factor * point -> color;
+	}
       }
     }
 
@@ -103,7 +119,8 @@ __device__ bool _traverse_bvh_photon(
 
 __global__
 void update_hit_point_parameters(
-  Node** photon_node_list, PPMHitPoint** hit_point_list, int num_hit_point
+  int iteration, Node** photon_node_list, Node** geom_node_list, 
+  PPMHitPoint** hit_point_list, int num_hit_point, int emitted_photon_per_pass
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_hit_point) return;
@@ -111,14 +128,13 @@ void update_hit_point_parameters(
   vec3 iterative_flux = vec3(0.0, 0.0, 0.0);
   int extra_photons = 0;
   bool photon_found = _traverse_bvh_photon(
-    photon_node_list[0], hit_point_list[idx], iterative_flux, extra_photons
+    photon_node_list[0], geom_node_list[0], hit_point_list[idx], 
+    iterative_flux, extra_photons
   );
   if (photon_found)
     hit_point_list[idx] -> update_accummulated_reflected_flux(
-      iterative_flux, extra_photons
+      iteration, iterative_flux, extra_photons, emitted_photon_per_pass
     );
-//    printf("iterative_flux = (%f, %f, %f)\n", 
-//		    iterative_flux.r(), iterative_flux.g(), iterative_flux.b());
 }
 
 #endif
