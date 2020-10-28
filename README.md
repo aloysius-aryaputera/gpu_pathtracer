@@ -1,6 +1,6 @@
 # GPU Renderer
 
-![](images/20201005_green_dragon.jpg)
+![](images/20201028_green_dragon.jpg)
 
 ![](images/20201023_skyhawk.jpg)
 
@@ -11,9 +11,6 @@
 ![](images/20201005_ship.jpg)
 
 ![](images/20200426_glass.jpg)
-
-![](images/20200311_dragon.jpg)
-
 
 ## Features
 * Path tracing
@@ -49,6 +46,7 @@
 
 ## Credits
 
+* The Ferrari SF70H model was by [Dil Afroze Ahmed](https://free3d.com/user/dil_afroze). 
 * The table lamp was from https://www.lugher3d.com/free-3d-models/table-lamp-fendi.
 * The Douglas A-4 Skyhawk model was from https://done3d.com/douglas-a-4-skyhawk/.
 * The Dr.Booms Exo model was by [LDsanya](https://www.blendswap.com/profile/740888).
@@ -57,7 +55,7 @@
 * The T-Rex model was by [joel3d](https://www.turbosquid.com/Search/Artists/joel3d).
 * The Indominus Rex model was by [AzurPoly](https://sketchfab.com/VapTor).
 * LaFerrari model was by [mfaprodesign](https://free3d.com/user/mfaprodesign).
-* The Lamborghini Aventador and Bumble Bee models were by [ysup12](https://free3d.com/user/ysup12).
+* The Lamborghini Aventador model was by [ysup12](https://free3d.com/user/ysup12).
 * The Koenigsegg Jesco model was by [Steven Grey](https://sketchfab.com/Steven007).
 * The gecko model was by [DigitalLife3D](https://sketchfab.com/DigitalLife3D).
 * The mechanical shark and the ship in a bottle were by [Loïc Norgeot](https://sketchfab.com/norgeotloic).
