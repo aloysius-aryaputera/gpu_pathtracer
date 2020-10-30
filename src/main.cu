@@ -141,6 +141,7 @@ int main(int argc, char **argv) {
   float *path_length;
   float *material_image_r, *material_image_g, *material_image_b;
   float *bm;
+  float *scattering_coef, *absorption_coef, *g;
   int *num_materials;
   int *material_image_height_diffuse, *material_image_width_diffuse, \
     *material_image_offset_diffuse, *material_priority;
@@ -288,6 +289,13 @@ int main(int argc, char **argv) {
     (void **)&n_i, max_num_materials * sizeof(float)));
 
   checkCudaErrors(cudaMallocManaged(
+    (void **)&scattering_coef, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&absorption_coef, max_num_materials * sizeof(float)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&g, max_num_materials * sizeof(float)));
+
+  checkCudaErrors(cudaMallocManaged(
     (void **)&material_image_height_diffuse,
     max_num_materials * sizeof(int)));
   checkCudaErrors(cudaMallocManaged(
@@ -357,6 +365,7 @@ int main(int argc, char **argv) {
     tf_x, tf_y, tf_z,
     path_length,
     t_r, n_s, n_i, bm,
+    scattering_coef, absorption_coef, g,
     material_priority,
     material_image_height_diffuse, material_image_width_diffuse,
     material_image_offset_diffuse,
@@ -493,6 +502,7 @@ int main(int argc, char **argv) {
     tf_x, tf_y, tf_z,
     path_length,
     t_r, n_s, n_i, bm,
+    scattering_coef, absorption_coef, g,
     material_priority,
     material_image_height_diffuse,
     material_image_width_diffuse,

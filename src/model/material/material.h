@@ -56,6 +56,7 @@ class Material {
     int texture_width_n_s, texture_height_n_s;
     int texture_width_bump, texture_height_bump;
     float n_s, bm;
+    float scattering_coef, absorption_coef, g;
     float *texture_r_diffuse, *texture_g_diffuse, *texture_b_diffuse;
     float *texture_r_specular, *texture_g_specular, *texture_b_specular;
     float *texture_r_emission, *texture_g_emission, *texture_b_emission;
@@ -69,6 +70,7 @@ class Material {
       vec3 transmission_,
       float path_length_,
       float t_r_, float n_s_, float n_i_, float bm_,
+      float scattering_coef_, float absorption_coef_, float g_,
       int priority_,
       int texture_height_diffuse_,
       int texture_width_diffuse_,
@@ -315,6 +317,9 @@ __host__ __device__ Material::Material(
   float n_s_,
   float n_i_,
   float bm_,
+  float scattering_coef_,
+  float absorption_coef_,
+  float g_,
   int priority_,
   int texture_height_diffuse_,
   int texture_width_diffuse_,
@@ -355,6 +360,9 @@ __host__ __device__ Material::Material(
   else
     this -> n_s = n_s_;
   this -> bm = bm_;
+  this -> scattering_coef = scattering_coef_;
+  this -> absorption_coef = absorption_coef_;
+  this -> g = g_;
   this -> priority = priority_;
 
   this -> texture_height_diffuse = texture_height_diffuse_;

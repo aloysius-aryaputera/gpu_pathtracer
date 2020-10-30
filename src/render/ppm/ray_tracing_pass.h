@@ -97,14 +97,6 @@ void _get_hit_point_details(
         emittance = filter_lag * rec.object -> get_material(
         ) -> get_texture_emission(rec.uv_vector);
 	
-	//////////////////////////////////////////////////////////////////
-	// To be checked:
-	//////////////////////////////////////////////////////////////////
-        //rec.object -> get_material() -> check_next_path(
-        //  rec.coming_ray, rec.point, rec.normal, rec.uv_vector,
-        //  sss, material_list, material_list_length,
-        //  ref_2, rand_state
-        //);
 	ref_2 = ref;
 	pdf = pdf_lag;
         for (int idx = 0; idx < num_light_source_sampling; idx++) {
