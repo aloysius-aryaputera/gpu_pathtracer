@@ -31,12 +31,12 @@ void _get_hit_point_details(
 ) {
   
   hit_record rec_2, rec_3;
-  reflection_record ref_2, ref_3;
+  reflection_record ref_2; //ref_3;
   bool sss = false;
   Ray ray;
   Material* material_list[400];
   int material_list_length = 0, num_bounce = 0;
-  float factor, pdf_lag = 1;
+  float factor, pdf_lag = 1, transmittance;
   vec3 emittance = vec3(0.0, 0.0, 0.0), filter_lag = vec3(1.0, 1.0, 1.0);
   direct_radiance = vec3(0.0, 0.0, 0.0);
   vec3 add_direct_radiance;
@@ -101,6 +101,7 @@ void _get_hit_point_details(
 	pdf = pdf_lag;
         for (int idx = 0; idx < num_light_source_sampling; idx++) {
 	  factor = 1;
+	  transmittance = 1;
 
 	  change_ref_ray(
 	    rec, 
@@ -117,13 +118,27 @@ void _get_hit_point_details(
 	  ray = ref_2.ray;
 	  hit = traverse_bvh(geom_node_list[0], ray, rec_2);
 
+          while (
+	    hit && rec_2.object -> get_material() -> n_i < SMALL_DOUBLE &&
+	    rec_2.object -> get_material() -> scattering_coef >= 0 &&
+	    rec_2.object -> get_material() -> absorption_coef >= 0
+	  ) {
+	    if (dot(rec_2.normal, ray.dir) >= 0) {
+	      float ex_coef = rec_2.object -> get_material() -> absorption_coef + \
+	        rec_2.object -> get_material() -> scattering_coef;
+	      transmittance *= exp(-rec_2.t * ex_coef);
+	    }
+	    ray = Ray(rec_2.point, ray.dir);
+	    hit = traverse_bvh(geom_node_list[0], ray, rec_2);
+	  }
+
 	  if (hit) {
-	    rec_2.object -> get_material() -> check_next_path(
-	      rec_2.coming_ray, rec_2.point, rec_2.normal, rec_2.uv_vector,
-	      sss, material_list, material_list_length, ref_3, rand_state
-	    );
+	    //rec_2.object -> get_material() -> check_next_path(
+	    //  rec_2.coming_ray, rec_2.point, rec_2.normal, rec_2.uv_vector,
+	    //  sss, material_list, material_list_length, ref_3, rand_state
+	    //);
 	    add_direct_radiance = (
-	      filter_lag * ref_2.filter * clamp(0, .999999, factor)
+	      filter_lag * ref_2.filter * transmittance * clamp(0, .999999, factor)
 	    ) * rec_2.object -> get_material() -> get_texture_emission(
 	      rec_2.uv_vector
             );

@@ -6,7 +6,6 @@
 
 #include "../input/read_file_util.h"
 #include "../model/camera.h"
-#include "../model/data_structure/local_vector.h"
 #include "../model/geometry/triangle.h"
 #include "../model/material/material.h"
 #include "../model/object/object.h"

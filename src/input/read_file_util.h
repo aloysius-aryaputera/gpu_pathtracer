@@ -264,8 +264,8 @@ void _extract_single_material_data(
     *(t_r + idx) = 0;
     *(bm + idx) = 1;
 
-    *(scattering_coef + idx) = 0;
-    *(absorption_coef + idx) = 0;
+    *(scattering_coef + idx) = -1;
+    *(absorption_coef + idx) = -1;
     *(g + idx) = 0;
 
     *(material_priority + idx) = -1;
@@ -332,8 +332,8 @@ void _extract_single_material_data(
           *(t_r + idx) = 1;
 	  *(bm + idx) = 1;
 
-          *(scattering_coef + idx) = 0;
-          *(absorption_coef + idx) = 0;
+          *(scattering_coef + idx) = -1;
+          *(absorption_coef + idx) = -1;
           *(g + idx) = 0;
 
           *(material_priority + idx) = -1;

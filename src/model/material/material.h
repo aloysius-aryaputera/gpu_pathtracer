@@ -56,7 +56,6 @@ class Material {
     int texture_width_n_s, texture_height_n_s;
     int texture_width_bump, texture_height_bump;
     float n_s, bm;
-    float scattering_coef, absorption_coef, g;
     float *texture_r_diffuse, *texture_g_diffuse, *texture_b_diffuse;
     float *texture_r_specular, *texture_g_specular, *texture_b_specular;
     float *texture_r_emission, *texture_g_emission, *texture_b_emission;
@@ -112,6 +111,7 @@ class Material {
     vec3 emission;
     int priority;
     float n_i, path_length, t_r;
+    float scattering_coef, absorption_coef, g;
     bool sub_surface_scattering;
 };
 

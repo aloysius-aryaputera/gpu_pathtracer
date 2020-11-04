@@ -6,12 +6,28 @@
 
 #include "../../model/bvh/bvh.h"
 #include "../../model/bvh/bvh_traversal.h"
+#include "../../model/cartesian_system.h"
 #include "../../model/geometry/primitive.h"
 #include "../../model/material/material.h"
 #include "../../model/point/point.h"
 #include "../../model/ray/ray.h"
 #include "../../util/vector_util.h"
 #include "../material_list_operations.h"
+
+__device__ vec3 _get_new_scattering_direction(
+  vec3 current_dir, float g, curandState *rand_state
+) {
+  float cos_theta = henyey_greenstein_cos_theta(g, rand_state);
+  float sin_theta = powf(1 - powf(cos_theta, 2), .5);
+  float cot_theta = cos_theta / sin_theta;
+  CartesianSystem cart_sys = CartesianSystem(current_dir);
+  vec3 new_dir = get_random_unit_vector_disk(rand_state);
+  float new_dir_z = cot_theta * powf(
+    new_dir.x() * new_dir.x() + new_dir.y() * new_dir.y(), .5);
+  new_dir = vec3(new_dir.x(), new_dir.y(), new_dir_z);
+  new_dir.make_unit_vector();
+  return cart_sys.to_world_system(new_dir);
+}	
 
 __global__
 void gather_recorded_photons(

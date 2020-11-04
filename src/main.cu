@@ -19,7 +19,6 @@
 #include "model/bvh/bvh_building_pts.h"
 #include "model/bvh/bvh_traversal_photon.h"
 #include "model/camera.h"
-#include "model/data_structure/local_vector.h"
 #include "model/geometry/primitive.h"
 #include "model/geometry/triangle.h"
 #include "model/geometry/triangle_operations.h"
@@ -1321,23 +1320,6 @@ int main(int argc, char **argv) {
       printf("PPM Pass %d.\n", i);
 
       start = clock();
-      process = "Ray tracing pass";
-      print_start_process(process, start);
-      ray_tracing_pass<<<blocks, threads>>>(
-        hit_point_list, my_camera, rand_state_image, node_list, false, 
-        ppm_max_bounce, ppm_alpha, i,
-        num_target_geom[0],
-        target_geom_list,
-	target_node_list,
-        target_leaf_list,
-        pathtracing_sample_size,
-	ppm_radius_scaling_factor
-      );
-      checkCudaErrors(cudaGetLastError());
-      checkCudaErrors(cudaDeviceSynchronize());
-      print_end_process(process, start);
-
-      start = clock();
       process = "Photon pass";
       print_start_process(process, start);
       photon_pass<<<ppm_num_photon_per_pass, 1>>>(
@@ -1441,6 +1423,23 @@ int main(int argc, char **argv) {
       print_start_process(process, start);
       compute_node_bounding_boxes<<<max(1, num_recorded_photons[0]), 1>>>(
         photon_leaf_list, photon_node_list, num_recorded_photons[0]
+      );
+      checkCudaErrors(cudaGetLastError());
+      checkCudaErrors(cudaDeviceSynchronize());
+      print_end_process(process, start);
+
+      start = clock();
+      process = "Ray tracing pass";
+      print_start_process(process, start);
+      ray_tracing_pass<<<blocks, threads>>>(
+        hit_point_list, my_camera, rand_state_image, node_list, false, 
+        ppm_max_bounce, ppm_alpha, i,
+        num_target_geom[0],
+        target_geom_list,
+	target_node_list,
+        target_leaf_list,
+        pathtracing_sample_size,
+	ppm_radius_scaling_factor
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());

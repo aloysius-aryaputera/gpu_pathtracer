@@ -23,6 +23,7 @@ class Point {
     vec3 location, filter, normal, color, direction, prev_location;
     int object_idx;
     BoundingBox *bounding_box;
+    bool on_surface;
 };
 
 __device__ Point::Point(

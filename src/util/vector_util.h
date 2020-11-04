@@ -7,6 +7,7 @@
 #include "../model/vector_and_matrix/vec3.h"
 #include "../param.h"
 
+__device__ float henyey_greenstein_cos_theta(float g, curandState *rand_state);
 __device__ vec3 get_random_unit_vector_hemisphere_cos_pdf(
   curandState *rand_state);
 __device__ vec3 get_random_unit_vector_hemisphere(curandState *rand_state);
@@ -41,6 +42,16 @@ __device__ float _compute_reflection_sampling_pdf_2(
 __device__ float _compute_refraction_sampling_pdf_2(
   vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
 );
+
+__device__ float henyey_greenstein_cos_theta(float g, curandState *rand_state) {
+  float eta = curand_uniform(rand_state);
+  if (abs(g) < SMALL_DOUBLE) {
+    return 1 - (2 * eta);
+  } else {
+    return (-1 / abs(2 * g)) * (
+      1 + g * g - powf((1 - g * g) / (1 - g + 2 * g * eta), 2));
+  }
+}
 
 __device__ float _compute_reflection_sampling_pdf(
   vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
