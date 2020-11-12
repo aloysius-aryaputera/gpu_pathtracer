@@ -1146,7 +1146,7 @@ int main(int argc, char **argv) {
   
   } else if (render_mode == 2) {
     PPMHitPoint **hit_point_list;
-    Point **photon_list;
+    Point **photon_list, **surface_photon_list, **volume_photon_list;
     vec3 *image_dir, *image_indir, *image_photon;
 
     checkCudaErrors(cudaMallocManaged((void **)&image_dir, image_size));
@@ -1160,6 +1160,16 @@ int main(int argc, char **argv) {
     checkCudaErrors(
       cudaMallocManaged(
         (void **)&photon_list, ppm_num_photon_per_pass * sizeof(Point*)
+      )
+    );
+    checkCudaErrors(
+      cudaMallocManaged(
+        (void **)&surface_photon_list, ppm_num_photon_per_pass * sizeof(Point*)
+      )
+    );
+    checkCudaErrors(
+      cudaMallocManaged(
+        (void **)&volume_photon_list, ppm_num_photon_per_pass * sizeof(Point*)
       )
     );
 
@@ -1189,16 +1199,6 @@ int main(int argc, char **argv) {
         (void **)&average_hit_point_radius, sizeof(float)
       )
     );
-
-    //start = clock();
-    //process = "Compute hit point radius";
-    //print_start_process(process, start);
-    //compute_radius<<<blocks, threads>>>(
-    //  hit_point_list, my_camera, ppm_radius_scaling_factor
-    //);
-    //checkCudaErrors(cudaGetLastError());
-    //checkCudaErrors(cudaDeviceSynchronize());
-    //print_end_process(process, start);
 
     start = clock();
     process = "Compute average hit point radius";
@@ -1254,31 +1254,59 @@ int main(int argc, char **argv) {
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);
 
-    Node** photon_node_list, **photon_leaf_list;
+    Node **surface_photon_node_list, **surface_photon_leaf_list;
+    Node **volume_photon_node_list, **volume_photon_leaf_list;
+
     checkCudaErrors(cudaMallocManaged(
-      (void **)&photon_node_list, 
+      (void **)&surface_photon_node_list, 
       (ppm_num_photon_per_pass - 1) * sizeof(Node *)));
     checkCudaErrors(cudaMallocManaged(
-      (void **)&photon_leaf_list, ppm_num_photon_per_pass * sizeof(Node *)));
+      (void **)&surface_photon_leaf_list,
+      ppm_num_photon_per_pass * sizeof(Node *)));
+    checkCudaErrors(cudaMallocManaged(
+      (void **)&volume_photon_node_list, 
+      (ppm_num_photon_per_pass - 1) * sizeof(Node *)));
+    checkCudaErrors(cudaMallocManaged(
+      (void **)&volume_photon_leaf_list,
+      ppm_num_photon_per_pass * sizeof(Node *)));
+
     float *accummulated_target_geom_energy;
     checkCudaErrors(cudaMallocManaged(
       (void **)&accummulated_target_geom_energy, 
       num_target_geom[0] * sizeof(float)));
 
     start = clock();
-    process = "Init photon leaves";
+    process = "Init surface photon leaves";
     print_start_process(process, start);
     init_photon_leaves<<<ppm_num_photon_per_pass, 1>>>(
-      photon_leaf_list, ppm_num_photon_per_pass);
+      surface_photon_leaf_list, ppm_num_photon_per_pass);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);
 
     start = clock();
-    process = "Init photon nodes";
+    process = "Init surface photon nodes";
     print_start_process(process, start);
     init_photon_nodes<<<ppm_num_photon_per_pass, 1>>>(
-      photon_node_list, ppm_num_photon_per_pass);
+      surface_photon_node_list, ppm_num_photon_per_pass);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+
+    start = clock();
+    process = "Init volume photon leaves";
+    print_start_process(process, start);
+    init_photon_leaves<<<ppm_num_photon_per_pass, 1>>>(
+      volume_photon_leaf_list, ppm_num_photon_per_pass);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    print_end_process(process, start);
+
+    start = clock();
+    process = "Init volume photon nodes";
+    print_start_process(process, start);
+    init_photon_nodes<<<ppm_num_photon_per_pass, 1>>>(
+      volume_photon_node_list, ppm_num_photon_per_pass);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);
@@ -1297,9 +1325,11 @@ int main(int argc, char **argv) {
     checkCudaErrors(cudaMallocManaged(
       (void **)&rand_state_ppm, rand_state_ppm_size));
 
-    int *num_recorded_photons;
+    int *num_surface_photons, *num_volume_photons;
     checkCudaErrors(cudaMallocManaged(
-      (void **)&num_recorded_photons, sizeof(int)));
+      (void **)&num_surface_photons, sizeof(int)));
+    checkCudaErrors(cudaMallocManaged(
+      (void **)&num_volume_photons, sizeof(int)));
 
     start = clock();
     process = "Generating curand state for photon shooting";
@@ -1310,9 +1340,13 @@ int main(int argc, char **argv) {
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);
 
-    unsigned int *photon_morton_code_list;
+    unsigned int *surface_photon_morton_code_list;
+    unsigned int *volume_photon_morton_code_list;
     checkCudaErrors(cudaMallocManaged(
-      (void **)&photon_morton_code_list,
+      (void **)&surface_photon_morton_code_list,
+      max(1, ppm_num_photon_per_pass) * sizeof(unsigned int)));
+    checkCudaErrors(cudaMallocManaged(
+      (void **)&volume_photon_morton_code_list,
       max(1, ppm_num_photon_per_pass) * sizeof(unsigned int)));
 
     for (int i = 0; i < ppm_num_pass; i++) {
@@ -1334,12 +1368,11 @@ int main(int argc, char **argv) {
       process = "Gather recorded photon";
       print_start_process(process, start);
       gather_recorded_photons<<<1, 1>>>(
-        photon_list, ppm_num_photon_per_pass, num_recorded_photons);
+        photon_list, surface_photon_list, volume_photon_list,
+	ppm_num_photon_per_pass, num_surface_photons, num_volume_photons);
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
-
-      printf("Num recorded photons after %d passes = %d\n", i + 1, num_recorded_photons[0]);
 
       start = clock();
       process = "Clearing image";
@@ -1349,22 +1382,24 @@ int main(int argc, char **argv) {
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
 
-      start = clock();
-      process = "Creating photon image";
-      print_start_process(process, start);
-      create_point_image<<<num_recorded_photons[0] / tx + 1, tx>>>(
-        image_photon, my_camera, photon_list, num_recorded_photons[0]
-      );
-      checkCudaErrors(cudaGetLastError());
-      checkCudaErrors(cudaDeviceSynchronize());
-      print_end_process(process, start);
+      //start = clock();
+      //process = "Creating photon image";
+      //print_start_process(process, start);
+      //create_point_image<<<num_recorded_photons[0] / tx + 1, tx>>>(
+      //  image_photon, my_camera, photon_list, num_recorded_photons[0]
+      //);
+      //checkCudaErrors(cudaGetLastError());
+      //checkCudaErrors(cudaDeviceSynchronize());
+      //print_end_process(process, start);
+
+      // Building the tree of surface photons
 
       checkCudaErrors(cudaDeviceSynchronize());
       start = clock();
       process = "Computing photon morton codes";
       print_start_process(process, start);
-      compute_photon_morton_code_batch<<<num_recorded_photons[0], 1>>>(
-        photon_list, num_recorded_photons[0], world_bounding_box);
+      compute_photon_morton_code_batch<<<num_surface_photons[0], 1>>>(
+        surface_photon_list, num_surface_photons[0], world_bounding_box);
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
@@ -1373,7 +1408,8 @@ int main(int argc, char **argv) {
       start = clock();
       print_start_process(process, start);
       thrust::stable_sort(
-        thrust::device, photon_list, photon_list + num_recorded_photons[0],
+        thrust::device, surface_photon_list, 
+	surface_photon_list + num_surface_photons[0],
         sort_points);
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
@@ -1383,7 +1419,7 @@ int main(int argc, char **argv) {
       process = "Reset photon nodes";
       print_start_process(process, start);
       reset_photon_nodes<<<ppm_num_photon_per_pass, 1>>>(
-        photon_node_list, ppm_num_photon_per_pass);
+        surface_photon_node_list, ppm_num_photon_per_pass);
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
@@ -1391,8 +1427,9 @@ int main(int argc, char **argv) {
       process = "Assign photons to leaves";
       start = clock();
       print_start_process(process, start);
-      assign_photons<<<max(1, num_recorded_photons[0]), 1>>>(
-        photon_leaf_list, photon_list, num_recorded_photons[0]);
+      assign_photons<<<max(1, num_surface_photons[0]), 1>>>(
+        surface_photon_leaf_list, surface_photon_list, 
+	num_surface_photons[0]);
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
@@ -1400,8 +1437,9 @@ int main(int argc, char **argv) {
       start = clock();
       process = "Extracting the morton codes of the photons";
       print_start_process(process, start);
-      extract_sss_morton_code_list<<<max(1, num_recorded_photons[0]), 1>>>(
-        photon_list, photon_morton_code_list, num_recorded_photons[0]
+      extract_sss_morton_code_list<<<max(1, num_surface_photons[0]), 1>>>(
+        surface_photon_list, surface_photon_morton_code_list, 
+	num_surface_photons[0]
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
@@ -1410,9 +1448,9 @@ int main(int argc, char **argv) {
       process = "Setting photon node relationship";
       start = clock();
       print_start_process(process, start);
-      set_photon_node_relationship<<<max(1, num_recorded_photons[0]), 1>>>(
-        photon_node_list, photon_leaf_list, photon_morton_code_list, 
-        num_recorded_photons[0]
+      set_photon_node_relationship<<<max(1, num_surface_photons[0]), 1>>>(
+        surface_photon_node_list, surface_photon_leaf_list, 
+	surface_photon_morton_code_list, num_surface_photons[0]
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
@@ -1421,8 +1459,9 @@ int main(int argc, char **argv) {
       start = clock();
       process = "Compute node bounding boxes";
       print_start_process(process, start);
-      compute_node_bounding_boxes<<<max(1, num_recorded_photons[0]), 1>>>(
-        photon_leaf_list, photon_node_list, num_recorded_photons[0]
+      compute_node_bounding_boxes<<<max(1, num_surface_photons[0]), 1>>>(
+        surface_photon_leaf_list, surface_photon_node_list, 
+	num_surface_photons[0]
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
@@ -1449,7 +1488,7 @@ int main(int argc, char **argv) {
       start = clock();
       print_start_process(process, start);
       update_hit_point_parameters<<<num_pixels, 1>>>(
-        i + 1, photon_node_list, node_list, hit_point_list, num_pixels, 
+        i + 1, surface_photon_node_list, node_list, hit_point_list, num_pixels, 
 	ppm_num_photon_per_pass
       );
       checkCudaErrors(cudaGetLastError());

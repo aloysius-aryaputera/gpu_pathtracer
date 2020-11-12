@@ -19,12 +19,17 @@ class Point {
     __device__ void assign_location(vec3 location_);
     __device__ void assign_prev_location(vec3 location_);
     __device__ void assign_direction(vec3 direction_);
+    __device__ void declare_on_surface();
 
     vec3 location, filter, normal, color, direction, prev_location;
     int object_idx;
     BoundingBox *bounding_box;
     bool on_surface;
 };
+
+__device__ void Point::declare_on_surface() {
+  this -> on_surface = true;
+}
 
 __device__ Point::Point(
   vec3 location_, vec3 filter_, vec3 normal_, int object_idx_
@@ -33,6 +38,7 @@ __device__ Point::Point(
   this -> location = location_;
   this -> filter = filter_;
   this -> normal = normal_;
+  this -> on_surface = false;
   this -> _create_bounding_box();
 }
 

@@ -7,6 +7,7 @@
 #include "../../model/bvh/bvh.h"
 #include "../../model/bvh/bvh_traversal.h"
 #include "../../model/camera.h"
+#include "../../model/grid/bounding_cylinder.h"
 #include "../../model/material/material.h"
 #include "../../model/point/ppm_hit_point.h"
 #include "../../model/ray/ray.h"
@@ -120,13 +121,11 @@ void _get_hit_point_details(
 
           while (
 	    hit && rec_2.object -> get_material() -> n_i < SMALL_DOUBLE &&
-	    rec_2.object -> get_material() -> scattering_coef >= 0 &&
-	    rec_2.object -> get_material() -> absorption_coef >= 0
+	    rec_2.object -> get_material() -> extinction_coef >= 0
 	  ) {
 	    if (dot(rec_2.normal, ray.dir) >= 0) {
-	      float ex_coef = rec_2.object -> get_material() -> absorption_coef + \
-	        rec_2.object -> get_material() -> scattering_coef;
-	      transmittance *= exp(-rec_2.t * ex_coef);
+	      transmittance *= exp(
+		-rec_2.t * rec_2.object -> get_material() -> extinction_coef);
 	    }
 	    ray = Ray(rec_2.point, ray.dir);
 	    hit = traverse_bvh(geom_node_list[0], ray, rec_2);
@@ -147,7 +146,7 @@ void _get_hit_point_details(
 	}
         direct_radiance /= max(1.0, float(num_light_source_sampling));	
 	direct_radiance += emittance;
-
+	return;
       }
 
       if (!(ref.diffuse)) {

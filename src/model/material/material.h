@@ -10,17 +10,7 @@
 #include "../ray/ray_operations.h"
 #include "../vector_and_matrix/vec3.h"
 
-struct reflection_record
-{
-  Ray ray;
-  vec3 k;
-  vec3 filter, filter_2;
-  vec3 perfect_reflection_dir;
-  float pdf;
-  bool diffuse, reflected, refracted, false_hit, entering;
-
-  float n;
-};
+struct reflection_record;
 
 __device__ reflection_record _get_false_hit_parameters(
   vec3 hit_point, vec3 v_in, vec3 normal
@@ -33,8 +23,11 @@ class Material {
       float* texture_b, int texture_height, int texture_width
     );
     __device__ float _get_texture_n_s(vec3 uv_vector);
-    __device__ reflection_record _refract(
-      vec3 hit_point, vec3 v_in, vec3 normal,
+    __device__ void _refract(
+      reflection_record &ref,
+      vec3 hit_point, 
+      vec3 v_in, 
+      vec3 normal,
       vec3 uv_vector,
       bool &sss,
       Material *highest_prioritised_material,
@@ -111,8 +104,20 @@ class Material {
     vec3 emission;
     int priority;
     float n_i, path_length, t_r;
-    float scattering_coef, absorption_coef, g;
+    float scattering_coef, absorption_coef, extinction_coef, g;
+    float scattering_prob;
     bool sub_surface_scattering;
+};
+
+struct reflection_record
+{
+  Ray ray;
+  vec3 k;
+  vec3 filter, filter_2;
+  vec3 perfect_reflection_dir;
+  float pdf, n;
+  bool diffuse, reflected, refracted, false_hit, entering;
+  Material *next_material;
 };
 
 __device__ int get_material_priority(Material* material) {
@@ -182,7 +187,8 @@ __device__ bool Material::_check_if_false_hit(
   }
 }
 
-__device__ reflection_record Material::_refract(
+__device__ void Material::_refract(
+  reflection_record &ref,
   vec3 hit_point, vec3 v_in, vec3 normal,
   vec3 uv_vector,
   bool &sss,
@@ -191,7 +197,7 @@ __device__ reflection_record Material::_refract(
   curandState *rand_state,
   bool write=false
 ) {
-  reflection_record ref;
+  //reflection_record ref;
   float random_number = curand_uniform(&rand_state[0]);
 
   float highest_prioritised_material_ref_idx = get_material_refraction_index(
@@ -234,6 +240,7 @@ __device__ reflection_record Material::_refract(
       ref.refracted = true;
       ref.false_hit = false;
       ref.entering = true;
+      ref.next_material = this;
     } else {
       v_out = reflect(v_in, normal);
       v_out.make_unit_vector();
@@ -244,6 +251,7 @@ __device__ reflection_record Material::_refract(
       ref.refracted = false;
       ref.false_hit = false;
       ref.entering = false;
+      ref.next_material = highest_prioritised_material;
     }
   } else {
 
@@ -265,7 +273,7 @@ __device__ reflection_record Material::_refract(
       ref.refracted = false;
       ref.false_hit = false;
       ref.entering = false;
-
+      ref.next_material = this;
     } else {
       vec3 v_in_perpendicular = cos_theta_1 * normal;
       vec3 v_in_parallel = v_in - v_in_perpendicular;
@@ -289,6 +297,7 @@ __device__ reflection_record Material::_refract(
       ref.refracted = true;
       ref.false_hit = false;
       ref.entering = false;
+      ref.next_material = second_highest_prioritised_material;
     }
   }
 
@@ -306,7 +315,7 @@ __device__ reflection_record Material::_refract(
   );
   ref.pdf = sampling_pdf * M_PI / scattering_pdf; 
 
-  return ref;
+  //return ref;
 }
 
 __host__ __device__ Material::Material(
@@ -362,7 +371,9 @@ __host__ __device__ Material::Material(
   this -> bm = bm_;
   this -> scattering_coef = scattering_coef_;
   this -> absorption_coef = absorption_coef_;
+  this -> extinction_coef = scattering_coef_ + absorption_coef_;
   this -> g = g_;
+  this -> scattering_prob = this -> scattering_coef / this -> extinction_coef;
   this -> priority = priority_;
 
   this -> texture_height_diffuse = texture_height_diffuse_;
@@ -455,8 +466,11 @@ __device__ void Material::check_next_path(
       second_highest_prioritised_material -> t_r > 0
     )
   ) {
-    ref = this -> _refract(
-      hit_point, coming_ray.dir, normal,
+    this -> _refract(
+      ref,
+      hit_point, 
+      coming_ray.dir, 
+      normal,
       uv_vector,
       sss,
       highest_prioritised_material,
