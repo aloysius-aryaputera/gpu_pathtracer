@@ -13,6 +13,7 @@
 #include "../../model/ray/ray.h"
 #include "../../model/vector_and_matrix/vec3.h"
 #include "../material_list_operations.h"
+#include "common.h"
 
 __device__
 void _get_hit_point_details(
@@ -28,19 +29,20 @@ void _get_hit_point_details(
   Node **target_leaf_list,
   int num_light_source_sampling,
   curandState *rand_state,
-  int pixel_idx 
+  int pixel_idx,
+  bool init
 ) {
   
   hit_record rec_2, rec_3;
-  reflection_record ref_2; //ref_3;
-  bool sss = false;
+  reflection_record ref_2;
+  bool sss = false, in_medium = false, prev_in_medium = false;
   Ray ray;
   Material* material_list[400];
   int material_list_length = 0, num_bounce = 0;
   float factor, pdf_lag = 1, transmittance;
   vec3 emittance = vec3(0.0, 0.0, 0.0), filter_lag = vec3(1.0, 1.0, 1.0);
   direct_radiance = vec3(0.0, 0.0, 0.0);
-  vec3 add_direct_radiance;
+  vec3 add_direct_radiance, prev_hit_point, start_point;
   bool write;
 
   max_bounce = 64;
@@ -86,12 +88,22 @@ void _get_hit_point_details(
         remove_a_material(
           material_list, material_list_length, rec.object -> get_material()
         );
+      
+      in_medium = check_if_entering_medium(rec, ref, in_medium);
      
       if (!(ref.false_hit)) {
 	filter_lag = filter;
         filter *= ref.filter_2;
 	pdf_lag = pdf;
 	pdf *= ref.pdf;
+      }
+
+      if (!(ref.false_hit) && prev_in_medium && !init) {
+        float l = compute_distance(prev_hit_point, rec.point);
+
+	BoundingCylinder cylinder = BoundingCylinder(
+	  prev_hit_point, rec.coming_ray.dir, 1, l
+	);
       }
 
       if (ref.diffuse) {
@@ -124,8 +136,10 @@ void _get_hit_point_details(
 	    rec_2.object -> get_material() -> extinction_coef >= 0
 	  ) {
 	    if (dot(rec_2.normal, ray.dir) >= 0) {
-	      transmittance *= exp(
-		-rec_2.t * rec_2.object -> get_material() -> extinction_coef);
+	      //transmittance *= exp(
+	      //-rec_2.t * rec_2.object -> get_material() -> extinction_coef);
+	      transmittance *= rec_2.object -> get_material(
+	      ) -> get_transmittance(rec_2.t);
 	    }
 	    ray = Ray(rec_2.point, ray.dir);
 	    hit = traverse_bvh(geom_node_list[0], ray, rec_2);
@@ -149,10 +163,16 @@ void _get_hit_point_details(
 	return;
       }
 
-      if (!(ref.diffuse)) {
-        ray = ref.ray;
-        hit = traverse_bvh(geom_node_list[0], ray, rec);
+      if (!(ref.false_hit)) {
+        prev_in_medium = in_medium;
+	prev_hit_point = rec.point;
       }
+
+      //if (!(ref.diffuse)) {
+      ray = ref.ray;
+      hit = traverse_bvh(geom_node_list[0], ray, rec);
+      //}
+
     }
   }
 }
@@ -169,7 +189,7 @@ void compute_average_radius(
   int num_valid = 0;
   average_radius[0] = 0;
   for (int idx = 0; idx < num_hit_points; idx++) {
-    current_radius = hit_point_list[idx] -> current_photon_radius;
+    current_radius = hit_point_list[idx] -> surface_radius;
     if (!isinf(current_radius)) {
       num_valid++;
       average_radius[0] += current_radius;
@@ -189,7 +209,7 @@ void compute_max_radius(
   float current_radius;
   max_radius[0] = 0;
   for (int idx = 0; idx < num_hit_points; idx++) {
-    current_radius = hit_point_list[idx] -> current_photon_radius;
+    current_radius = hit_point_list[idx] -> surface_radius;
     if (!isinf(current_radius) && max_radius[0] < current_radius) {
       max_radius[0] = current_radius;
     }
@@ -215,43 +235,43 @@ void assign_radius_to_invalid_hit_points(
   hit_point_list[i] -> update_radius(new_radius);
 }
 
-__global__
-void compute_radius(
-  PPMHitPoint** hit_point_list, Camera **camera, float radius_scaling_factor
-) {
-  int j = threadIdx.x + blockIdx.x * blockDim.x;
-  int i = threadIdx.y + blockIdx.y * blockDim.y;
-
-  if (
-    (j >= camera[0] -> width - 1) || 
-    (i >= camera[0] -> height - 1) || 
-    (i == 0) || (j == 0)
-  ) return;
-
-  int pixel_index = i * (camera[0] -> width) + j;
-  int pixel_index_2 = (i - 1) * (camera[0] -> width) + j;
-  int pixel_index_3 = (i + 1) * (camera[0] -> width) + j;
-  int pixel_index_4 = i * (camera[0] -> width) + j + 1;
-  int pixel_index_5 = i * (camera[0] -> width) + j - 1;
-
-  float dist_1 = compute_distance(
-    hit_point_list[pixel_index] -> location, 
-    hit_point_list[pixel_index_2] -> location);
-  float dist_2 = compute_distance(
-    hit_point_list[pixel_index] -> location, 
-    hit_point_list[pixel_index_3] -> location);
-  float dist_3 = compute_distance(
-    hit_point_list[pixel_index] -> location, 
-    hit_point_list[pixel_index_4] -> location);
-  float dist_4 = compute_distance(
-    hit_point_list[pixel_index] -> location, 
-    hit_point_list[pixel_index_5] -> location);
-
-  float radius = radius_scaling_factor * (
-    dist_1 + dist_2 + dist_3 + dist_4) / 4;
-  hit_point_list[pixel_index] -> update_radius(radius);
-  
-}
+//__global__
+//void compute_radius(
+//  PPMHitPoint** hit_point_list, Camera **camera, float radius_scaling_factor
+//) {
+//  int j = threadIdx.x + blockIdx.x * blockDim.x;
+//  int i = threadIdx.y + blockIdx.y * blockDim.y;
+//
+//  if (
+//    (j >= camera[0] -> width - 1) || 
+//    (i >= camera[0] -> height - 1) || 
+//    (i == 0) || (j == 0)
+//  ) return;
+//
+//  int pixel_index = i * (camera[0] -> width) + j;
+//  int pixel_index_2 = (i - 1) * (camera[0] -> width) + j;
+//  int pixel_index_3 = (i + 1) * (camera[0] -> width) + j;
+//  int pixel_index_4 = i * (camera[0] -> width) + j + 1;
+//  int pixel_index_5 = i * (camera[0] -> width) + j - 1;
+//
+//  float dist_1 = compute_distance(
+//    hit_point_list[pixel_index] -> location, 
+//    hit_point_list[pixel_index_2] -> location);
+//  float dist_2 = compute_distance(
+//    hit_point_list[pixel_index] -> location, 
+//    hit_point_list[pixel_index_3] -> location);
+//  float dist_3 = compute_distance(
+//    hit_point_list[pixel_index] -> location, 
+//    hit_point_list[pixel_index_4] -> location);
+//  float dist_4 = compute_distance(
+//    hit_point_list[pixel_index] -> location, 
+//    hit_point_list[pixel_index_5] -> location);
+//
+//  float radius = radius_scaling_factor * (
+//    dist_1 + dist_2 + dist_3 + dist_4) / 4;
+//  hit_point_list[pixel_index] -> update_radius(radius);
+//  
+//}
 
 __global__
 void ray_tracing_pass(
@@ -286,23 +306,20 @@ void ray_tracing_pass(
 
   if (init) {
     radius = INFINITY;
-    hit_point_list[pixel_index] = new PPMHitPoint(
-     vec3(INFINITY, INFINITY, INFINITY), radius, filter, vec3(0, 0, 1),
-     ppm_alpha  
-    ); 
+    hit_point_list[pixel_index] = new PPMHitPoint(ppm_alpha); 
   } else {
     main_camera_height_offset = curand_uniform(&local_rand_state);
     main_camera_width_offset = curand_uniform(&local_rand_state);
   }
 
-  radius = hit_point_list[pixel_index] -> current_photon_radius;
+  radius = hit_point_list[pixel_index] -> surface_radius;
 
   _get_hit_point_details(
     ref, rec, filter, pdf, direct_radiance,
     camera, j, i, geom_node_list, max_bounce, main_camera_width_offset, 
     main_camera_height_offset, hit, target_geom_list, num_target_geom, 
     target_node_list, target_leaf_list, sample_size, &local_rand_state, 
-    pixel_index
+    pixel_index, init
   );
 
   if (init) {
@@ -312,7 +329,7 @@ void ray_tracing_pass(
         camera, j, i, geom_node_list, max_bounce, 
         camera_width_offset[idx], camera_height_offset[idx], hit_2,
         target_geom_list, num_target_geom, target_node_list, target_leaf_list,
-        0, &local_rand_state, pixel_index
+        0, &local_rand_state, pixel_index, init
       );
       if (hit_2 && ref_2.diffuse) {
         hit_loc[idx] = rec_2.point;

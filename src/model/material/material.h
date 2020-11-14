@@ -100,6 +100,7 @@ class Material {
     __device__ vec3 get_texture_diffuse(vec3 uv_vector);
     __device__ vec3 get_texture_bump(vec3 uv_vector);
     __device__ vec3 get_texture_specular(vec3 uv_vector);
+    __device__ float get_transmittance(float t);
 
     vec3 emission;
     int priority;
@@ -160,6 +161,10 @@ __device__ void find_highest_prioritised_materials(
       second_highest_prioritised_material = material_list[idx];
     }
   }
+}
+
+__device__ float Material::get_transmittance(float t) {
+  return exp(-t * this -> extinction_coef); 
 }
 
 __device__ bool Material::_check_if_false_hit(

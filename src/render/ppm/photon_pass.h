@@ -13,6 +13,7 @@
 #include "../../model/ray/ray.h"
 #include "../../util/vector_util.h"
 #include "../material_list_operations.h"
+#include "common.h"
 
 __device__ vec3 _get_new_scattering_direction(
   vec3 current_dir, float g, curandState *rand_state
@@ -122,18 +123,6 @@ __device__ float _get_propagation_distance(
   return - logf(random_number) / extinction_coef;
 }
 
-__device__ bool _check_if_entering_medium(
-  hit_record rec, reflection_record ref, bool in_medium
-) {
-  return (
-    !(ref.false_hit) &&
-    ref.next_material != nullptr && 
-    ref.next_material -> extinction_coef > 0
-  ) || (
-    ref.false_hit && in_medium
-  );
-}
-
 __global__
 void photon_pass(
   Primitive **target_geom_list, Node **geom_node_list,
@@ -147,7 +136,6 @@ void photon_pass(
   if (i >= num_photons) return;
 
   photon_list[i] -> assign_location(vec3(INFINITY, INFINITY, INFINITY));
-
 
   vec3 filter, light_source_color, tex_specular, tex_diffuse, prev_location;
   vec3 new_scattering_dir;
@@ -212,7 +200,7 @@ void photon_pass(
           material_list, material_list_length, rec.object -> get_material()
         );
 
-      in_medium = _check_if_entering_medium(rec, ref, in_medium);
+      in_medium = check_if_entering_medium(rec, ref, in_medium);
       //printf("in_medium = %d\n", in_medium);
       //in_medium = false;    
  

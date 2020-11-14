@@ -1394,78 +1394,155 @@ int main(int argc, char **argv) {
 
       // Building the tree of surface photons
 
-      checkCudaErrors(cudaDeviceSynchronize());
-      start = clock();
-      process = "Computing photon morton codes";
-      print_start_process(process, start);
-      compute_photon_morton_code_batch<<<num_surface_photons[0], 1>>>(
-        surface_photon_list, num_surface_photons[0], world_bounding_box);
-      checkCudaErrors(cudaGetLastError());
-      checkCudaErrors(cudaDeviceSynchronize());
-      print_end_process(process, start);
+      if (num_surface_photons[0] > 0) {
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	start = clock();
+      	process = "Computing photon morton codes";
+      	print_start_process(process, start);
+      	compute_photon_morton_code_batch<<<num_surface_photons[0], 1>>>(
+      	  surface_photon_list, num_surface_photons[0], world_bounding_box);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
 
-      process = "Sorting the photons based on morton code";
-      start = clock();
-      print_start_process(process, start);
-      thrust::stable_sort(
-        thrust::device, surface_photon_list, 
-	surface_photon_list + num_surface_photons[0],
-        sort_points);
-      checkCudaErrors(cudaGetLastError());
-      checkCudaErrors(cudaDeviceSynchronize());
-      print_end_process(process, start);
+      	process = "Sorting the photons based on morton code";
+      	start = clock();
+      	print_start_process(process, start);
+      	thrust::stable_sort(
+      	  thrust::device, surface_photon_list, 
+      	  surface_photon_list + num_surface_photons[0],
+      	  sort_points);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
 
-      start = clock();
-      process = "Reset photon nodes";
-      print_start_process(process, start);
-      reset_photon_nodes<<<ppm_num_photon_per_pass, 1>>>(
-        surface_photon_node_list, ppm_num_photon_per_pass);
-      checkCudaErrors(cudaGetLastError());
-      checkCudaErrors(cudaDeviceSynchronize());
-      print_end_process(process, start);
+      	start = clock();
+      	process = "Reset photon nodes";
+      	print_start_process(process, start);
+      	reset_photon_nodes<<<ppm_num_photon_per_pass, 1>>>(
+      	  surface_photon_node_list, ppm_num_photon_per_pass);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
 
-      process = "Assign photons to leaves";
-      start = clock();
-      print_start_process(process, start);
-      assign_photons<<<max(1, num_surface_photons[0]), 1>>>(
-        surface_photon_leaf_list, surface_photon_list, 
-	num_surface_photons[0]);
-      checkCudaErrors(cudaGetLastError());
-      checkCudaErrors(cudaDeviceSynchronize());
-      print_end_process(process, start);
+      	process = "Assign photons to leaves";
+      	start = clock();
+      	print_start_process(process, start);
+      	assign_photons<<<max(1, num_surface_photons[0]), 1>>>(
+      	  surface_photon_leaf_list, surface_photon_list, 
+      	  num_surface_photons[0]);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
 
-      start = clock();
-      process = "Extracting the morton codes of the photons";
-      print_start_process(process, start);
-      extract_sss_morton_code_list<<<max(1, num_surface_photons[0]), 1>>>(
-        surface_photon_list, surface_photon_morton_code_list, 
-	num_surface_photons[0]
-      );
-      checkCudaErrors(cudaGetLastError());
-      checkCudaErrors(cudaDeviceSynchronize());
-      print_end_process(process, start);
+      	start = clock();
+      	process = "Extracting the morton codes of the photons";
+      	print_start_process(process, start);
+      	extract_sss_morton_code_list<<<max(1, num_surface_photons[0]), 1>>>(
+      	  surface_photon_list, surface_photon_morton_code_list, 
+      	  num_surface_photons[0]
+      	);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
 
-      process = "Setting photon node relationship";
-      start = clock();
-      print_start_process(process, start);
-      set_photon_node_relationship<<<max(1, num_surface_photons[0]), 1>>>(
-        surface_photon_node_list, surface_photon_leaf_list, 
-	surface_photon_morton_code_list, num_surface_photons[0]
-      );
-      checkCudaErrors(cudaGetLastError());
-      checkCudaErrors(cudaDeviceSynchronize());
-      print_end_process(process, start);
+      	process = "Setting photon node relationship";
+      	start = clock();
+      	print_start_process(process, start);
+      	set_photon_node_relationship<<<max(1, num_surface_photons[0]), 1>>>(
+      	  surface_photon_node_list, surface_photon_leaf_list, 
+      	  surface_photon_morton_code_list, num_surface_photons[0]
+      	);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
 
-      start = clock();
-      process = "Compute node bounding boxes";
-      print_start_process(process, start);
-      compute_node_bounding_boxes<<<max(1, num_surface_photons[0]), 1>>>(
-        surface_photon_leaf_list, surface_photon_node_list, 
-	num_surface_photons[0]
-      );
-      checkCudaErrors(cudaGetLastError());
-      checkCudaErrors(cudaDeviceSynchronize());
-      print_end_process(process, start);
+      	start = clock();
+      	process = "Compute node bounding boxes";
+      	print_start_process(process, start);
+      	compute_node_bounding_boxes<<<max(1, num_surface_photons[0]), 1>>>(
+      	  surface_photon_leaf_list, surface_photon_node_list, 
+      	  num_surface_photons[0]
+      	);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
+      }
+
+      if (num_volume_photons[0] > 0) {
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	start = clock();
+      	process = "Computing photon morton codes";
+      	print_start_process(process, start);
+      	compute_photon_morton_code_batch<<<num_volume_photons[0], 1>>>(
+      	  volume_photon_list, num_volume_photons[0], world_bounding_box);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
+
+      	process = "Sorting the photons based on morton code";
+      	start = clock();
+      	print_start_process(process, start);
+      	thrust::stable_sort(
+      	  thrust::device, volume_photon_list, 
+      	  volume_photon_list + num_volume_photons[0],
+      	  sort_points);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
+
+      	start = clock();
+      	process = "Reset photon nodes";
+      	print_start_process(process, start);
+      	reset_photon_nodes<<<ppm_num_photon_per_pass, 1>>>(
+      	  volume_photon_node_list, ppm_num_photon_per_pass);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
+
+      	process = "Assign photons to leaves";
+      	start = clock();
+      	print_start_process(process, start);
+      	assign_photons<<<max(1, num_volume_photons[0]), 1>>>(
+      	  volume_photon_leaf_list, volume_photon_list, 
+      	  num_volume_photons[0]);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
+
+      	start = clock();
+      	process = "Extracting the morton codes of the photons";
+      	print_start_process(process, start);
+      	extract_sss_morton_code_list<<<max(1, num_volume_photons[0]), 1>>>(
+      	  volume_photon_list, volume_photon_morton_code_list, 
+      	  num_volume_photons[0]
+      	);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
+
+      	process = "Setting photon node relationship";
+      	start = clock();
+      	print_start_process(process, start);
+      	set_photon_node_relationship<<<max(1, num_volume_photons[0]), 1>>>(
+      	  volume_photon_node_list, volume_photon_leaf_list, 
+      	  volume_photon_morton_code_list, num_volume_photons[0]
+      	);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
+
+      	start = clock();
+      	process = "Compute node bounding spheres";
+      	print_start_process(process, start);
+      	compute_node_bounding_spheres<<<max(1, num_volume_photons[0]), 1>>>(
+      	  volume_photon_leaf_list, volume_photon_node_list, 
+      	  num_volume_photons[0]
+      	);
+      	checkCudaErrors(cudaGetLastError());
+      	checkCudaErrors(cudaDeviceSynchronize());
+      	print_end_process(process, start);
+      }
 
       start = clock();
       process = "Ray tracing pass";

@@ -188,27 +188,30 @@ __device__ BoundingBox::BoundingBox(
   float x_min_, float x_max_, float y_min_, float y_max_, float z_min_,
   float z_max_
 ) {
-  this -> x_min = x_min_;
-  this -> x_max = x_max_;
-  this -> y_min = y_min_;
-  this -> y_max = y_max_;
-  this -> z_min = z_min_;
-  this -> z_max = z_max_;
 
-  this -> x_center = 0.5 * (this -> x_min + this -> x_max);
-  this -> y_center = 0.5 * (this -> y_min + this -> y_max);
-  this -> z_center = 0.5 * (this -> z_min + this -> z_max);
-	this -> center = vec3(x_center, y_center, z_center);
+  this -> initialize(x_min_, x_max_, y_min_, y_max_, z_min_, z_max_);
 
-  this -> length_x = this -> x_max - this -> x_min;
-  this -> length_y = this -> y_max - this -> y_min;
-  this -> length_z = this -> z_max - this -> z_min;
+  //this -> x_min = x_min_;
+  //this -> x_max = x_max_;
+  //this -> y_min = y_min_;
+  //this -> y_max = y_max_;
+  //this -> z_min = z_min_;
+  //this -> z_max = z_max_;
 
-  this -> tolerance_x = max(this -> length_x / 100, SMALL_DOUBLE);
-  this -> tolerance_y = max(this -> length_y / 100, SMALL_DOUBLE);
-  this -> tolerance_z = max(this -> length_z / 100, SMALL_DOUBLE);
+  //this -> x_center = 0.5 * (this -> x_min + this -> x_max);
+  //this -> y_center = 0.5 * (this -> y_min + this -> y_max);
+  //this -> z_center = 0.5 * (this -> z_min + this -> z_max);
+  //this -> center = vec3(x_center, y_center, z_center);
 
-  this -> initialized = true;
+  //this -> length_x = this -> x_max - this -> x_min;
+  //this -> length_y = this -> y_max - this -> y_min;
+  //this -> length_z = this -> z_max - this -> z_min;
+
+  //this -> tolerance_x = max(this -> length_x / 100, SMALL_DOUBLE);
+  //this -> tolerance_y = max(this -> length_y / 100, SMALL_DOUBLE);
+  //this -> tolerance_z = max(this -> length_z / 100, SMALL_DOUBLE);
+
+  //this -> initialized = true;
 }
 
 __device__ void BoundingBox::_compute_t_x_range(

@@ -1,6 +1,6 @@
-//File: bounding_sphere.h
-#ifndef BOUNDING_SPHERE_H
-#define BOUNDING_SPHERE_H
+//File: bounding_cylinder.h
+#ifndef BOUNDING_CYLINDER_H
+#define BOUNDING_CYLINDER_H
 
 #include "../ray/ray.h"
 #include "../vector_and_matrix/vec3.h"
@@ -8,18 +8,28 @@
 
 class BoundingCylinder {
   public:
+    __device__ BoundingCylinder() {}
     __device__ BoundingCylinder(
       vec3 start, vec3 dir, float l_, float r_);
+    __device__ void assign_parameters(
+      vec3 start, vec3 dir, float l_, float r_);
     __device__ bool intersect(BoundingSphere* sphere);
-    __device__ bool point_inside_cylinder(
+    __device__ bool is_point_inside_cylinder(
       vec3 loc, float &dist_perpendicular, float &dist_parallel, float buffer
     );
+    __device__ float compute_ppm_kernel(vec3 loc);
 
     Ray axis;
-    float length, radius;
-}
+    float l, r;
+};
 
 __device__ BoundingCylinder::BoundingCylinder(
+  vec3 start, vec3 dir, float l_, float r_
+) {
+  this -> assign_parameters(start, dir, l_, r_);
+}
+
+__device__ void BoundingCylinder::assign_parameters(
   vec3 start, vec3 dir, float l_, float r_
 ) {
   this -> axis = Ray(start, dir);
@@ -27,11 +37,25 @@ __device__ BoundingCylinder::BoundingCylinder(
   this -> r = r_;
 }
 
-__device__ bool point_inside_cylinder(
+__device__ float BoundingCylinder::compute_ppm_kernel(vec3 loc) {
+  float dist_perpendicular, dist_parallel;
+  bool point_inside_cylinder;
+  point_inside_cylinder = this -> is_point_inside_cylinder(
+    loc, dist_perpendicular, dist_parallel, 0
+  );
+  if (point_inside_cylinder) {
+    return (1 / (this -> r * this -> r)) * silverman_biweight_kernel(
+      dist_perpendicular / this -> r
+    );
+  }
+  return 0;
+}
+
+__device__ bool BoundingCylinder::is_point_inside_cylinder(
   vec3 loc, float &dist_perpendicular, float &dist_parallel, float buffer = 0
 ) {
   vec3 start_to_point = loc -  this -> axis.p0;
-  float start_to_point_dist = start_to_point.length()
+  float start_to_point_dist = start_to_point.length();
   float cos_theta = dot(
     this -> axis.dir, start_to_point / start_to_point_dist
   );
@@ -51,7 +75,7 @@ __device__ bool point_inside_cylinder(
 
 __device__ bool BoundingCylinder::intersect(BoundingSphere* sphere) {
   float dist_perpendicular, dist_parallel;
-  return this -> point_inside_cylinder(
+  return this -> is_point_inside_cylinder(
     sphere -> center, dist_perpendicular, dist_parallel, sphere -> r 
   );
   //vec3 start_to_sphere_center = sphere -> center -  this -> axis.p0;

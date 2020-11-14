@@ -7,6 +7,8 @@
 #include "../model/vector_and_matrix/vec3.h"
 #include "../param.h"
 
+__device__ float silverman_biweight_kernel(float x);
+__device__ float henyey_greenstein_pdf(float g, vec3 dir_1, vec3 dir_2);
 __device__ float henyey_greenstein_cos_theta(float g, curandState *rand_state);
 __device__ vec3 get_random_unit_vector_hemisphere_cos_pdf(
   curandState *rand_state);
@@ -42,6 +44,16 @@ __device__ float _compute_reflection_sampling_pdf_2(
 __device__ float _compute_refraction_sampling_pdf_2(
   vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
 );
+
+__device__ float silverman_biweight_kernel(float x) {
+  return (3 / M_PI) * powf((1 - x * x), 2);
+}
+
+__device__ float henyey_greenstein_pdf(float g, vec3 dir_1, vec3 dir_2) {
+  float cos_theta = dot(unit_vector(dir_1), unit_vector(dir_2));
+  return (1.0 / (4 * M_PI)) * ((1 - g * g) / powf(
+    1 + g * g - 2 * g * cos_theta, 1.5));
+}
 
 __device__ float henyey_greenstein_cos_theta(float g, curandState *rand_state) {
   float eta = curand_uniform(rand_state);

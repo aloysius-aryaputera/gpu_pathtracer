@@ -8,13 +8,11 @@
 #include "bvh.h"
 
 __device__ bool traverse_bvh_pts(
-  Node* bvh_root, BoundingSphere bounding_sphere, //Point** point_array,
-  vec3 &color
+  Node* bvh_root, BoundingSphere bounding_sphere, vec3 &color
 );
 
 __device__ bool traverse_bvh_pts(
-  Node* bvh_root, BoundingSphere bounding_sphere, //Point** point_array,
-  vec3 &color
+  Node* bvh_root, BoundingSphere bounding_sphere, vec3 &color
 ) {
   Node* stack[400];
   Node *child_l, *child_r;

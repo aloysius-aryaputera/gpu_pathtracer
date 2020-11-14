@@ -4,11 +4,13 @@
 
 #include "../../param.h"
 #include "../grid/bounding_box.h"
+#include "../grid/bounding_sphere.h"
 #include "../vector_and_matrix/vec3.h"
 
 class Point {
   private:
     __device__ void _create_bounding_box();
+    __device__ void _create_bounding_sphere();
 
   public:
     __host__ __device__ Point();
@@ -24,6 +26,7 @@ class Point {
     vec3 location, filter, normal, color, direction, prev_location;
     int object_idx;
     BoundingBox *bounding_box;
+    BoundingSphere *bounding_sphere;
     bool on_surface;
 };
 
@@ -40,6 +43,7 @@ __device__ Point::Point(
   this -> normal = normal_;
   this -> on_surface = false;
   this -> _create_bounding_box();
+  this -> _create_bounding_sphere();
 }
 
 __device__ void Point::assign_prev_location(vec3 location_) {
@@ -53,6 +57,11 @@ __device__ void Point::assign_location(vec3 location_) {
     this -> location.y() - SMALL_DOUBLE, this -> location.y() + SMALL_DOUBLE,
     this -> location.z() - SMALL_DOUBLE, this -> location.z() + SMALL_DOUBLE
   );
+  this -> bounding_sphere -> initialize(this -> location, SMALL_DOUBLE);
+}
+
+__device__ void Point::_create_bounding_sphere() {
+  this -> bounding_sphere = new BoundingSphere(this -> location, SMALL_DOUBLE);
 }
 
 __device__ void Point::_create_bounding_box() {

@@ -13,12 +13,14 @@ __global__ void init_photon_nodes(Node** node_list, int num_photons) {
   if (idx >= num_photons - 1) return;
   node_list[idx] = new Node(idx);
   node_list[idx] -> bounding_box = new BoundingBox();
+  node_list[idx] -> bounding_sphere = new BoundingSphere();
 }
 
 __global__ void reset_photon_nodes(Node** node_list, int num_photons) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_photons - 1) return;
   node_list[idx] -> bounding_box -> reset();
+  node_list[idx] -> bounding_sphere -> reset();
 }
 
 __global__ void assign_photons(

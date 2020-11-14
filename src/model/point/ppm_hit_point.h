@@ -2,6 +2,7 @@
 #ifndef PPM_HIT_POINT_H
 #define PPM_HIT_POINT_H
 
+#include "../grid/bounding_cylinder.h"
 #include "../grid/bounding_sphere.h"
 #include "../vector_and_matrix/vec3.h"
 
@@ -10,21 +11,20 @@ class PPMHitPoint {
     float ppm_alpha, pdf;
 
     __device__ void _create_bounding_sphere();
+    __device__ void _create_bounding_cylinder();
 
   public:
     vec3 location, normal, accummulated_reflected_flux, filter, direct_radiance;
     vec3 accummulated_indirect_radiance;
-    float current_photon_radius;
+    float surface_radius, volume_radius;
     int accummulated_photon_count;
     BoundingSphere *bounding_sphere;
+    BoundingCylinder *bounding_cylinder;
 
     __host__ __device__ PPMHitPoint();
-    __device__ PPMHitPoint(
-      vec3 location_, float radius_, vec3 filter_, vec3 normal_,
-      float ppm_alpha_
-    ); 
+    __device__ PPMHitPoint(float ppm_alpha_); 
     __device__ void update_parameters(
-      vec3 location_, float radius_, vec3 filter_, vec3 normal_,
+      vec3 location_, float surface_radius_, vec3 filter_, vec3 normal_,
       float pdf_
     );
     __device__ void update_radius(float radius_);
@@ -34,7 +34,18 @@ class PPMHitPoint {
     );
     __device__ void update_direct_radiance(vec3 extra_direct_radiance);
     __device__ vec3 compute_pixel_color(int num_passes, int type);
+    __device__ void update_bounding_cylinder_parameters(
+      vec3 start, vec3 dir, float l
+    );
 };
+
+__device__ void PPMHitPoint::update_bounding_cylinder_parameters(
+  vec3 start, vec3 dir, float l
+) {
+  this -> bounding_cylinder -> assign_parameters(
+    start, dir, l, this -> volume_radius
+  );
+}
 
 __device__ vec3 PPMHitPoint::compute_pixel_color(int num_passes, int type) {
   vec3 mean_radiance, mean_direct_radiance, mean_indirect_radiance;
@@ -56,8 +67,9 @@ __device__ vec3 PPMHitPoint::compute_pixel_color(int num_passes, int type) {
 }
 
 __device__ void PPMHitPoint::update_radius(float radius_) {
-  this -> current_photon_radius = radius_;
-  this -> bounding_sphere -> assign_new_radius(this -> current_photon_radius);
+  this -> volume_radius = radius_;
+  this -> surface_radius = radius_;
+  this -> bounding_sphere -> assign_new_radius(this -> surface_radius);
 }
 
 __device__ void PPMHitPoint::update_direct_radiance(vec3 extra_direct_radiance) {
@@ -69,44 +81,29 @@ __device__ void PPMHitPoint::update_accummulated_reflected_flux(
   int emitted_photon_per_pass
 ) {
   float new_radius;
-  //if (extra_photons > 0) {
-  //  new_radius = this -> current_photon_radius * powf(
-  //    (this -> accummulated_photon_count + this -> ppm_alpha * extra_photons) /
-  //    (this -> accummulated_photon_count + extra_photons),
-  //    0.5
-  //  );
-  //} else {
-  //  new_radius = this -> current_photon_radius;
-  //}
   if (iteration >= 2) {
-    new_radius = this -> current_photon_radius * powf(
+    new_radius = this -> surface_radius * powf(
       (iteration + this -> ppm_alpha) / (iteration + 1), 0.5
     );
   } else {
-    new_radius = this -> current_photon_radius;
+    new_radius = this -> surface_radius;
   }
 
   this -> accummulated_indirect_radiance += de_nan(
     this -> filter * iterative_total_photon_flux / 
-    (emitted_photon_per_pass * M_PI * powf(this -> current_photon_radius, 2))
+    (emitted_photon_per_pass * M_PI * powf(this -> surface_radius, 2))
   );
 
-  //this -> accummulated_photon_count += (this -> ppm_alpha * extra_photons);
-  //this -> accummulated_reflected_flux = (
-  //  this -> accummulated_reflected_flux +
-  //  de_nan(this -> filter * iterative_total_photon_flux)
-  //) * powf(new_radius / this -> current_photon_radius, 2);
-  this -> current_photon_radius = new_radius;
+  this -> surface_radius = new_radius;
   this -> bounding_sphere -> assign_new_radius(new_radius);
 }
 
-__device__ PPMHitPoint::PPMHitPoint(
-  vec3 location_, float radius_, vec3 filter_, vec3 normal_, float ppm_alpha_
-) {
-  this -> location = location_;
-  this -> current_photon_radius = radius_;
-  this -> filter = filter_;
-  this -> normal = normal_;
+__device__ PPMHitPoint::PPMHitPoint(float ppm_alpha_) {
+  this -> location = vec3(INFINITY, INFINITY, INFINITY);
+  this -> surface_radius = INFINITY;
+  this -> volume_radius = INFINITY;
+  this -> filter = vec3(1.0, 1.0, 1.0);
+  this -> normal = vec3(0.0, 0.0, 1.0);
   this -> ppm_alpha = ppm_alpha_;
   this -> accummulated_reflected_flux = vec3(0.0, 0.0, 0.0);
   this -> accummulated_indirect_radiance = vec3(0.0, 0.0, 0.0);
@@ -115,26 +112,31 @@ __device__ PPMHitPoint::PPMHitPoint(
   this -> pdf = 1;
 
   this -> _create_bounding_sphere();
+  this -> _create_bounding_cylinder();
 }
 
 __device__ void PPMHitPoint::_create_bounding_sphere() {
   this -> bounding_sphere = new BoundingSphere(
-    this -> location, this -> current_photon_radius
+    this -> location, this -> surface_radius
   );
 }
 
+__device__ void PPMHitPoint::_create_bounding_cylinder() {
+  this -> bounding_cylinder = new BoundingCylinder();
+}
+
 __device__ void PPMHitPoint::update_parameters(
-  vec3 location_, float radius_, vec3 filter_, vec3 normal_, float pdf_
+  vec3 location_, float surface_radius_, vec3 filter_, vec3 normal_, 
+  float pdf_
 ) {
   this -> location = location_;
-  this -> current_photon_radius = radius_;
+  this -> surface_radius = surface_radius_;
   this -> filter = filter_;
   this -> normal = normal_;
   this -> pdf = pdf_;
 
   this -> bounding_sphere -> assign_new_center(this -> location);
-  this -> bounding_sphere -> assign_new_radius(
-    this -> current_photon_radius);
+  this -> bounding_sphere -> assign_new_radius(this -> surface_radius);
 }
 
 #endif

@@ -6,6 +6,7 @@
 #include "../geometry/primitive.h"
 #include "../grid/bounding_box.h"
 #include "../grid/bounding_cone.h"
+#include "../grid/bounding_sphere.h"
 #include "../point/point.h"
 #include "../ray/ray.h"
 
@@ -31,6 +32,7 @@ class Node {
     bool visited, is_leaf;
     BoundingBox *bounding_box;
     BoundingCone *bounding_cone;
+    BoundingSphere *bounding_sphere;
     Primitive *object;
     Point *point;
     int idx;
@@ -114,12 +116,14 @@ __device__ void Node::assign_object(
 __device__ void Node::assign_point(Point* point_) {
   this -> point = point_;
   this -> bounding_box = point_ -> bounding_box;
+  this -> bounding_sphere = point_ -> bounding_sphere;
   this -> is_leaf = true;
 }
 
 __device__ void Node::release_point(Point* point_) {
   this -> point = nullptr;
   this -> bounding_box = nullptr;
+  this -> bounding_sphere = nullptr;
   this -> is_leaf = false;
 }
 

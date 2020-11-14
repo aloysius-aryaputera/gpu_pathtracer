@@ -4,6 +4,7 @@
 
 #include "../geometry/primitive.h"
 #include "../grid/bounding_box.h"
+#include "../grid/bounding_sphere.h"
 #include "../ray/ray.h"
 #include "../vector_and_matrix/vec3.h"
 #include "bvh.h"
@@ -256,6 +257,46 @@ __global__ void compute_node_bounding_boxes(
         bb_y_min, bb_y_max,
         bb_z_min, bb_z_max
       );
+    }
+  }
+}
+
+__global__ void compute_node_bounding_spheres(
+  Node** leaf_list, Node** node_list, int num_objects
+) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+
+  if (idx >= num_objects) return;
+
+  Node* current_node = leaf_list[idx];
+  vec3 bs_center;
+  float bs_r;
+
+  if (current_node -> parent == nullptr) {
+    printf("Leaf %d has no parent.\n", idx);
+    return;
+  }
+
+  while(
+    current_node -> is_leaf ||
+    (!current_node -> is_leaf && current_node -> parent != nullptr)
+  ) {
+    current_node = current_node -> parent;
+
+    if (
+      !(current_node -> left -> bounding_sphere -> initialized) ||
+      !(current_node -> right -> bounding_sphere -> initialized)
+    )
+      return;
+
+    compute_bs_union(
+      current_node -> left -> bounding_sphere,
+      current_node -> right -> bounding_sphere,
+      bs_center, bs_r
+    );
+
+    if (!(current_node -> bounding_sphere -> initialized)) {
+      current_node -> bounding_sphere -> initialize(bs_center, bs_r);
     }
   }
 }
