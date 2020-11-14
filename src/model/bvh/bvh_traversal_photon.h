@@ -6,28 +6,27 @@
 #include "../geometry/primitive.h"
 #include "../grid/bounding_box.h"
 #include "../grid/bounding_sphere.h"
+#include "../material/material.h"
 #include "../point/ppm_hit_point.h"
 #include "../point/point.h"
 #include "bvh.h"
 #include "bvh_traversal.h"
 
 __device__ bool _traverse_bvh_volume_photon(
-  Node* bvh_root, Node* geom_bvh_root, PPMHitPoint* hit_point, 
-  vec3 &iterative_flux, int &num_photons
+  Node* bvh_root, PPMHitPoint* hit_point, Material *medium, vec3 filter
 ) {
   Node* stack[400];
   Node *child_l, *child_r;
   Point *point;
   Ray ray;
   vec3 ray_dir;
-  bool intersection_l, intersection_r, traverse_l, traverse_r, geom_hit;
-  bool is_inside = false;
+  bool intersection_l, intersection_r, traverse_l, traverse_r;
   bool pts_found = false;
   int idx_stack_top = 0;
   hit_record rec;
+  float dist_perpendicular, dist_parallel, kernel_value;
 
-  float factor;
-  iterative_flux = vec3(0.0, 0.0, 0.0);
+  hit_point -> reset_tmp_accummulated_lm();
 
   stack[idx_stack_top] = nullptr;
   idx_stack_top++;
@@ -38,46 +37,24 @@ __device__ bool _traverse_bvh_volume_photon(
     child_l = node -> left;
     child_r = node -> right;
 
-    intersection_l = child_l -> bounding_box -> is_intersection(
-      hit_point -> bounding_sphere);
-    intersection_r = child_r -> bounding_box -> is_intersection(
-      hit_point -> bounding_sphere);
+    intersection_l = hit_point -> bounding_cylinder -> is_intersection(
+      child_l -> bounding_sphere);
+    intersection_r = hit_point -> bounding_cylinder -> is_intersection(
+      child_r -> bounding_sphere);
 
     if (intersection_l && child_l -> is_leaf) {
-      is_inside = hit_point -> bounding_sphere -> is_inside(
-        child_l -> point -> location);
-      if (is_inside) {
+      kernel_value = hit_point -> compute_ppm_volume_kernel(
+        child_l -> point -> location, dist_perpendicular, dist_parallel);
+      if (kernel_value > 0) {
 	point = child_l -> point;
-	ray_dir = point -> prev_location - hit_point -> location;
-	ray = Ray(hit_point -> location, ray_dir);
-	geom_hit = traverse_bvh(geom_bvh_root, ray, rec);
-	if (
-	  geom_hit && abs(rec.t - ray_dir.length()) < SMALL_DOUBLE
-	) {
-          pts_found = true;
-	  num_photons++;
-          factor = max(0.0, dot(hit_point -> normal, -(point -> direction)));
-          iterative_flux += factor * point -> color;
-	}
       }
     }
 
     if (intersection_r && child_r -> is_leaf) {
-      is_inside = hit_point -> bounding_sphere -> is_inside(
-	child_r -> point -> location);
-      if (is_inside) {
+      kernel_value = hit_point -> compute_ppm_volume_kernel(
+        child_r -> point -> location, dist_perpendicular, dist_parallel);
+      if (kernel_value > 0) {
         point = child_r -> point;
-	ray_dir = point -> prev_location - hit_point -> location;
-	ray = Ray(hit_point -> location, ray_dir);
-	geom_hit = traverse_bvh(geom_bvh_root, ray, rec);
-	if (
-	  geom_hit && abs(rec.t - ray_dir.length()) < SMALL_DOUBLE
-	) {
-          pts_found = true;
-	  num_photons++;
-          factor = max(0.0, dot(hit_point -> normal, -(point -> direction)));
-          iterative_flux += factor * point -> color;
-	}
       }
     }
 

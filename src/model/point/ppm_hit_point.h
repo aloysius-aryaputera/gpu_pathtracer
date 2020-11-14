@@ -9,6 +9,7 @@
 class PPMHitPoint {
   private:
     float ppm_alpha, pdf;
+    vec3 tmp_accummulated_lm;
 
     __device__ void _create_bounding_sphere();
     __device__ void _create_bounding_cylinder();
@@ -27,6 +28,8 @@ class PPMHitPoint {
       vec3 location_, float surface_radius_, vec3 filter_, vec3 normal_,
       float pdf_
     );
+    __device__ void reset_tmp_accummulated_lm();
+    __device__ void add_tmp_accummulated_lm(vec3 add);
     __device__ void update_radius(float radius_);
     __device__ void update_accummulated_reflected_flux(
       int iteration, vec3 iterative_total_photon_flux, int extra_photons,
@@ -37,7 +40,31 @@ class PPMHitPoint {
     __device__ void update_bounding_cylinder_parameters(
       vec3 start, vec3 dir, float l
     );
+    __device__ float compute_ppm_volume_kernel(
+      vec3 loc, float &dist_perpendicular, float &dist_parallel);
 };
+
+__device__ float PPMHitPoint::compute_ppm_volume_kernel(
+  vec3 loc, float &dist_perpendicular, float &dist_parallel
+) {
+  bool is_inside = this -> bounding_cylinder -> is_point_inside(
+    loc, dist_perpendicular, dist_parallel, 0
+  ); 
+  if (is_inside) {
+    return powf(1 / this -> volume_radius, 2) * silverman_biweight_kernel(
+      dist_perpendicular / this -> volume_radius);
+  } else {
+    return 0;
+  }
+}
+
+__device__ void PPMHitPoint::add_tmp_accummulated_lm(vec3 add) {
+  this -> tmp_accummulated_lm += add;
+}
+
+__device__ void PPMHitPoint::reset_tmp_accummulated_lm() {
+  this -> tmp_accummulated_lm = vec3(0.0, 0.0, 0.0);
+}
 
 __device__ void PPMHitPoint::update_bounding_cylinder_parameters(
   vec3 start, vec3 dir, float l
