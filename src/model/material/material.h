@@ -101,6 +101,9 @@ class Material {
     __device__ vec3 get_texture_bump(vec3 uv_vector);
     __device__ vec3 get_texture_specular(vec3 uv_vector);
     __device__ float get_transmittance(float t);
+    __device__ vec3 get_new_scattering_direction(
+      vec3 current_dir, curandState *rand_state);
+    __device__ float get_propagation_distance(curandState *rand_state);
 
     vec3 emission;
     int priority;
@@ -162,6 +165,26 @@ __device__ void find_highest_prioritised_materials(
     }
   }
 }
+
+__device__ float Material::get_propagation_distance(curandState *rand_state) {
+  float random_number = curand_uniform(&rand_state[0]);
+  return - logf(random_number) / this -> extinction_coef;
+}
+
+__device__ vec3 Material::get_new_scattering_direction(
+  vec3 current_dir, curandState *rand_state
+) {
+  float cos_theta = henyey_greenstein_cos_theta(this -> g, rand_state);
+  float sin_theta = powf(1 - powf(cos_theta, 2), .5);
+  float cot_theta = cos_theta / sin_theta;
+  CartesianSystem cart_sys = CartesianSystem(current_dir);
+  vec3 new_dir = get_random_unit_vector_disk(rand_state);
+  float new_dir_z = cot_theta * powf(
+    new_dir.x() * new_dir.x() + new_dir.y() * new_dir.y(), .5);
+  new_dir = vec3(new_dir.x(), new_dir.y(), new_dir_z);
+  new_dir.make_unit_vector();
+  return cart_sys.to_world_system(new_dir);
+}	
 
 __device__ float Material::get_transmittance(float t) {
   return exp(-t * this -> extinction_coef); 

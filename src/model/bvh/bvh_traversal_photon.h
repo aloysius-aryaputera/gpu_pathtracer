@@ -24,7 +24,7 @@ __device__ bool _traverse_bvh_volume_photon(
   bool pts_found = false;
   int idx_stack_top = 0;
   hit_record rec;
-  float dist_perpendicular, dist_parallel, kernel_value;
+  float dist_perpendicular, dist_parallel, kernel_value, transmittance;
 
   hit_point -> reset_tmp_accummulated_lm();
 
@@ -47,6 +47,7 @@ __device__ bool _traverse_bvh_volume_photon(
         child_l -> point -> location, dist_perpendicular, dist_parallel);
       if (kernel_value > 0) {
 	point = child_l -> point;
+	transmittance = medium -> get_transmittance(dist_parallel);
       }
     }
 
@@ -55,6 +56,7 @@ __device__ bool _traverse_bvh_volume_photon(
         child_r -> point -> location, dist_perpendicular, dist_parallel);
       if (kernel_value > 0) {
         point = child_r -> point;
+	transmittance = medium -> get_transmittance(dist_parallel);
       }
     }
 

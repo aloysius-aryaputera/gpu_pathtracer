@@ -15,21 +15,6 @@
 #include "../material_list_operations.h"
 #include "common.h"
 
-__device__ vec3 _get_new_scattering_direction(
-  vec3 current_dir, float g, curandState *rand_state
-) {
-  float cos_theta = henyey_greenstein_cos_theta(g, rand_state);
-  float sin_theta = powf(1 - powf(cos_theta, 2), .5);
-  float cot_theta = cos_theta / sin_theta;
-  CartesianSystem cart_sys = CartesianSystem(current_dir);
-  vec3 new_dir = get_random_unit_vector_disk(rand_state);
-  float new_dir_z = cot_theta * powf(
-    new_dir.x() * new_dir.x() + new_dir.y() * new_dir.y(), .5);
-  new_dir = vec3(new_dir.x(), new_dir.y(), new_dir_z);
-  new_dir.make_unit_vector();
-  return cart_sys.to_world_system(new_dir);
-}	
-
 __device__ void _copy_photon_info(Point *original, Point *copy) {
   copy -> assign_location(original -> location);
   copy -> assign_color(original -> color);
@@ -114,13 +99,6 @@ __device__ int pick_primitive_idx_for_sampling(
   }
 
   return idx;
-}
-
-__device__ float _get_propagation_distance(
-  float extinction_coef, curandState *rand_state
-) {
-  float random_number = curand_uniform(&rand_state[0]);
-  return - logf(random_number) / extinction_coef;
 }
 
 __global__
@@ -209,9 +187,7 @@ void photon_pass(
 	if (in_medium) {
 	  medium = ref.next_material;
 	  ray = ref.ray;
-          d = _get_propagation_distance(
-	    medium -> extinction_coef, &local_rand_state
-	  ); 
+          d = medium -> get_propagation_distance(&local_rand_state); 
 	  hit = traverse_bvh(geom_node_list[0], ray, rec);
           
 	  while (rec.t > d) {
@@ -221,12 +197,9 @@ void photon_pass(
 	      photon_list[i] -> assign_color(light_source_color);
 	      return;
 	    }
-            new_scattering_dir = _get_new_scattering_direction(
-	      ray.dir, medium -> g, &local_rand_state
-	    );
-	    d = _get_propagation_distance(
-	      medium -> extinction_coef, &local_rand_state
-	    );
+            new_scattering_dir = medium -> get_new_scattering_direction(
+	      ray.dir, &local_rand_state);
+	    d = medium -> get_propagation_distance(&local_rand_state);
 	    ray = Ray(ray.get_vector(d), new_scattering_dir);
 	    hit = traverse_bvh(geom_node_list[0], ray, rec);
             prev_location = rec.point;
