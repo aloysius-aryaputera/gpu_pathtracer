@@ -107,13 +107,13 @@ __device__ void PPMHitPoint::update_accummulated_reflected_flux(
   int iteration, vec3 iterative_total_photon_flux, int extra_photons,
   int emitted_photon_per_pass
 ) {
-  float new_radius;
+  float new_surface_radius;
   if (iteration >= 2) {
-    new_radius = this -> surface_radius * powf(
+    new_surface_radius = this -> surface_radius * powf(
       (iteration + this -> ppm_alpha) / (iteration + 1), 0.5
     );
   } else {
-    new_radius = this -> surface_radius;
+    new_surface_radius = this -> surface_radius;
   }
 
   this -> accummulated_indirect_radiance += de_nan(
@@ -121,8 +121,8 @@ __device__ void PPMHitPoint::update_accummulated_reflected_flux(
     (emitted_photon_per_pass * M_PI * powf(this -> surface_radius, 2))
   );
 
-  this -> surface_radius = new_radius;
-  this -> bounding_sphere -> assign_new_radius(new_radius);
+  this -> surface_radius = new_surface_radius;
+  this -> bounding_sphere -> assign_new_radius(new_surface_radius);
 }
 
 __device__ PPMHitPoint::PPMHitPoint(float ppm_alpha_) {

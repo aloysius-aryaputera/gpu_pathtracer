@@ -6,6 +6,7 @@
 
 #include "../../model/bvh/bvh.h"
 #include "../../model/bvh/bvh_traversal.h"
+#include "../../model/bvh/bvh_traversal_photon.h"
 #include "../../model/camera.h"
 #include "../../model/grid/bounding_cylinder.h"
 #include "../../model/material/material.h"
@@ -17,6 +18,8 @@
 
 __device__
 void _get_hit_point_details(
+  PPMHitPoint* hit_point,
+  Node **volume_photon_node_list,
   reflection_record &ref, hit_record &rec, vec3 &filter, float &pdf,
   vec3 &direct_radiance,
   Camera **camera, int pixel_width_index, int pixel_height_index,
@@ -37,7 +40,7 @@ void _get_hit_point_details(
   reflection_record ref_2;
   bool sss = false, in_medium = false, prev_in_medium = false;
   Ray ray;
-  Material* material_list[400];
+  Material* material_list[400], *medium;
   int material_list_length = 0, num_bounce = 0;
   float factor, pdf_lag = 1, transmittance;
   vec3 emittance = vec3(0.0, 0.0, 0.0), filter_lag = vec3(1.0, 1.0, 1.0);
@@ -90,13 +93,21 @@ void _get_hit_point_details(
         );
       
       in_medium = check_if_entering_medium(rec, ref, in_medium);
-     
-      if (!(ref.false_hit) && prev_in_medium && !init) {
-        float l = compute_distance(prev_hit_point, rec.point);
+    
+      if (in_medium) {
+        medium = ref.next_material;
+      }
 
-	BoundingCylinder cylinder = BoundingCylinder(
-	  prev_hit_point, rec.coming_ray.dir, 1, l
+      if (!(ref.false_hit) && prev_in_medium && !init) {
+	vec3 dir = rec.point - prev_hit_point;
+	float l = dir.length();
+        hit_point -> update_bounding_cylinder_parameters(
+	  prev_hit_point, dir, l
 	);
+        traverse_bvh_volume_photon(
+	  volume_photon_node_list[0], hit_point, medium, filter
+	);
+	filter *= medium -> get_transmittance(l);
       }
 
       if (!(ref.false_hit)) {
@@ -276,6 +287,7 @@ void assign_radius_to_invalid_hit_points(
 __global__
 void ray_tracing_pass(
   PPMHitPoint** hit_point_list, Camera **camera, curandState *rand_state,
+  Node **volume_photon_node_list,
   Node **geom_node_list, bool init, int max_bounce, float ppm_alpha,
   int pass_iteration, int num_target_geom, Primitive** target_geom_list,
   Node** target_node_list, Node** target_leaf_list, int sample_size,
@@ -315,6 +327,7 @@ void ray_tracing_pass(
   radius = hit_point_list[pixel_index] -> surface_radius;
 
   _get_hit_point_details(
+    hit_point_list[pixel_index], volume_photon_node_list,
     ref, rec, filter, pdf, direct_radiance,
     camera, j, i, geom_node_list, max_bounce, main_camera_width_offset, 
     main_camera_height_offset, hit, target_geom_list, num_target_geom, 
@@ -325,7 +338,9 @@ void ray_tracing_pass(
   if (init) {
     for (int idx = 0; idx < 4; idx++) {
       _get_hit_point_details(
-        ref_2, rec_2, filter, pdf, direct_radiance_dummy,
+        hit_point_list[pixel_index], volume_photon_node_list,
+	ref_2, rec_2, filter, pdf, 
+	direct_radiance_dummy,
         camera, j, i, geom_node_list, max_bounce, 
         camera_width_offset[idx], camera_height_offset[idx], hit_2,
         target_geom_list, num_target_geom, target_node_list, target_leaf_list,

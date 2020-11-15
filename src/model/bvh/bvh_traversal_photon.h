@@ -31,7 +31,7 @@ __device__ vec3 _compute_volume_photon_contribution(
   }
 }
 
-__device__ void _traverse_bvh_volume_photon(
+__device__ void traverse_bvh_volume_photon(
   Node* bvh_root, PPMHitPoint* hit_point, Material *medium, vec3 filter
 ) {
   Node* stack[400];

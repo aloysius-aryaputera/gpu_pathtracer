@@ -121,7 +121,7 @@ void photon_pass(
   reflection_record ref;
   Material* material_list[400], *medium;
   int num_bounce = 0, material_list_length = 0, light_source_idx;
-  bool hit = false, sss = false, in_medium = false;
+  bool hit = false, sss = false, in_medium = false, scattered_in_medium = false;
   curandState local_rand_state = rand_state[i];
   float random_number, reflection_prob, mean_color, mean_color_tmp, d;
   float max_energy = accummulated_light_source_energy[num_light_source_geom - 1];
@@ -191,6 +191,7 @@ void photon_pass(
 	  hit = traverse_bvh(geom_node_list[0], ray, rec);
           
 	  while (rec.t > d) {
+	    scattered_in_medium = true;
 	    random_number = curand_uniform(&local_rand_state);
 	    if (random_number < medium -> scattering_prob) {
 	      photon_list[i] -> assign_location(ray.get_vector(d));
@@ -210,7 +211,7 @@ void photon_pass(
           random_number = curand_uniform(&local_rand_state);
 	  reflection_prob = max(ref.k);
           if (random_number > reflection_prob) {
-	    if (ref.diffuse && num_bounce > 1) {
+	    if (ref.diffuse && (num_bounce > 1 || scattered_in_medium)) {
 	      photon_list[i] -> assign_prev_location(prev_location);
 	      photon_list[i] -> assign_location(rec.point);
 	      photon_list[i] -> assign_color(light_source_color);

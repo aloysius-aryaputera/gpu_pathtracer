@@ -1180,7 +1180,7 @@ int main(int argc, char **argv) {
     process = "Ray tracing pass";
     print_start_process(process, start);
     ray_tracing_pass<<<blocks, threads>>>(
-      hit_point_list, my_camera, rand_state_image, node_list, true, 
+      hit_point_list, my_camera, rand_state_image, node_list, nullptr, true, 
       ppm_max_bounce, ppm_alpha, 0,
       num_target_geom[0],
       target_geom_list,
@@ -1548,7 +1548,8 @@ int main(int argc, char **argv) {
       process = "Ray tracing pass";
       print_start_process(process, start);
       ray_tracing_pass<<<blocks, threads>>>(
-        hit_point_list, my_camera, rand_state_image, node_list, false, 
+        hit_point_list, my_camera, rand_state_image, node_list, 
+	volume_photon_node_list, false, 
         ppm_max_bounce, ppm_alpha, i,
         num_target_geom[0],
         target_geom_list,
