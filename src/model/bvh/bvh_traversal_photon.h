@@ -12,19 +12,36 @@
 #include "bvh.h"
 #include "bvh_traversal.h"
 
-__device__ bool _traverse_bvh_volume_photon(
+__device__ vec3 _compute_volume_photon_contribution(
+  Point *photon, PPMHitPoint* hit_point, Material *medium
+) {
+  float dist_perpendicular, dist_parallel;
+  float kernel_value = hit_point -> compute_ppm_volume_kernel(
+    photon -> location, dist_perpendicular, dist_parallel
+  );
+  if (kernel_value > 0) {
+    return vec3(0.0, 0.0, 0.0);
+  } else {
+    float transmittance = medium -> get_transmittance(dist_parallel);
+    float phase_function_value = medium -> get_phase_function_value(
+      hit_point -> bounding_cylinder -> axis.dir, photon -> direction 
+    );
+    return kernel_value * transmittance * medium -> scattering_coef * 
+      phase_function_value * photon -> color;  
+  }
+}
+
+__device__ void _traverse_bvh_volume_photon(
   Node* bvh_root, PPMHitPoint* hit_point, Material *medium, vec3 filter
 ) {
   Node* stack[400];
   Node *child_l, *child_r;
-  Point *point;
   Ray ray;
   vec3 ray_dir;
   bool intersection_l, intersection_r, traverse_l, traverse_r;
-  bool pts_found = false;
   int idx_stack_top = 0;
   hit_record rec;
-  float dist_perpendicular, dist_parallel, kernel_value, transmittance;
+  vec3 photon_contribution;
 
   hit_point -> reset_tmp_accummulated_lm();
 
@@ -43,21 +60,15 @@ __device__ bool _traverse_bvh_volume_photon(
       child_r -> bounding_sphere);
 
     if (intersection_l && child_l -> is_leaf) {
-      kernel_value = hit_point -> compute_ppm_volume_kernel(
-        child_l -> point -> location, dist_perpendicular, dist_parallel);
-      if (kernel_value > 0) {
-	point = child_l -> point;
-	transmittance = medium -> get_transmittance(dist_parallel);
-      }
+      photon_contribution += _compute_volume_photon_contribution(
+        child_l -> point, hit_point, medium
+      ); 
     }
 
     if (intersection_r && child_r -> is_leaf) {
-      kernel_value = hit_point -> compute_ppm_volume_kernel(
-        child_r -> point -> location, dist_perpendicular, dist_parallel);
-      if (kernel_value > 0) {
-        point = child_r -> point;
-	transmittance = medium -> get_transmittance(dist_parallel);
-      }
+      photon_contribution += _compute_volume_photon_contribution(
+        child_r -> point, hit_point, medium
+      ); 
     }
 
     traverse_l = (intersection_l && !(child_l -> is_leaf));
@@ -84,7 +95,8 @@ __device__ bool _traverse_bvh_volume_photon(
 
   } while(idx_stack_top > 0 && idx_stack_top < 400 && node != nullptr);
 
-  return pts_found;
+  hit_point -> add_tmp_accummulated_lm(filter * photon_contribution); 
+
 }
 
 __device__ bool _traverse_bvh_surface_photon(

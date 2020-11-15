@@ -91,19 +91,19 @@ void _get_hit_point_details(
       
       in_medium = check_if_entering_medium(rec, ref, in_medium);
      
-      if (!(ref.false_hit)) {
-	filter_lag = filter;
-        filter *= ref.filter_2;
-	pdf_lag = pdf;
-	pdf *= ref.pdf;
-      }
-
       if (!(ref.false_hit) && prev_in_medium && !init) {
         float l = compute_distance(prev_hit_point, rec.point);
 
 	BoundingCylinder cylinder = BoundingCylinder(
 	  prev_hit_point, rec.coming_ray.dir, 1, l
 	);
+      }
+
+      if (!(ref.false_hit)) {
+	filter_lag = filter;
+        filter *= ref.filter_2;
+	pdf_lag = pdf;
+	pdf *= ref.pdf;
       }
 
       if (ref.diffuse) {

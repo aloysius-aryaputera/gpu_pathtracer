@@ -104,6 +104,7 @@ class Material {
     __device__ vec3 get_new_scattering_direction(
       vec3 current_dir, curandState *rand_state);
     __device__ float get_propagation_distance(curandState *rand_state);
+    __device__ float get_phase_function_value(vec3 dir_1, vec3 dir_2);
 
     vec3 emission;
     int priority;
@@ -164,6 +165,10 @@ __device__ void find_highest_prioritised_materials(
       second_highest_prioritised_material = material_list[idx];
     }
   }
+}
+
+__device__ float Material::get_phase_function_value(vec3 dir_1, vec3 dir_2) {
+  return henyey_greenstein_pdf(this -> g, dir_1, dir_2);
 }
 
 __device__ float Material::get_propagation_distance(curandState *rand_state) {
