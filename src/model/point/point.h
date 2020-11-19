@@ -22,6 +22,7 @@ class Point {
     __device__ void assign_prev_location(vec3 location_);
     __device__ void assign_direction(vec3 direction_);
     __device__ void declare_on_surface();
+    __device__ void undeclare_on_surface();
 
     vec3 location, filter, normal, color, direction, prev_location;
     int object_idx;
@@ -29,6 +30,10 @@ class Point {
     BoundingSphere *bounding_sphere;
     bool on_surface;
 };
+
+__device__ void Point::undeclare_on_surface() {
+  this -> on_surface = false;
+}
 
 __device__ void Point::declare_on_surface() {
   this -> on_surface = true;

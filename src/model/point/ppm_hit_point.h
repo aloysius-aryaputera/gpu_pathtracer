@@ -51,7 +51,7 @@ __device__ float PPMHitPoint::compute_ppm_volume_kernel(
     loc, dist_perpendicular, dist_parallel, 0
   ); 
   if (is_inside) {
-    return powf(1 / this -> volume_radius, 2) * silverman_biweight_kernel(
+    return powf(1.0 / this -> volume_radius, 2) * silverman_biweight_kernel(
       dist_perpendicular / this -> volume_radius);
   } else {
     return 0;
@@ -107,21 +107,31 @@ __device__ void PPMHitPoint::update_accummulated_reflected_flux(
   int iteration, vec3 iterative_total_photon_flux, int extra_photons,
   int emitted_photon_per_pass
 ) {
-  float new_surface_radius;
+  float new_surface_radius, new_volume_radius;
   if (iteration >= 2) {
     new_surface_radius = this -> surface_radius * powf(
       (iteration + this -> ppm_alpha) / (iteration + 1), 0.5
     );
+    new_volume_radius = this -> volume_radius * powf(
+      (iteration + this -> ppm_alpha) / (iteration + 1), 1.0 / 3
+    );
   } else {
     new_surface_radius = this -> surface_radius;
+    new_volume_radius = this -> volume_radius;
   }
 
-  this -> accummulated_indirect_radiance += de_nan(
+  vec3 surface_photon_contribution = de_nan(
     this -> filter * iterative_total_photon_flux / 
     (emitted_photon_per_pass * M_PI * powf(this -> surface_radius, 2))
   );
+  vec3 volume_photon_contribution = de_nan(
+    this -> tmp_accummulated_lm / emitted_photon_per_pass);
+
+  this -> accummulated_indirect_radiance += surface_photon_contribution + 
+    volume_photon_contribution;
 
   this -> surface_radius = new_surface_radius;
+  this -> volume_radius = new_volume_radius;
   this -> bounding_sphere -> assign_new_radius(new_surface_radius);
 }
 

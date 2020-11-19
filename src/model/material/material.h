@@ -475,6 +475,7 @@ __device__ void Material::check_next_path(
   Material** material_list, int material_list_length,
   reflection_record &ref, curandState *rand_state, bool write=false
 ) {
+  ref.next_material = nullptr;
 
   Material *highest_prioritised_material = nullptr;
   Material *second_highest_prioritised_material = nullptr;
@@ -539,6 +540,7 @@ __device__ void Material::check_next_path(
     ref.reflected = false;
     ref.refracted = false;
     ref.k = ref.filter;
+    ref.next_material = highest_prioritised_material;
     ref.n = 1;
 
     if (actual_mat -> sub_surface_scattering) {
@@ -564,6 +566,7 @@ __device__ void Material::check_next_path(
     ref.perfect_reflection_dir = reflected_ray_dir;
     ref.n = local_n_s;
     ref.k = k;
+    ref.next_material = highest_prioritised_material;
     sss = false;
   }
 

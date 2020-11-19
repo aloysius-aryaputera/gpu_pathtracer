@@ -1180,7 +1180,7 @@ int main(int argc, char **argv) {
     process = "Ray tracing pass";
     print_start_process(process, start);
     ray_tracing_pass<<<blocks, threads>>>(
-      hit_point_list, my_camera, rand_state_image, node_list, nullptr, true, 
+      hit_point_list, my_camera, rand_state_image, nullptr, node_list, true, 
       ppm_max_bounce, ppm_alpha, 0,
       num_target_geom[0],
       target_geom_list,
@@ -1544,12 +1544,15 @@ int main(int argc, char **argv) {
       	print_end_process(process, start);
       }
 
+      printf("Number of surface photons = %d\n", num_surface_photons[0]);
+      printf("Number of volume photons  = %d\n", num_volume_photons[0]);
+
       start = clock();
       process = "Ray tracing pass";
       print_start_process(process, start);
       ray_tracing_pass<<<blocks, threads>>>(
-        hit_point_list, my_camera, rand_state_image, node_list, 
-	volume_photon_node_list, false, 
+        hit_point_list, my_camera, rand_state_image, volume_photon_node_list, 
+	node_list, false, 
         ppm_max_bounce, ppm_alpha, i,
         num_target_geom[0],
         target_geom_list,

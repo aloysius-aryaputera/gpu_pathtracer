@@ -20,14 +20,15 @@ __device__ vec3 _compute_volume_photon_contribution(
     photon -> location, dist_perpendicular, dist_parallel
   );
   if (kernel_value > 0) {
-    return vec3(0.0, 0.0, 0.0);
-  } else {
     float transmittance = medium -> get_transmittance(dist_parallel);
     float phase_function_value = medium -> get_phase_function_value(
       hit_point -> bounding_cylinder -> axis.dir, photon -> direction 
     );
+    printf("kernel = %5.2f; transmittance = %5.2f; scattering_coef = %5.2f; phase_function_value = %5.2f; photon_color = (%5.2f, %5.2f, %5.2f)\n", kernel_value, transmittance, medium -> scattering_coef, phase_function_value, photon -> color.r(), photon -> color.g(), photon -> color.b());
     return kernel_value * transmittance * medium -> scattering_coef * 
       phase_function_value * photon -> color;  
+  } else {
+    return vec3(0.0, 0.0, 0.0);
   }
 }
 
@@ -39,11 +40,9 @@ __device__ void traverse_bvh_volume_photon(
   Ray ray;
   vec3 ray_dir;
   bool intersection_l, intersection_r, traverse_l, traverse_r;
-  int idx_stack_top = 0;
+  int idx_stack_top = 0, num_intersections = 0;
   hit_record rec;
-  vec3 photon_contribution;
-
-  hit_point -> reset_tmp_accummulated_lm();
+  vec3 photon_contribution = vec3(0.0, 0.0, 0.0);
 
   stack[idx_stack_top] = nullptr;
   idx_stack_top++;
@@ -60,12 +59,14 @@ __device__ void traverse_bvh_volume_photon(
       child_r -> bounding_sphere);
 
     if (intersection_l && child_l -> is_leaf) {
+      num_intersections++;
       photon_contribution += _compute_volume_photon_contribution(
         child_l -> point, hit_point, medium
       ); 
     }
 
     if (intersection_r && child_r -> is_leaf) {
+      num_intersections++;
       photon_contribution += _compute_volume_photon_contribution(
         child_r -> point, hit_point, medium
       ); 
@@ -96,7 +97,9 @@ __device__ void traverse_bvh_volume_photon(
   } while(idx_stack_top > 0 && idx_stack_top < 400 && node != nullptr);
 
   hit_point -> add_tmp_accummulated_lm(filter * photon_contribution); 
-
+  //if (num_intersections > 0) {
+  //  print_vec3(filter * photon_contribution);
+  //}
 }
 
 __device__ bool _traverse_bvh_surface_photon(

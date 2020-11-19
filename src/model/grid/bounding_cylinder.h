@@ -64,8 +64,7 @@ __device__ bool BoundingCylinder::is_point_inside(
   if (dist_perpendicular <= (this -> r + buffer)) {
     dist_parallel = start_to_point_dist * cos_theta;
     if (
-      (start_to_point_dist <= (this -> l + buffer)) &&
-      (start_to_point_dist >= (-buffer))
+      (dist_parallel <= (this -> l + buffer)) && (dist_parallel >= (-buffer))
     ) {
       return true;
     }  

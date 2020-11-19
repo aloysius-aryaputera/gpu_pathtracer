@@ -51,6 +51,9 @@ __device__ float silverman_biweight_kernel(float x) {
 
 __device__ float henyey_greenstein_pdf(float g, vec3 dir_1, vec3 dir_2) {
   float cos_theta = dot(unit_vector(dir_1), unit_vector(dir_2));
+  if (isnan(cos_theta)) {
+    cos_theta = 0;
+  }
   return (1.0 / (4 * M_PI)) * ((1 - g * g) / powf(
     1 + g * g - 2 * g * cos_theta, 1.5));
 }

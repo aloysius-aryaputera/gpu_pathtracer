@@ -43,11 +43,13 @@ void gather_recorded_photons(
       if (photon_list[idx] -> on_surface) {
         (num_surface_photons[0])++;
 	new_idx = num_surface_photons[0] - 1;
-	_copy_photon_info(photon_list[idx], surface_photon_list[new_idx]);
+	surface_photon_list[new_idx] = photon_list[idx];
+	//_copy_photon_info(photon_list[idx], surface_photon_list[new_idx]);
       } else {
 	(num_volume_photons[0])++;
         new_idx = num_volume_photons[0] - 1;
-        _copy_photon_info(photon_list[idx], volume_photon_list[new_idx]);
+	volume_photon_list[new_idx] = photon_list[idx];
+        //_copy_photon_info(photon_list[idx], volume_photon_list[new_idx]);
       }
     }
   }
@@ -196,6 +198,7 @@ void photon_pass(
 	    if (random_number < medium -> scattering_prob) {
 	      photon_list[i] -> assign_location(ray.get_vector(d));
 	      photon_list[i] -> assign_color(light_source_color);
+	      photon_list[i] -> undeclare_on_surface();
 	      return;
 	    }
             new_scattering_dir = medium -> get_new_scattering_direction(

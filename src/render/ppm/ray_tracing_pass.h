@@ -35,7 +35,7 @@ void _get_hit_point_details(
   int pixel_idx,
   bool init
 ) {
-  
+ 
   hit_record rec_2, rec_3;
   reflection_record ref_2;
   bool sss = false, in_medium = false, prev_in_medium = false;
@@ -61,7 +61,7 @@ void _get_hit_point_details(
   pdf = 1.0;
 
   hit = traverse_bvh(geom_node_list[0], ray, rec);
-  
+
   if (hit) {
     while (!(ref.diffuse) && hit && num_bounce < max_bounce) {
       num_bounce += 1;
@@ -91,9 +91,9 @@ void _get_hit_point_details(
         remove_a_material(
           material_list, material_list_length, rec.object -> get_material()
         );
-      
+  
       in_medium = check_if_entering_medium(rec, ref, in_medium);
-    
+
       if (in_medium) {
         medium = ref.next_material;
       }
@@ -317,17 +317,18 @@ void ray_tracing_pass(
   }
 
   if (init) {
-    radius = INFINITY;
     hit_point_list[pixel_index] = new PPMHitPoint(ppm_alpha); 
   } else {
+    hit_point_list[pixel_index] -> reset_tmp_accummulated_lm();
     main_camera_height_offset = curand_uniform(&local_rand_state);
     main_camera_width_offset = curand_uniform(&local_rand_state);
   }
 
-  radius = hit_point_list[pixel_index] -> surface_radius;
+  PPMHitPoint *hit_point = hit_point_list[pixel_index];
+  radius = hit_point -> surface_radius;
 
   _get_hit_point_details(
-    hit_point_list[pixel_index], volume_photon_node_list,
+    hit_point, volume_photon_node_list,
     ref, rec, filter, pdf, direct_radiance,
     camera, j, i, geom_node_list, max_bounce, main_camera_width_offset, 
     main_camera_height_offset, hit, target_geom_list, num_target_geom, 
@@ -338,7 +339,7 @@ void ray_tracing_pass(
   if (init) {
     for (int idx = 0; idx < 4; idx++) {
       _get_hit_point_details(
-        hit_point_list[pixel_index], volume_photon_node_list,
+        hit_point, volume_photon_node_list,
 	ref_2, rec_2, filter, pdf, 
 	direct_radiance_dummy,
         camera, j, i, geom_node_list, max_bounce, 
@@ -379,12 +380,10 @@ void ray_tracing_pass(
   }
 
   if (hit && ref.diffuse) {
-    hit_point_list[pixel_index] -> update_parameters(
-      rec.point, radius, filter, rec.normal, pdf 
-    );
-    hit_point_list[pixel_index] -> update_direct_radiance(direct_radiance);
+    hit_point -> update_parameters(rec.point, radius, filter, rec.normal, pdf);
+    hit_point -> update_direct_radiance(direct_radiance);
   } else {
-    hit_point_list[pixel_index] -> update_parameters(
+    hit_point -> update_parameters(
       vec3(INFINITY, INFINITY, INFINITY), radius, filter, vec3(0, 0, 1), pdf
     );
   }
