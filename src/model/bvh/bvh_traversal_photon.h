@@ -24,7 +24,7 @@ __device__ vec3 _compute_volume_photon_contribution(
     float phase_function_value = medium -> get_phase_function_value(
       hit_point -> bounding_cylinder -> axis.dir, photon -> direction 
     );
-    printf("kernel = %5.2f; transmittance = %5.2f; scattering_coef = %5.2f; phase_function_value = %5.2f; photon_color = (%5.2f, %5.2f, %5.2f)\n", kernel_value, transmittance, medium -> scattering_coef, phase_function_value, photon -> color.r(), photon -> color.g(), photon -> color.b());
+    //printf("kernel = %5.2f; transmittance = %5.2f; scattering_coef = %5.2f; phase_function_value = %5.2f; photon_color = (%5.2f, %5.2f, %5.2f)\n", kernel_value, transmittance, medium -> scattering_coef, phase_function_value, photon -> color.r(), photon -> color.g(), photon -> color.b());
     return kernel_value * transmittance * medium -> scattering_coef * 
       phase_function_value * photon -> color;  
   } else {

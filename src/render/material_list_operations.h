@@ -26,7 +26,7 @@ __device__ void remove_a_material(
   }
 
   if (material_found) {
-    for (idx = selected_idx - 1; idx < material_list_length - 1; idx++) {
+    for (idx = selected_idx; idx < material_list_length - 1; idx++) {
       material_list[idx] = material_list[idx + 1];
     }
     material_list[material_list_length - 1] = nullptr;

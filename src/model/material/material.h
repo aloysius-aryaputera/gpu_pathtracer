@@ -12,10 +12,6 @@
 
 struct reflection_record;
 
-__device__ reflection_record _get_false_hit_parameters(
-  vec3 hit_point, vec3 v_in, vec3 normal
-);
-
 class Material {
   private:
     __device__ vec3 _get_texture(
@@ -37,8 +33,8 @@ class Material {
     );
     __device__ bool _check_if_false_hit(
       Material** material_list, int material_list_length,
-      Material *highest_prioritised_material,
-      Material *second_highest_prioritised_material
+      Material* &highest_prioritised_material,
+      Material* &second_highest_prioritised_material
     );
 
     float diffuse_mag, specular_mag;
@@ -125,6 +121,11 @@ struct reflection_record
   Material *next_material;
 };
 
+__device__ reflection_record _get_false_hit_parameters(
+  vec3 hit_point, vec3 v_in, vec3 normal, 
+  Material* &highest_prioritised_material
+);
+
 __device__ int get_material_priority(Material* material) {
   if (material == nullptr) {
     return 9999999;
@@ -143,12 +144,20 @@ __device__ float get_material_refraction_index(Material* material) {
 
 __device__ void find_highest_prioritised_materials(
   Material** material_list, int material_list_length,
-  Material* highest_prioritised_material,
-  Material* second_highest_prioritised_material
+  Material* &highest_prioritised_material,
+  Material* &second_highest_prioritised_material,
+  bool write = false
 ) {
   highest_prioritised_material = nullptr;
   second_highest_prioritised_material = nullptr;
+
+  if (write)
+    printf("\n\n");
+
   for (int idx = material_list_length - 1; idx >= 0; idx--) {
+    if (write) {
+      printf("material_priority[%d] = %d\n", idx, get_material_priority(material_list[idx]));
+    }
     if (
       get_material_priority(material_list[idx]) <
         get_material_priority(highest_prioritised_material)
@@ -164,6 +173,10 @@ __device__ void find_highest_prioritised_materials(
     ) {
       second_highest_prioritised_material = material_list[idx];
     }
+  }
+  if (write) {
+    printf("highest priority material priority = %d\n", get_material_priority(highest_prioritised_material));
+    printf("\n\n");
   }
 }
 
@@ -197,8 +210,8 @@ __device__ float Material::get_transmittance(float t) {
 
 __device__ bool Material::_check_if_false_hit(
   Material** material_list, int material_list_length,
-  Material *highest_prioritised_material,
-  Material *second_highest_prioritised_material
+  Material* &highest_prioritised_material,
+  Material* &second_highest_prioritised_material
 ) {
   highest_prioritised_material = nullptr;
   second_highest_prioritised_material = nullptr;
@@ -238,6 +251,9 @@ __device__ void Material::_refract(
   float second_highest_prioritised_material_ref_idx = \
     get_material_refraction_index(second_highest_prioritised_material);
 
+  float highest_prioritised_material_priority = get_material_priority(
+    highest_prioritised_material);
+
   vec3 k = this -> transmission * this -> t_r, v_out;
   float local_n_s = this -> _get_texture_n_s(uv_vector);
   ref.n = local_n_s;
@@ -272,7 +288,7 @@ __device__ void Material::_refract(
       ref.reflected = false;
       ref.refracted = true;
       ref.false_hit = false;
-      ref.entering = true;
+      ref.entering = true; 
       ref.next_material = this;
     } else {
       v_out = reflect(v_in, normal);
@@ -450,7 +466,8 @@ __host__ __device__ Material::Material(
 
 
 __device__ reflection_record _get_false_hit_parameters(
-  vec3 hit_point, vec3 v_in, vec3 normal
+  vec3 hit_point, vec3 v_in, vec3 normal, 
+  Material* &highest_prioritised_material
 ) {
   reflection_record ref;
   ref.false_hit = true;
@@ -466,6 +483,7 @@ __device__ reflection_record _get_false_hit_parameters(
   } else {
     ref.entering = false;
   }
+  ref.next_material = highest_prioritised_material;
   return ref;
 }
 
@@ -489,7 +507,9 @@ __device__ void Material::check_next_path(
 
   if (ref.false_hit) {
     sss = false;
-    ref = _get_false_hit_parameters(hit_point, v_in, normal);
+    ref = _get_false_hit_parameters(
+      hit_point, v_in, normal, highest_prioritised_material);
+    ref.next_material = highest_prioritised_material;
     return;
   }
 

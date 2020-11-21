@@ -72,6 +72,18 @@ void _get_hit_point_details(
         ref, rand_state, write
       );
 
+      if (pixel_height_index == 245 && pixel_width_index == 182) {
+	Material *first = nullptr, *second = nullptr;	
+        find_highest_prioritised_materials(
+          material_list, material_list_length, first, second, true
+        );
+        int first_priority = get_material_priority(first);
+	int material_priority = get_material_priority(ref.next_material);
+        printf(
+	  "ref.false_hit = %d, ref.refracted = %d, ref.entering = %d, material_list_length = %d, hit material -> priority = %d, next material -> priority = %d, first -> priority = %d\n", ref.false_hit, ref.refracted, ref.entering, material_list_length, get_material_priority(rec.object -> get_material()), material_priority, first_priority
+	);
+      }
+
       if (ref.false_hit && ref.entering)
         add_new_material(
           material_list, material_list_length, rec.object -> get_material()
