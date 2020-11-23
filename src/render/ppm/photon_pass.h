@@ -124,6 +124,7 @@ void photon_pass(
   Material* material_list[400], *medium;
   int num_bounce = 0, material_list_length = 0, light_source_idx;
   bool hit = false, sss = false, in_medium = false, scattered_in_medium = false;
+  bool scattered_in_medium_now = false;
   curandState local_rand_state = rand_state[i];
   float random_number, reflection_prob, mean_color, mean_color_tmp, d;
   float max_energy = accummulated_light_source_energy[num_light_source_geom - 1];
@@ -153,6 +154,7 @@ void photon_pass(
   if (hit) {
     while (hit && num_bounce < max_bounce) {
       num_bounce += 1;
+      scattered_in_medium_now = false;
 
       rec.object -> get_material() -> check_next_path(
         rec.coming_ray, rec.point, rec.normal, rec.uv_vector,
@@ -194,6 +196,7 @@ void photon_pass(
           
 	  while (rec.t > d) {
 	    scattered_in_medium = true;
+	    scattered_in_medium_now = true;
 	    random_number = curand_uniform(&local_rand_state);
 	    if (random_number < medium -> scattering_prob) {
 	      photon_list[i] -> assign_location(ray.get_vector(d));
@@ -209,9 +212,9 @@ void photon_pass(
 	    hit = traverse_bvh(geom_node_list[0], ray, rec);
             prev_location = rec.point;
 	  }
-
-	} else {
-
+	}
+	
+	if(!scattered_in_medium_now) {
           random_number = curand_uniform(&local_rand_state);
 	  reflection_prob = max(ref.k);
           if (random_number > reflection_prob) {
@@ -236,7 +239,7 @@ void photon_pass(
 	}
       } 
 
-      if (!(in_medium)) {
+      if (!scattered_in_medium_now) {
         ray = ref.ray;
         prev_location = rec.point;
         hit = traverse_bvh(geom_node_list[0], ray, rec);
