@@ -9,7 +9,6 @@
 class PPMHitPoint {
   private:
     float ppm_alpha, pdf;
-    vec3 tmp_accummulated_lm;
 
     __device__ void _create_bounding_sphere();
     __device__ void _create_bounding_cylinder();
@@ -17,6 +16,7 @@ class PPMHitPoint {
   public:
     vec3 location, normal, accummulated_reflected_flux, filter, direct_radiance;
     vec3 accummulated_indirect_radiance;
+    vec3 tmp_accummulated_lm;
     float surface_radius, volume_radius;
     int accummulated_photon_count;
     BoundingSphere *bounding_sphere;
@@ -94,7 +94,7 @@ __device__ vec3 PPMHitPoint::compute_pixel_color(int num_passes, int type) {
 }
 
 __device__ void PPMHitPoint::update_radius(float radius_) {
-  this -> volume_radius = radius_;
+  this -> volume_radius = 5 * radius_;
   this -> surface_radius = radius_;
   this -> bounding_sphere -> assign_new_radius(this -> surface_radius);
 }
@@ -129,6 +129,8 @@ __device__ void PPMHitPoint::update_accummulated_reflected_flux(
 
   this -> accummulated_indirect_radiance += surface_photon_contribution + 
     volume_photon_contribution;
+
+  printf("surf = (%5.2f, %5.2f, %5.2f), vol = (%5.2f, %5.2f, %5.2f)\n", surface_photon_contribution.r(), surface_photon_contribution.g(), surface_photon_contribution.b(), volume_photon_contribution.r(), volume_photon_contribution.g(), volume_photon_contribution.b()); 
 
   this -> surface_radius = new_surface_radius;
   this -> volume_radius = new_volume_radius;

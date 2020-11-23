@@ -110,16 +110,24 @@ void _get_hit_point_details(
         medium = ref.next_material;
       }
 
+      if (pixel_height_index == 245 && pixel_width_index == 182) {
+	printf("in_medium = %d\n\n", in_medium);
+      }
       if (!(ref.false_hit) && prev_in_medium && !init) {
 	vec3 dir = rec.point - prev_hit_point;
 	float l = dir.length();
         hit_point -> update_bounding_cylinder_parameters(
 	  prev_hit_point, dir, l
 	);
+	int num_photons = 0;
         traverse_bvh_volume_photon(
-	  volume_photon_node_list[0], hit_point, medium, filter
+	  volume_photon_node_list[0], hit_point, medium, filter, num_photons
 	);
-	filter *= medium -> get_transmittance(l);
+	float transmittance = medium -> get_transmittance(l);
+	filter *= transmittance;
+        if (pixel_height_index == 245 && pixel_width_index == 182) {
+	  printf("num_photons = %d, acc_lm = (%5.2f, %5.2f, %5.2f), l = %5.2f, medium transmittance = %5.2f\n", num_photons, hit_point -> tmp_accummulated_lm.r(), hit_point -> tmp_accummulated_lm.g(), hit_point -> tmp_accummulated_lm.b(), l, transmittance); 
+	}
       }
 
       if (!(ref.false_hit)) {

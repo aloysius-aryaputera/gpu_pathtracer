@@ -1147,11 +1147,12 @@ int main(int argc, char **argv) {
   } else if (render_mode == 2) {
     PPMHitPoint **hit_point_list;
     Point **photon_list, **surface_photon_list, **volume_photon_list;
-    vec3 *image_dir, *image_indir, *image_photon;
+    vec3 *image_dir, *image_indir, *image_surface_photon, *image_volume_photon;
 
     checkCudaErrors(cudaMallocManaged((void **)&image_dir, image_size));
     checkCudaErrors(cudaMallocManaged((void **)&image_indir, image_size));
-    checkCudaErrors(cudaMallocManaged((void **)&image_photon, image_size));
+    checkCudaErrors(cudaMallocManaged((void **)&image_surface_photon, image_size));
+    checkCudaErrors(cudaMallocManaged((void **)&image_volume_photon, image_size));
 
     checkCudaErrors(
       cudaMallocManaged((void **)&hit_point_list, 
@@ -1377,22 +1378,41 @@ int main(int argc, char **argv) {
       start = clock();
       process = "Clearing image";
       print_start_process(process, start);
-      clear_image<<<blocks, threads>>>(image_photon, im_width, im_height);
+      clear_image<<<blocks, threads>>>(image_surface_photon, im_width, im_height);
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
 
-      //start = clock();
-      //process = "Creating photon image";
-      //print_start_process(process, start);
-      //create_point_image<<<num_recorded_photons[0] / tx + 1, tx>>>(
-      //  image_photon, my_camera, photon_list, num_recorded_photons[0]
-      //);
-      //checkCudaErrors(cudaGetLastError());
-      //checkCudaErrors(cudaDeviceSynchronize());
-      //print_end_process(process, start);
+      start = clock();
+      process = "Clearing image";
+      print_start_process(process, start);
+      clear_image<<<blocks, threads>>>(
+	image_volume_photon, im_width, im_height);
+      checkCudaErrors(cudaGetLastError());
+      checkCudaErrors(cudaDeviceSynchronize());
+      print_end_process(process, start);
+      start = clock();
 
-      // Building the tree of surface photons
+      process = "Creating photon image";
+      print_start_process(process, start);
+      create_point_image<<<num_surface_photons[0] / tx + 1, tx>>>(
+        image_surface_photon, my_camera, surface_photon_list, 
+	num_surface_photons[0]
+      );
+      checkCudaErrors(cudaGetLastError());
+      checkCudaErrors(cudaDeviceSynchronize());
+      print_end_process(process, start);
+
+      start = clock();
+      process = "Creating photon image";
+      print_start_process(process, start);
+      create_point_image<<<num_volume_photons[0] / tx + 1, tx>>>(
+        image_volume_photon, my_camera, volume_photon_list, 
+	num_volume_photons[0]
+      );
+      checkCudaErrors(cudaGetLastError());
+      checkCudaErrors(cudaDeviceSynchronize());
+      print_end_process(process, start);
 
       if (num_surface_photons[0] > 0) {
       	checkCudaErrors(cudaDeviceSynchronize());
@@ -1623,8 +1643,16 @@ int main(int argc, char **argv) {
           process = "Saving photon image";
           print_start_process(process, start);
           save_image(
-            image_photon, im_width, im_height, 
-            image_output_path + "_photon.ppm");
+            image_surface_photon, im_width, im_height, 
+            image_output_path + "_surface_photon.ppm");
+          print_end_process(process, start);
+
+          start = clock();
+          process = "Saving photon image";
+          print_start_process(process, start);
+          save_image(
+            image_volume_photon, im_width, im_height, 
+            image_output_path + "_volume_photon.ppm");
           print_end_process(process, start);
 
           start = clock();

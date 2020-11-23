@@ -33,17 +33,19 @@ __device__ vec3 _compute_volume_photon_contribution(
 }
 
 __device__ void traverse_bvh_volume_photon(
-  Node* bvh_root, PPMHitPoint* hit_point, Material *medium, vec3 filter
+  Node* bvh_root, PPMHitPoint* hit_point, Material *medium, vec3 filter,
+  int &num_photons
 ) {
   Node* stack[400];
   Node *child_l, *child_r;
   Ray ray;
   vec3 ray_dir;
   bool intersection_l, intersection_r, traverse_l, traverse_r;
-  int idx_stack_top = 0, num_intersections = 0;
+  int idx_stack_top = 0;
   hit_record rec;
   vec3 photon_contribution = vec3(0.0, 0.0, 0.0);
 
+  num_photons = 0;
   stack[idx_stack_top] = nullptr;
   idx_stack_top++;
 
@@ -59,16 +61,20 @@ __device__ void traverse_bvh_volume_photon(
       child_r -> bounding_sphere);
 
     if (intersection_l && child_l -> is_leaf) {
-      num_intersections++;
-      photon_contribution += _compute_volume_photon_contribution(
-        child_l -> point, hit_point, medium
+      num_photons++;
+      photon_contribution += de_nan(
+        _compute_volume_photon_contribution(
+          child_l -> point, hit_point, medium
+        )
       ); 
     }
 
     if (intersection_r && child_r -> is_leaf) {
-      num_intersections++;
-      photon_contribution += _compute_volume_photon_contribution(
-        child_r -> point, hit_point, medium
+      num_photons++;
+      photon_contribution += de_nan(
+	_compute_volume_photon_contribution(
+          child_r -> point, hit_point, medium
+        )
       ); 
     }
 

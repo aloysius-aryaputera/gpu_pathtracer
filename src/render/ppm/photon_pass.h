@@ -198,6 +198,7 @@ void photon_pass(
 	    if (random_number < medium -> scattering_prob) {
 	      photon_list[i] -> assign_location(ray.get_vector(d));
 	      photon_list[i] -> assign_color(light_source_color);
+	      photon_list[i] -> assign_direction(rec.coming_ray.dir);
 	      photon_list[i] -> undeclare_on_surface();
 	      return;
 	    }

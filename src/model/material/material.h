@@ -155,6 +155,7 @@ __device__ void find_highest_prioritised_materials(
     printf("\n\n");
 
   for (int idx = material_list_length - 1; idx >= 0; idx--) {
+  //for (int idx = 0; idx < material_list_length; idx++) {
     if (write) {
       printf("material_priority[%d] = %d\n", idx, get_material_priority(material_list[idx]));
     }
@@ -164,18 +165,22 @@ __device__ void find_highest_prioritised_materials(
     ) {
       highest_prioritised_material = material_list[idx];
     }
+  }
 
+  for (int idx = material_list_length - 1; idx >= 0; idx--) {
     if (
       (get_material_priority(material_list[idx]) <
         get_material_priority(second_highest_prioritised_material)) &&
-      (get_material_priority(material_list[idx]) >=
+      (get_material_priority(material_list[idx]) >
         get_material_priority(highest_prioritised_material))
     ) {
       second_highest_prioritised_material = material_list[idx];
     }
   }
+
   if (write) {
     printf("highest priority material priority = %d\n", get_material_priority(highest_prioritised_material));
+    printf("second highest priority material priority = %d\n", get_material_priority(second_highest_prioritised_material));
     printf("\n\n");
   }
 }
@@ -354,6 +359,14 @@ __device__ void Material::_refract(
   ref.k = k;
   ref.filter = compute_phong_filter(k, local_n_s, v_out, ref.ray.dir);
   ref.filter_2 = compute_phong_filter_2(k, local_n_s, v_out, ref.ray.dir);
+
+  if (ref.next_material != nullptr && ref.next_material != this) {
+    vec3 k2 = ref.next_material -> transmission * ref.next_material -> t_r;
+    float local_n_s_2 = ref.next_material -> _get_texture_n_s(uv_vector);
+    ref.k *= k2;
+    ref.filter *= compute_phong_filter(k2, local_n_s_2, v_out, ref.ray.dir);
+    ref.filter_2 *= compute_phong_filter_2(k2, local_n_s_2, v_out, ref.ray.dir);
+  }
 
   float sampling_pdf = compute_sampling_pdf_2(
     normal, ref.ray.dir, ref.diffuse, ref.n, v_in, ref.perfect_reflection_dir,
