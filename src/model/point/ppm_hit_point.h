@@ -36,7 +36,7 @@ class PPMHitPoint {
       int emitted_photon_per_pass
     );
     __device__ void update_direct_radiance(vec3 extra_direct_radiance);
-    __device__ vec3 compute_pixel_color(int num_passes, int type);
+    __device__ vec3 compute_pixel_color(int num_passes, int type, bool write);
     __device__ void update_bounding_cylinder_parameters(
       vec3 start, vec3 dir, float l
     );
@@ -53,6 +53,7 @@ __device__ float PPMHitPoint::compute_ppm_volume_kernel(
   if (is_inside) {
     return powf(1.0 / this -> volume_radius, 2) * silverman_biweight_kernel(
       dist_perpendicular / this -> volume_radius);
+    //return powf(1.0 / this -> volume_radius, 2);
   } else {
     return 0;
   }
@@ -74,7 +75,7 @@ __device__ void PPMHitPoint::update_bounding_cylinder_parameters(
   );
 }
 
-__device__ vec3 PPMHitPoint::compute_pixel_color(int num_passes, int type) {
+__device__ vec3 PPMHitPoint::compute_pixel_color(int num_passes, int type, bool write = false) {
   vec3 mean_radiance, mean_direct_radiance, mean_indirect_radiance;
 
   mean_radiance = (
@@ -83,6 +84,14 @@ __device__ vec3 PPMHitPoint::compute_pixel_color(int num_passes, int type) {
   mean_direct_radiance = this -> direct_radiance / float(num_passes);
   mean_indirect_radiance = this -> accummulated_indirect_radiance / float(
     num_passes);
+
+  if (write) {
+    printf(
+      "direct = (%.2f, %.2f, %.2f), indirect = (%.2f, %.2f, %.2f)\n",
+      mean_direct_radiance.r(), mean_direct_radiance.g(), mean_direct_radiance.b(),
+      mean_indirect_radiance.r(), mean_indirect_radiance.g(), mean_indirect_radiance.b()
+    );
+  }
 
   if (type == 0) {
     return de_nan(mean_direct_radiance);
@@ -94,7 +103,7 @@ __device__ vec3 PPMHitPoint::compute_pixel_color(int num_passes, int type) {
 }
 
 __device__ void PPMHitPoint::update_radius(float radius_) {
-  this -> volume_radius = 5 * radius_;
+  this -> volume_radius = radius_;
   this -> surface_radius = radius_;
   this -> bounding_sphere -> assign_new_radius(this -> surface_radius);
 }
@@ -130,7 +139,7 @@ __device__ void PPMHitPoint::update_accummulated_reflected_flux(
   this -> accummulated_indirect_radiance += surface_photon_contribution + 
     volume_photon_contribution;
 
-  printf("surf = (%5.2f, %5.2f, %5.2f), vol = (%5.2f, %5.2f, %5.2f)\n", surface_photon_contribution.r(), surface_photon_contribution.g(), surface_photon_contribution.b(), volume_photon_contribution.r(), volume_photon_contribution.g(), volume_photon_contribution.b()); 
+  //printf("surf = (%5.2f, %5.2f, %5.2f), vol = (%5.2f, %5.2f, %5.2f)\n", surface_photon_contribution.r(), surface_photon_contribution.g(), surface_photon_contribution.b(), volume_photon_contribution.r(), volume_photon_contribution.g(), volume_photon_contribution.b()); 
 
   this -> surface_radius = new_surface_radius;
   this -> volume_radius = new_volume_radius;

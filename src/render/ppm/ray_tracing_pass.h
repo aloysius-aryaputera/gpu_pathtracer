@@ -72,18 +72,6 @@ void _get_hit_point_details(
         ref, rand_state, write
       );
 
-      if (pixel_height_index == 245 && pixel_width_index == 182) {
-	Material *first = nullptr, *second = nullptr;	
-        find_highest_prioritised_materials(
-          material_list, material_list_length, first, second, true
-        );
-        int first_priority = get_material_priority(first);
-	int material_priority = get_material_priority(ref.next_material);
-        printf(
-	  "ref.false_hit = %d, ref.refracted = %d, ref.entering = %d, material_list_length = %d, hit material -> priority = %d, next material -> priority = %d, first -> priority = %d\n", ref.false_hit, ref.refracted, ref.entering, material_list_length, get_material_priority(rec.object -> get_material()), material_priority, first_priority
-	);
-      }
-
       if (ref.false_hit && ref.entering)
         add_new_material(
           material_list, material_list_length, rec.object -> get_material()
@@ -110,9 +98,6 @@ void _get_hit_point_details(
         medium = ref.next_material;
       }
 
-      if (pixel_height_index == 245 && pixel_width_index == 182) {
-	printf("in_medium = %d\n\n", in_medium);
-      }
       if (!(ref.false_hit) && prev_in_medium && !init) {
 	vec3 dir = rec.point - prev_hit_point;
 	float l = dir.length();
@@ -123,11 +108,21 @@ void _get_hit_point_details(
         traverse_bvh_volume_photon(
 	  volume_photon_node_list[0], hit_point, medium, filter, num_photons
 	);
+
+        if (pixel_width_index == 208 && pixel_height_index == 179) {
+          printf(
+	    "hit point accummulated lm = (%.2f, %.2f, %.2f), accummulated indirect = (%.2f, %.2f, %.2f)\n", 
+	    hit_point -> tmp_accummulated_lm.r(),
+	    hit_point -> tmp_accummulated_lm.g(),
+	    hit_point -> tmp_accummulated_lm.b(),
+	    hit_point -> accummulated_indirect_radiance.r(),
+	    hit_point -> accummulated_indirect_radiance.g(),
+	    hit_point -> accummulated_indirect_radiance.b()
+	  );
+	}
+
 	float transmittance = medium -> get_transmittance(l);
 	filter *= transmittance;
-        if (pixel_height_index == 245 && pixel_width_index == 182) {
-	  printf("num_photons = %d, acc_lm = (%5.2f, %5.2f, %5.2f), l = %5.2f, medium transmittance = %5.2f\n", num_photons, hit_point -> tmp_accummulated_lm.r(), hit_point -> tmp_accummulated_lm.g(), hit_point -> tmp_accummulated_lm.b(), l, transmittance); 
-	}
       }
 
       if (!(ref.false_hit)) {
@@ -177,10 +172,6 @@ void _get_hit_point_details(
 	  }
 
 	  if (hit) {
-	    //rec_2.object -> get_material() -> check_next_path(
-	    //  rec_2.coming_ray, rec_2.point, rec_2.normal, rec_2.uv_vector,
-	    //  sss, material_list, material_list_length, ref_3, rand_state
-	    //);
 	    add_direct_radiance = (
 	      filter_lag * ref_2.filter * transmittance * clamp(0, .999999, factor)
 	    ) * rec_2.object -> get_material() -> get_texture_emission(
@@ -191,6 +182,23 @@ void _get_hit_point_details(
 	}
         direct_radiance /= max(1.0, float(num_light_source_sampling));	
 	direct_radiance += emittance;
+
+	
+        if (pixel_width_index == 208 && pixel_height_index == 179) {
+          printf(
+	    "hit point accummulated lm = (%.2f, %.2f, %.2f), accummulated indirect = (%.2f, %.2f, %.2f), direct = (%.2f, %.2f, %.2f)\n", 
+	    hit_point -> tmp_accummulated_lm.r(),
+	    hit_point -> tmp_accummulated_lm.g(),
+	    hit_point -> tmp_accummulated_lm.b(),
+	    hit_point -> accummulated_indirect_radiance.r(),
+	    hit_point -> accummulated_indirect_radiance.g(),
+	    hit_point -> accummulated_indirect_radiance.b(),
+	    hit_point -> direct_radiance.r(),
+	    hit_point -> direct_radiance.g(),
+	    hit_point -> direct_radiance.b()
+	  );
+	}
+
 	return;
       }
 

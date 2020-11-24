@@ -19,8 +19,13 @@ void get_ppm_image_output(
 
   int pixel_index = i * (camera[0] -> width) + j;
 
+  bool write = false;
+  if (j == 208 && i == 179) {
+    write = true;
+  }
+
   fb[pixel_index] = hit_point_list[pixel_index] -> compute_pixel_color(
-    ppm_pass, image_mode
+    ppm_pass, image_mode, write
   );
 
 }

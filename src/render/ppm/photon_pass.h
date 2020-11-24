@@ -11,17 +11,10 @@
 #include "../../model/material/material.h"
 #include "../../model/point/point.h"
 #include "../../model/ray/ray.h"
+#include "../../param.h"
 #include "../../util/vector_util.h"
 #include "../material_list_operations.h"
 #include "common.h"
-
-__device__ void _copy_photon_info(Point *original, Point *copy) {
-  copy -> assign_location(original -> location);
-  copy -> assign_color(original -> color);
-  copy -> assign_direction(original -> direction);
-  if (original -> on_surface) 
-    copy -> declare_on_surface();
-}
 
 __global__
 void gather_recorded_photons(
@@ -44,12 +37,10 @@ void gather_recorded_photons(
         (num_surface_photons[0])++;
 	new_idx = num_surface_photons[0] - 1;
 	surface_photon_list[new_idx] = photon_list[idx];
-	//_copy_photon_info(photon_list[idx], surface_photon_list[new_idx]);
       } else {
 	(num_volume_photons[0])++;
         new_idx = num_volume_photons[0] - 1;
 	volume_photon_list[new_idx] = photon_list[idx];
-        //_copy_photon_info(photon_list[idx], volume_photon_list[new_idx]);
       }
     }
   }
@@ -119,7 +110,7 @@ void photon_pass(
 
   vec3 filter, light_source_color, tex_specular, tex_diffuse, prev_location;
   vec3 new_scattering_dir;
-  hit_record rec;
+  hit_record rec, rec_medium;
   reflection_record ref;
   Material* material_list[400], *medium;
   int num_bounce = 0, material_list_length = 0, light_source_idx;
@@ -192,16 +183,16 @@ void photon_pass(
 	  medium = ref.next_material;
 	  ray = ref.ray;
           d = medium -> get_propagation_distance(&local_rand_state); 
-	  hit = traverse_bvh(geom_node_list[0], ray, rec);
+	  hit = traverse_bvh(geom_node_list[0], ray, rec_medium);
           
-	  while (rec.t > d) {
+	  while (d - rec_medium.t < SMALL_DOUBLE) {
 	    scattered_in_medium = true;
 	    scattered_in_medium_now = true;
 	    random_number = curand_uniform(&local_rand_state);
 	    if (random_number < medium -> scattering_prob) {
 	      photon_list[i] -> assign_location(ray.get_vector(d));
 	      photon_list[i] -> assign_color(light_source_color);
-	      photon_list[i] -> assign_direction(rec.coming_ray.dir);
+	      photon_list[i] -> assign_direction(rec_medium.coming_ray.dir);
 	      photon_list[i] -> undeclare_on_surface();
 	      return;
 	    }
@@ -209,8 +200,12 @@ void photon_pass(
 	      ray.dir, &local_rand_state);
 	    d = medium -> get_propagation_distance(&local_rand_state);
 	    ray = Ray(ray.get_vector(d), new_scattering_dir);
-	    hit = traverse_bvh(geom_node_list[0], ray, rec);
-            prev_location = rec.point;
+            prev_location = rec_medium.point;
+	    hit = traverse_bvh(geom_node_list[0], ray, rec_medium);
+	  }
+
+	  if (scattered_in_medium_now) {
+	    rec = rec_medium;
 	  }
 	}
 	

@@ -26,7 +26,8 @@ __device__ vec3 _compute_volume_photon_contribution(
     );
     //printf("kernel = %5.2f; transmittance = %5.2f; scattering_coef = %5.2f; phase_function_value = %5.2f; photon_color = (%5.2f, %5.2f, %5.2f)\n", kernel_value, transmittance, medium -> scattering_coef, phase_function_value, photon -> color.r(), photon -> color.g(), photon -> color.b());
     return kernel_value * transmittance * medium -> scattering_coef * 
-      phase_function_value * photon -> color;  
+      phase_function_value * photon -> color; 
+    //return transmittance * medium -> scattering_coef * photon -> color;
   } else {
     return vec3(0.0, 0.0, 0.0);
   }
@@ -103,7 +104,7 @@ __device__ void traverse_bvh_volume_photon(
   } while(idx_stack_top > 0 && idx_stack_top < 400 && node != nullptr);
 
   hit_point -> add_tmp_accummulated_lm(filter * photon_contribution); 
-  //if (num_intersections > 0) {
+  //if (num_photons > 0) {
   //  print_vec3(filter * photon_contribution);
   //}
 }
@@ -212,17 +213,17 @@ void update_hit_point_parameters(
 ) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= num_hit_point) return;
-  if (hit_point_list[idx] -> location.vector_is_inf()) return;
   vec3 iterative_flux = vec3(0.0, 0.0, 0.0);
   int extra_photons = 0;
-  bool photon_found = _traverse_bvh_surface_photon(
-    photon_node_list[0], geom_node_list[0], hit_point_list[idx], 
-    iterative_flux, extra_photons
-  );
-  if (photon_found)
-    hit_point_list[idx] -> update_accummulated_reflected_flux(
-      iteration, iterative_flux, extra_photons, emitted_photon_per_pass
+  if (hit_point_list[idx] -> location.vector_is_inf()) {
+    _traverse_bvh_surface_photon(
+      photon_node_list[0], geom_node_list[0], hit_point_list[idx], 
+      iterative_flux, extra_photons
     );
+  }
+  hit_point_list[idx] -> update_accummulated_reflected_flux(
+    iteration, iterative_flux, extra_photons, emitted_photon_per_pass
+  );
 }
 
 #endif
