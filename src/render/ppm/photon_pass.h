@@ -168,7 +168,8 @@ void photon_pass(
 	    photon_list[i] -> assign_location(rec.point);
 	    photon_list[i] -> assign_color(light_source_color);
 	    photon_list[i] -> assign_direction(rec.coming_ray.dir);
-	  }  
+	  }
+	  return;  
 	} else {
 	  light_source_color = ref.k * light_source_color;
 	  //light_source_color = light_source_color * (
