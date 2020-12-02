@@ -7,6 +7,9 @@
 __device__ void add_new_material(
   Material** material_list, int &material_list_length, Material* material
 ) {
+  if (is_material_inside(material_list, material_list_length, material)) {
+    return;
+  }
   material_list[material_list_length] = material;
   material_list_length++;
 }
@@ -33,6 +36,23 @@ __device__ void remove_a_material(
     material_list_length--;
   }
 
+}
+
+__device__ void rearrange_material_list(
+  Material** material_list, int &material_list_length, Material* material,
+  bool false_hit, bool entering, bool refracted 
+) {
+  if (false_hit && entering)
+    add_new_material(material_list, material_list_length, material);
+  
+  if (false_hit && !entering)
+    remove_a_material(material_list, material_list_length, material);
+  
+  if (!false_hit && refracted && entering)
+    add_new_material(material_list, material_list_length, material);
+  
+  if (!false_hit && refracted && !entering)
+    remove_a_material(material_list, material_list_length, material);
 }
 
 #endif

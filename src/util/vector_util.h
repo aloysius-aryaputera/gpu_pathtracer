@@ -45,6 +45,10 @@ __device__ float _compute_refraction_sampling_pdf_2(
   vec3 in, vec3 out, vec3 normal, vec3 perfect_out, float n
 );
 
+__device__ float n_s_too_large(float n) {
+  return abs(n - MAX_PHONG_N_S) < SMALL_DOUBLE || n >= MAX_PHONG_N_S;
+}
+
 __device__ float silverman_biweight_kernel(float x) {
   return (3 / M_PI) * powf((1 - x * x), 2);
 }
@@ -77,7 +81,7 @@ __device__ float _compute_reflection_sampling_pdf(
     (dot_prod_1 >= 0 && dot_prod_2 <= 0) ||
     (dot_prod_1 <= 0 && dot_prod_2 >= 0)
   ) {
-    if (isinf(n)) {
+    if (n_s_too_large(n)) {
       return MAX_PHONG_N_S / (2 * M_PI);
     } else {
       return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
@@ -96,7 +100,7 @@ __device__ float _compute_refraction_sampling_pdf(
     (dot_prod_1 >= 0 && dot_prod_2 >= 0) ||
     (dot_prod_1 <= 0 && dot_prod_2 <= 0)
   ) {
-    if (isinf(n)) {
+    if (n_s_too_large(n)) {
       return MAX_PHONG_N_S / (2 * M_PI);
     } else {
       return (n + 1) * powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
@@ -125,7 +129,7 @@ __device__ float _compute_reflection_sampling_pdf_2(
     (dot_prod_1 >= 0 && dot_prod_2 <= 0) ||
     (dot_prod_1 <= 0 && dot_prod_2 >= 0)
   ) {
-    if (isinf(n)) {
+    if (n_s_too_large(n)) {
       return 1 / (2 * M_PI);
     } else {
       return powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
@@ -144,7 +148,7 @@ __device__ float _compute_refraction_sampling_pdf_2(
     (dot_prod_1 >= 0 && dot_prod_2 >= 0) ||
     (dot_prod_1 <= 0 && dot_prod_2 <= 0)
   ) {
-    if (isinf(n)) {
+    if (n_s_too_large(n)) {
       return 1 / (2 * M_PI);
     } else {
       return powf(fmaxf(0.0, dot(perfect_out, out)), n) / (2 * M_PI);
@@ -215,7 +219,7 @@ __device__ vec3 compute_phong_filter(
   vec3 k, float n, vec3 ideal_dir, vec3 dir
 ) {
   vec3 filter;
-  if (isinf(n)) {
+  if (n_s_too_large(n)) {
     filter = k * MAX_PHONG_N_S * vec3(1, 1, 1) / 2;
   } else {
     filter = k * (n + 2) * powf(fmaxf(0, dot(ideal_dir, dir)), n) / 2;
@@ -227,17 +231,23 @@ __device__ vec3 compute_phong_filter_2(
   vec3 k, float n, vec3 ideal_dir, vec3 dir
 ) {
   vec3 filter;
-  if (isinf(n)) {
+  if (n_s_too_large(n)) {
     filter = k;
   } else {
     filter = k * powf(fmaxf(0, dot(ideal_dir, dir)), n);
+  }
+  if (filter.vector_is_inf()) {
+    printf("k = (%.2f, %.2f, %.2f), n = %.2f, ideal_dir = (%.2f, %.2f, %.2f), dir = (%.2f, %.2f, %.2f)\n",
+      k.r(), k.g(), k.b(), n, ideal_dir.x(), ideal_dir.y(), ideal_dir.z(),
+      dir.x(), dir.y(), dir.z()
+    );
   } 
   return filter;
 }
 
 __device__ vec3 get_random_unit_vector_phong(float n, curandState *rand_state) {
   vec3 output_vector;
-  if (isinf(n)) {
+  if (n_s_too_large(n)) {
     output_vector = vec3(0, 0, 1);
   } else {
     float r1 = curand_uniform(&rand_state[0]);

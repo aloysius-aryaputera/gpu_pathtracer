@@ -207,6 +207,11 @@ __device__ hit_record Triangle::get_random_point_on_surface(
     1 - u - v) * this -> tex_3;
   new_hit_record.object = this;
 
+  CartesianSystem system = CartesianSystem(new_hit_record.normal);
+  vec3 random_dir = get_random_unit_vector_hemisphere(&rand_state[0]);
+  random_dir = system.to_world_system(random_dir);
+  new_hit_record.coming_ray = Ray(new_hit_record.point, -random_dir); 
+
   return new_hit_record;
 
 }

@@ -113,7 +113,7 @@ void photon_pass(
   hit_record rec, rec_medium;
   reflection_record ref;
   Material* material_list[400], *medium;
-  int num_bounce = 0, material_list_length = 0, light_source_idx;
+  int num_bounce = -1, material_list_length = 0, light_source_idx;
   bool hit = false, sss = false, in_medium = false, scattered_in_medium = false;
   bool scattered_in_medium_now = false;
   curandState local_rand_state = rand_state[i];
@@ -140,12 +140,17 @@ void photon_pass(
   
   prev_location = rec.point;
   photon_list[i] -> assign_prev_location(prev_location);
-  hit = traverse_bvh(geom_node_list[0], ray, rec);
 
-  if (hit) {
-    while (hit && num_bounce < max_bounce) {
-      num_bounce += 1;
+  //if (hit) {
+    while ((hit && num_bounce < max_bounce) || num_bounce < 0) {
       scattered_in_medium_now = false;
+
+      //if (num_bounce < 0) {
+        
+      //  hit = traverse_bvh(geom_node_list[0], ray, rec);
+      //}
+
+      num_bounce += 1;
 
       rec.object -> get_material() -> check_next_path(
         rec.coming_ray, rec.point, rec.normal, rec.uv_vector,
@@ -153,34 +158,17 @@ void photon_pass(
         ref, rand_state
       );
 
-      if (ref.false_hit && ref.entering)
-        add_new_material(
-          material_list, material_list_length, rec.object -> get_material()
-        );
+      rearrange_material_list(
+        material_list, material_list_length, rec.object -> get_material(),
+        ref.false_hit, ref.entering, ref.refracted 
+      );
 
-      if (ref.false_hit && !(ref.entering))
-        remove_a_material(
-          material_list, material_list_length, rec.object -> get_material()
-        );
-
-      if (!(ref.false_hit) && ref.refracted && ref.entering)
-        add_new_material(
-          material_list, material_list_length, rec.object -> get_material()
-        );
-
-      if (!(ref.false_hit) && ref.refracted && !(ref.entering))
-        remove_a_material(
-          material_list, material_list_length, rec.object -> get_material()
-        );
-
-      in_medium = check_if_entering_medium(rec, ref, in_medium);
-      //printf("in_medium = %d\n", in_medium);
-      //in_medium = false;    
+      in_medium = check_if_entering_medium(rec, ref, in_medium, medium);
  
-      if (!(ref.false_hit)) {
+      if (!(ref.false_hit) && num_bounce > 0) {
 
 	if (in_medium) {
-	  medium = ref.next_material;
+	  //medium = ref.next_material;
 	  ray = ref.ray;
           d = medium -> get_propagation_distance(&local_rand_state); 
 	  hit = traverse_bvh(geom_node_list[0], ray, rec_medium);
@@ -241,7 +229,7 @@ void photon_pass(
       }
       
     }
-  }
+  //}
 }
 
 #endif

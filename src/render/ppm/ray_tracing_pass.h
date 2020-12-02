@@ -40,7 +40,7 @@ void _get_hit_point_details(
   reflection_record ref_2;
   bool sss = false, in_medium = false, prev_in_medium = false;
   Ray ray;
-  Material* material_list[400], *medium;
+  Material* material_list[400], *medium = nullptr;
   int material_list_length = 0, num_bounce = 0;
   float factor, pdf_lag = 1, transmittance;
   vec3 emittance = vec3(0.0, 0.0, 0.0), filter_lag = vec3(1.0, 1.0, 1.0);
@@ -66,36 +66,40 @@ void _get_hit_point_details(
     while (!(ref.diffuse) && hit && num_bounce < max_bounce) {
       num_bounce += 1;
 
+      if (pixel_width_index == 79 && pixel_height_index == 247)
+        write = true;
+      else
+	write = false;
+
       rec.object -> get_material() -> check_next_path(
         rec.coming_ray, rec.point, rec.normal, rec.uv_vector,
         sss, material_list, material_list_length,
         ref, rand_state, write
       );
 
-      if (ref.false_hit && ref.entering)
-        add_new_material(
-          material_list, material_list_length, rec.object -> get_material()
-        );
-
-      if (ref.false_hit && !(ref.entering))
-        remove_a_material(
-          material_list, material_list_length, rec.object -> get_material()
-        );
-
-      if (!(ref.false_hit) && ref.refracted && ref.entering)
-        add_new_material(
-          material_list, material_list_length, rec.object -> get_material()
-        );
-
-      if (!(ref.false_hit) && ref.refracted && !(ref.entering))
-        remove_a_material(
-          material_list, material_list_length, rec.object -> get_material()
-        );
+      rearrange_material_list(
+        material_list, material_list_length, rec.object -> get_material(),
+        ref.false_hit, ref.entering, ref.refracted 
+      );
   
-      in_medium = check_if_entering_medium(rec, ref, in_medium);
+      in_medium = check_if_entering_medium(rec, ref, in_medium, medium);
 
       if (in_medium) {
         medium = ref.next_material;
+      }
+
+      if (pixel_width_index == 79 && pixel_height_index == 247) {
+	Material *highest_prioritised_material, *second_highest_prioritised_material;
+        printf(
+	  "false_hit = %d, entering = %d, diffuse = %d, refracted = %d, reflected = %d, in medium = %d\n",
+	  ref.false_hit, ref.entering, ref.diffuse, ref.refracted, ref.reflected, in_medium
+	);  
+        find_highest_prioritised_materials(
+          material_list, material_list_length,
+          highest_prioritised_material,
+          second_highest_prioritised_material,
+          true
+        );
       }
 
       if (!(ref.false_hit) && prev_in_medium && !init) {
@@ -109,17 +113,17 @@ void _get_hit_point_details(
 	  volume_photon_node_list[0], hit_point, medium, filter, num_photons
 	);
 
-        if (pixel_width_index == 208 && pixel_height_index == 179) {
-          printf(
-	    "hit point accummulated lm = (%.2f, %.2f, %.2f), accummulated indirect = (%.2f, %.2f, %.2f)\n", 
-	    hit_point -> tmp_accummulated_lm.r(),
-	    hit_point -> tmp_accummulated_lm.g(),
-	    hit_point -> tmp_accummulated_lm.b(),
-	    hit_point -> accummulated_indirect_radiance.r(),
-	    hit_point -> accummulated_indirect_radiance.g(),
-	    hit_point -> accummulated_indirect_radiance.b()
+	if (hit_point -> tmp_accummulated_lm.vector_is_inf() || 
+	  hit_point -> tmp_accummulated_lm.r() < 0 ||
+	  hit_point -> tmp_accummulated_lm.g() < 0 ||
+	  hit_point -> tmp_accummulated_lm.b() < 0
+	) {
+	  printf("wi = %d, hi = %d, false hit = %d, entering = %d, refracted = %d, reflected = %d, diffuse = %d, material list length = %d\n",
+	    pixel_width_index, pixel_height_index,
+	    ref.false_hit, ref.entering, ref.refracted, ref.reflected, ref.diffuse,
+	    material_list_length
 	  );
-	}
+	} 
 
 	float transmittance = medium -> get_transmittance(l);
 	filter *= transmittance;

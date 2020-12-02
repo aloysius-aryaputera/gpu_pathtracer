@@ -142,6 +142,17 @@ __device__ float get_material_refraction_index(Material* material) {
   }
 }
 
+__device__ bool is_material_inside(
+  Material** material_list, int material_list_length, Material *material
+) {
+  for (int idx = material_list_length - 1; idx >= 0; idx--) {
+    if (material_list[idx] == material) {
+      return true;
+    }
+  }
+  return false;
+}
+
 __device__ void find_highest_prioritised_materials(
   Material** material_list, int material_list_length,
   Material* &highest_prioritised_material,
@@ -222,6 +233,10 @@ __device__ bool Material::_check_if_false_hit(
   second_highest_prioritised_material = nullptr;
   int highest_prioritised_material_priority = 99999;
 
+  //if (is_material_inside(material_list, material_list_length, this)) {
+  //  return true;
+  //}
+
   find_highest_prioritised_materials(
     material_list, material_list_length,
     highest_prioritised_material,
@@ -248,7 +263,10 @@ __device__ void Material::_refract(
   curandState *rand_state,
   bool write=false
 ) {
-  //reflection_record ref;
+  if (write) {
+    printf("In the _refract function\n.");
+  }
+
   float random_number = curand_uniform(&rand_state[0]);
 
   float highest_prioritised_material_ref_idx = get_material_refraction_index(

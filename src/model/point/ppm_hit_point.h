@@ -103,7 +103,7 @@ __device__ vec3 PPMHitPoint::compute_pixel_color(int num_passes, int type, bool 
 }
 
 __device__ void PPMHitPoint::update_radius(float radius_) {
-  this -> volume_radius = radius_;
+  this -> volume_radius = 5 * radius_;
   this -> surface_radius = radius_;
   this -> bounding_sphere -> assign_new_radius(this -> surface_radius);
 }
@@ -135,6 +135,30 @@ __device__ void PPMHitPoint::update_accummulated_reflected_flux(
   );
   vec3 volume_photon_contribution = de_nan(
     this -> tmp_accummulated_lm / emitted_photon_per_pass);
+
+  if (surface_photon_contribution.r() < 0 || surface_photon_contribution.g() < 0 || surface_photon_contribution.b() < 0) {
+    printf("Surface photon contribution = (%.2f, %.2f, %.2f)\n",
+      surface_photon_contribution.r(),
+      surface_photon_contribution.g(),
+      surface_photon_contribution.b()
+    );
+  }
+
+  if (volume_photon_contribution.r() < 0 || volume_photon_contribution.g() < 0 || volume_photon_contribution.b() < 0) {
+    printf("Volume photon contribution = (%.2f, %.2f, %.2f)\n",
+      volume_photon_contribution.r(),
+      volume_photon_contribution.g(),
+      volume_photon_contribution.b()
+    );
+  }
+
+  if (surface_photon_contribution.vector_is_inf()) {
+    printf("surface_photon_contribution is inf!\n");
+  }
+
+  if (volume_photon_contribution.vector_is_inf()) {
+    printf("volume_photon_contribution is inf!\n");
+  }
 
   this -> accummulated_indirect_radiance += surface_photon_contribution + 
     volume_photon_contribution;

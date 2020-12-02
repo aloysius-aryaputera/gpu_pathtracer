@@ -19,18 +19,25 @@ __device__ vec3 _compute_volume_photon_contribution(
   float kernel_value = hit_point -> compute_ppm_volume_kernel(
     photon -> location, dist_perpendicular, dist_parallel
   );
+  vec3 output = vec3(0.0, 0.0, 0.0);
   if (kernel_value > 0) {
     float transmittance = medium -> get_transmittance(dist_parallel);
     float phase_function_value = medium -> get_phase_function_value(
       hit_point -> bounding_cylinder -> axis.dir, photon -> direction 
     );
-    //printf("kernel = %5.2f; transmittance = %5.2f; scattering_coef = %5.2f; phase_function_value = %5.2f; photon_color = (%5.2f, %5.2f, %5.2f)\n", kernel_value, transmittance, medium -> scattering_coef, phase_function_value, photon -> color.r(), photon -> color.g(), photon -> color.b());
-    return kernel_value * transmittance * medium -> scattering_coef * 
-      phase_function_value * photon -> color; 
-    //return transmittance * medium -> scattering_coef * photon -> color;
-  } else {
-    return vec3(0.0, 0.0, 0.0);
+
+    if (isinf(transmittance)) {
+      printf("Transmittance is inf!\n");
+    }
+
+    output = kernel_value * transmittance * medium -> scattering_coef * 
+      phase_function_value * photon -> color;
+    
+    //if (output.vector_is_inf() || output.r() < 0 || output.g() < 0 || output.b() < 0) { 
+    //  printf("kernel = %5.2f; transmittance = %5.2f; scattering_coef = %5.2f; phase_function_value = %5.2f; photon_color = (%5.2f, %5.2f, %5.2f)\n", kernel_value, transmittance, medium -> scattering_coef, phase_function_value, photon -> color.r(), photon -> color.g(), photon -> color.b());
+    //}
   }
+  return output;
 }
 
 __device__ void traverse_bvh_volume_photon(
@@ -44,7 +51,7 @@ __device__ void traverse_bvh_volume_photon(
   bool intersection_l, intersection_r, traverse_l, traverse_r;
   int idx_stack_top = 0;
   hit_record rec;
-  vec3 photon_contribution = vec3(0.0, 0.0, 0.0);
+  vec3 photon_contribution = vec3(0.0, 0.0, 0.0), photon_contribution_tmp;
 
   num_photons = 0;
   stack[idx_stack_top] = nullptr;
@@ -63,20 +70,22 @@ __device__ void traverse_bvh_volume_photon(
 
     if (intersection_l && child_l -> is_leaf) {
       num_photons++;
-      photon_contribution += de_nan(
+      photon_contribution_tmp += de_nan(
         _compute_volume_photon_contribution(
           child_l -> point, hit_point, medium
         )
       ); 
+      photon_contribution += photon_contribution_tmp;
     }
 
     if (intersection_r && child_r -> is_leaf) {
       num_photons++;
-      photon_contribution += de_nan(
+      photon_contribution_tmp += de_nan(
 	_compute_volume_photon_contribution(
           child_r -> point, hit_point, medium
         )
       ); 
+      photon_contribution += photon_contribution_tmp;
     }
 
     traverse_l = (intersection_l && !(child_l -> is_leaf));
@@ -107,6 +116,15 @@ __device__ void traverse_bvh_volume_photon(
   //if (num_photons > 0) {
   //  print_vec3(filter * photon_contribution);
   //}
+  
+
+  //if (hit_point -> tmp_accummulated_lm.vector_is_inf()) {
+  //	printf(
+  //        "filter = (%.2f, %.2f, %.2f), photon_cont = (%.2f, %.2f, %.2f)\n", 
+  //        filter.r(), filter.g(), filter.b(), 
+  //        photon_contribution.r(), photon_contribution.g(), photon_contribution.b());
+  //}
+
 }
 
 __device__ bool _traverse_bvh_surface_photon(
@@ -215,7 +233,7 @@ void update_hit_point_parameters(
   if (idx >= num_hit_point) return;
   vec3 iterative_flux = vec3(0.0, 0.0, 0.0);
   int extra_photons = 0;
-  if (hit_point_list[idx] -> location.vector_is_inf()) {
+  if (!(hit_point_list[idx] -> location.vector_is_inf())) {
     _traverse_bvh_surface_photon(
       photon_node_list[0], geom_node_list[0], hit_point_list[idx], 
       iterative_flux, extra_photons
