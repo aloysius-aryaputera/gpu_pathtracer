@@ -166,7 +166,6 @@ __device__ void find_highest_prioritised_materials(
     printf("\n\n");
 
   for (int idx = material_list_length - 1; idx >= 0; idx--) {
-  //for (int idx = 0; idx < material_list_length; idx++) {
     if (write) {
       printf("material_priority[%d] = %d\n", idx, get_material_priority(material_list[idx]));
     }
@@ -221,7 +220,10 @@ __device__ vec3 Material::get_new_scattering_direction(
 }	
 
 __device__ float Material::get_transmittance(float t) {
-  return exp(-t * this -> extinction_coef); 
+  if (this -> extinction_coef > SMALL_DOUBLE)
+    return exp(-t * this -> extinction_coef); 
+  else
+    return 1.0;
 }
 
 __device__ bool Material::_check_if_false_hit(

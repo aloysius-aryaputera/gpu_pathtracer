@@ -141,95 +141,85 @@ void photon_pass(
   prev_location = rec.point;
   photon_list[i] -> assign_prev_location(prev_location);
 
-  //if (hit) {
-    while ((hit && num_bounce < max_bounce) || num_bounce < 0) {
-      scattered_in_medium_now = false;
+  while ((hit && num_bounce < max_bounce) || num_bounce < 0) {
+    scattered_in_medium_now = false;
 
-      //if (num_bounce < 0) {
-        
-      //  hit = traverse_bvh(geom_node_list[0], ray, rec);
-      //}
+    num_bounce += 1;
 
-      num_bounce += 1;
+    rec.object -> get_material() -> check_next_path(
+      rec.coming_ray, rec.point, rec.normal, rec.uv_vector,
+      sss, material_list, material_list_length,
+      ref, rand_state
+    );
 
-      rec.object -> get_material() -> check_next_path(
-        rec.coming_ray, rec.point, rec.normal, rec.uv_vector,
-        sss, material_list, material_list_length,
-        ref, rand_state
-      );
+    rearrange_material_list(
+      material_list, material_list_length, rec.object -> get_material(),
+      ref.false_hit, ref.entering, ref.refracted 
+    );
 
-      rearrange_material_list(
-        material_list, material_list_length, rec.object -> get_material(),
-        ref.false_hit, ref.entering, ref.refracted 
-      );
-
-      in_medium = check_if_entering_medium(rec, ref, in_medium, medium);
+    in_medium = check_if_entering_medium(ref, in_medium, medium);
  
-      if (!(ref.false_hit) && num_bounce > 0) {
+    if (!(ref.false_hit) && num_bounce > 0) {
 
-	if (in_medium) {
-	  //medium = ref.next_material;
-	  ray = ref.ray;
-          d = medium -> get_propagation_distance(&local_rand_state); 
-	  hit = traverse_bvh(geom_node_list[0], ray, rec_medium);
-          
-	  while (d - rec_medium.t < SMALL_DOUBLE) {
-	    scattered_in_medium = true;
-	    scattered_in_medium_now = true;
-	    random_number = curand_uniform(&local_rand_state);
-	    if (random_number < medium -> scattering_prob) {
-	      photon_list[i] -> assign_location(ray.get_vector(d));
-	      photon_list[i] -> assign_color(light_source_color);
-	      photon_list[i] -> assign_direction(rec_medium.coming_ray.dir);
-	      photon_list[i] -> undeclare_on_surface();
-	      return;
-	    }
-            new_scattering_dir = medium -> get_new_scattering_direction(
-	      ray.dir, &local_rand_state);
-	    d = medium -> get_propagation_distance(&local_rand_state);
-	    ray = Ray(ray.get_vector(d), new_scattering_dir);
-            prev_location = rec_medium.point;
-	    hit = traverse_bvh(geom_node_list[0], ray, rec_medium);
-	  }
-
-	  if (scattered_in_medium_now) {
-	    rec = rec_medium;
-	  }
-	}
-	
-	if(!scattered_in_medium_now) {
-          random_number = curand_uniform(&local_rand_state);
-	  reflection_prob = max(ref.k);
-          if (random_number > reflection_prob) {
-	    if (ref.diffuse && (num_bounce > 1 || scattered_in_medium)) {
-	      photon_list[i] -> assign_prev_location(prev_location);
-	      photon_list[i] -> assign_location(rec.point);
-	      photon_list[i] -> assign_color(light_source_color);
-	      photon_list[i] -> assign_direction(rec.coming_ray.dir);
-	      photon_list[i] -> declare_on_surface();
-	    }
-	    return;  
-	  } else {
-	    light_source_color = ref.k * light_source_color;
-	    //light_source_color = light_source_color * (
-	    //  max_energy / light_source_color.length());
-	    mean_color_tmp = (
-	      light_source_color.r() + light_source_color.g() + 
-	      light_source_color.b()
-	    ) / 3;
-	    light_source_color *= (mean_color / mean_color_tmp);
-	  }	
-	}
-      } 
-
-      if (!scattered_in_medium_now) {
+      if (in_medium) {
         ray = ref.ray;
-        prev_location = rec.point;
-        hit = traverse_bvh(geom_node_list[0], ray, rec);
+        d = medium -> get_propagation_distance(&local_rand_state); 
+        hit = traverse_bvh(geom_node_list[0], ray, rec_medium);
+        
+        while (d - rec_medium.t < SMALL_DOUBLE) {
+          scattered_in_medium = true;
+          scattered_in_medium_now = true;
+          random_number = curand_uniform(&local_rand_state);
+          if (random_number < medium -> scattering_prob) {
+            photon_list[i] -> assign_location(ray.get_vector(d));
+            photon_list[i] -> assign_color(light_source_color);
+            photon_list[i] -> assign_direction(rec_medium.coming_ray.dir);
+            photon_list[i] -> undeclare_on_surface();
+            return;
+          }
+          new_scattering_dir = medium -> get_new_scattering_direction(
+            ray.dir, &local_rand_state);
+          d = medium -> get_propagation_distance(&local_rand_state);
+          ray = Ray(ray.get_vector(d), new_scattering_dir);
+          prev_location = rec_medium.point;
+          hit = traverse_bvh(geom_node_list[0], ray, rec_medium);
+        }
+
+        if (scattered_in_medium_now) {
+          rec = rec_medium;
+        }
       }
       
+      if(!scattered_in_medium_now) {
+        random_number = curand_uniform(&local_rand_state);
+        reflection_prob = max(ref.k);
+        if (random_number > reflection_prob) {
+          if (ref.diffuse && (num_bounce > 1 || scattered_in_medium)) {
+            photon_list[i] -> assign_prev_location(prev_location);
+            photon_list[i] -> assign_location(rec.point);
+            photon_list[i] -> assign_color(light_source_color);
+            photon_list[i] -> assign_direction(rec.coming_ray.dir);
+            photon_list[i] -> declare_on_surface();
+          }
+          return;  
+        } else {
+          light_source_color = ref.k * light_source_color;
+          mean_color_tmp = (
+            light_source_color.r() + light_source_color.g() + 
+            light_source_color.b()
+          ) / 3;
+          light_source_color *= (mean_color / mean_color_tmp);
+        }	
+      }
+    } 
+
+    if (!scattered_in_medium_now) {
+      ray = ref.ray;
+      prev_location = rec.point;
+      hit = traverse_bvh(geom_node_list[0], ray, rec);
     }
-  //}
+    
+  }
 }
 
 #endif

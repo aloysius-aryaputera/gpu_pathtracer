@@ -16,21 +16,86 @@
 #include "../material_list_operations.h"
 #include "common.h"
 
+__device__ vec3 _compute_direct_radiance(
+  vec3 filter,
+  hit_record rec,
+  reflection_record ref,
+  float &pdf,
+  Primitive** target_geom_array,
+  int num_target_geom,
+  Node** geom_node_list,
+  Node** target_node_list,
+  Node** target_leaf_list,
+  curandState *rand_state
+) {
+
+  float factor = 1, transmittance = 1;
+  vec3 emittance = filter * rec.object -> get_material(
+  ) -> get_texture_emission(rec.uv_vector);
+  vec3 direct_radiance;
+  Ray ray;
+  bool hit;
+
+  change_ref_ray(
+    rec, 
+    ref, 
+    target_geom_array, 
+    num_target_geom,
+    factor,
+    target_node_list,
+    target_leaf_list,
+    1,
+    rand_state,
+    false
+  );
+  ray = ref.ray;
+  hit = traverse_bvh(geom_node_list[0], ray, rec);
+  
+  while (
+    hit && rec.object -> get_material() -> n_i < SMALL_DOUBLE &&
+    rec.object -> get_material() -> extinction_coef >= SMALL_DOUBLE
+  ) {
+    if (dot(rec.normal, ray.dir) >= 0) {
+      transmittance *= rec.object -> get_material(
+      ) -> get_transmittance(rec.t);
+    }
+    ray = Ray(rec.point, ray.dir);
+    hit = traverse_bvh(geom_node_list[0], ray, rec);
+  }
+  
+  if (hit) {
+    direct_radiance += (
+      filter * ref.filter * transmittance * clamp(0, .999999, factor)
+    ) * rec.object -> get_material() -> get_texture_emission(
+      rec.uv_vector
+    );
+  }
+
+  direct_radiance += emittance;
+  return direct_radiance;
+}
+
 __device__
 void _get_hit_point_details(
   PPMHitPoint* hit_point,
   Node **volume_photon_node_list,
-  reflection_record &ref, hit_record &rec, vec3 &filter, float &pdf,
+  reflection_record &ref, 
+  hit_record &rec, 
+  vec3 &filter, 
+  float &pdf,
   vec3 &direct_radiance,
-  Camera **camera, int pixel_width_index, int pixel_height_index,
-  Node **geom_node_list, int max_bounce,
-  float camera_width_offset, float camera_height_offset, 
+  Camera **camera, 
+  int pixel_width_index, 
+  int pixel_height_index,
+  Node **geom_node_list, 
+  int max_bounce,
+  float camera_width_offset, 
+  float camera_height_offset, 
   bool& hit, 
   Primitive** target_geom_array,
   int num_target_geom,
   Node **target_node_list,
   Node **target_leaf_list,
-  int num_light_source_sampling,
   curandState *rand_state,
   int pixel_idx,
   bool init
@@ -46,7 +111,7 @@ void _get_hit_point_details(
   vec3 emittance = vec3(0.0, 0.0, 0.0), filter_lag = vec3(1.0, 1.0, 1.0);
   direct_radiance = vec3(0.0, 0.0, 0.0);
   vec3 add_direct_radiance, prev_hit_point, start_point;
-  bool write;
+  bool write = false;
 
   max_bounce = 64;
   add_new_material(material_list, material_list_length, nullptr);
@@ -66,11 +131,6 @@ void _get_hit_point_details(
     while (!(ref.diffuse) && hit && num_bounce < max_bounce) {
       num_bounce += 1;
 
-      if (pixel_width_index == 79 && pixel_height_index == 247)
-        write = true;
-      else
-	write = false;
-
       rec.object -> get_material() -> check_next_path(
         rec.coming_ray, rec.point, rec.normal, rec.uv_vector,
         sss, material_list, material_list_length,
@@ -82,27 +142,10 @@ void _get_hit_point_details(
         ref.false_hit, ref.entering, ref.refracted 
       );
   
-      in_medium = check_if_entering_medium(rec, ref, in_medium, medium);
-
-      if (in_medium) {
-        medium = ref.next_material;
-      }
-
-      if (pixel_width_index == 79 && pixel_height_index == 247) {
-	Material *highest_prioritised_material, *second_highest_prioritised_material;
-        printf(
-	  "false_hit = %d, entering = %d, diffuse = %d, refracted = %d, reflected = %d, in medium = %d\n",
-	  ref.false_hit, ref.entering, ref.diffuse, ref.refracted, ref.reflected, in_medium
-	);  
-        find_highest_prioritised_materials(
-          material_list, material_list_length,
-          highest_prioritised_material,
-          second_highest_prioritised_material,
-          true
-        );
-      }
+      in_medium = check_if_entering_medium(ref, in_medium, medium);
 
       if (!(ref.false_hit) && prev_in_medium && !init) {
+
 	vec3 dir = rec.point - prev_hit_point;
 	float l = dir.length();
         hit_point -> update_bounding_cylinder_parameters(
@@ -125,7 +168,7 @@ void _get_hit_point_details(
 	  );
 	} 
 
-	float transmittance = medium -> get_transmittance(l);
+	transmittance = medium -> get_transmittance(l);
 	filter *= transmittance;
       }
 
@@ -137,71 +180,67 @@ void _get_hit_point_details(
       }
 
       if (ref.diffuse) {
-        emittance = filter_lag * rec.object -> get_material(
-        ) -> get_texture_emission(rec.uv_vector);
-	
-	ref_2 = ref;
 	pdf = pdf_lag;
-        for (int idx = 0; idx < num_light_source_sampling; idx++) {
-	  factor = 1;
-	  transmittance = 1;
+        direct_radiance += _compute_direct_radiance(
+	  filter_lag,
+	  rec,
+	  ref,
+	  pdf,
+          target_geom_array,
+	  num_target_geom,
+	  geom_node_list,
+	  target_node_list,
+	  target_leaf_list,
+	  rand_state
+	);
 
-	  change_ref_ray(
-	    rec, 
-	    ref_2, 
-	    target_geom_array, 
-	    num_target_geom,
-            factor,
-            target_node_list,
-	    target_leaf_list,
-	    1,
-	    rand_state,
-	    false
-	  );
-	  ray = ref_2.ray;
-	  hit = traverse_bvh(geom_node_list[0], ray, rec_2);
+        //emittance = filter_lag * rec.object -> get_material(
+        //) -> get_texture_emission(rec.uv_vector);
+	//
+	//ref_2 = ref;
+	//pdf = pdf_lag;
+        ////for (int idx = 0; idx < num_light_source_sampling; idx++) {
+	//factor = 1;
+	//transmittance = 1;
 
-          while (
-	    hit && rec_2.object -> get_material() -> n_i < SMALL_DOUBLE &&
-	    rec_2.object -> get_material() -> extinction_coef >= 0
-	  ) {
-	    if (dot(rec_2.normal, ray.dir) >= 0) {
-	      //transmittance *= exp(
-	      //-rec_2.t * rec_2.object -> get_material() -> extinction_coef);
-	      transmittance *= rec_2.object -> get_material(
-	      ) -> get_transmittance(rec_2.t);
-	    }
-	    ray = Ray(rec_2.point, ray.dir);
-	    hit = traverse_bvh(geom_node_list[0], ray, rec_2);
-	  }
+	//change_ref_ray(
+	//  rec, 
+	//  ref_2, 
+	//  target_geom_array, 
+	//  num_target_geom,
+        //  factor,
+        //  target_node_list,
+	//  target_leaf_list,
+	//  1,
+	//  rand_state,
+	//  false
+	//);
+	//ray = ref_2.ray;
+	//hit = traverse_bvh(geom_node_list[0], ray, rec_2);
 
-	  if (hit) {
-	    add_direct_radiance = (
-	      filter_lag * ref_2.filter * transmittance * clamp(0, .999999, factor)
-	    ) * rec_2.object -> get_material() -> get_texture_emission(
-	      rec_2.uv_vector
-            );
-	    direct_radiance += add_direct_radiance;
-	  }
-	}
-        direct_radiance /= max(1.0, float(num_light_source_sampling));	
-	direct_radiance += emittance;
+        //while (
+	//  hit && rec_2.object -> get_material() -> n_i < SMALL_DOUBLE &&
+	//  rec_2.object -> get_material() -> extinction_coef >= SMALL_DOUBLE
+	//) {
+	//  if (dot(rec_2.normal, ray.dir) >= 0) {
+	//    transmittance *= rec_2.object -> get_material(
+	//    ) -> get_transmittance(rec_2.t);
+	//  }
+	//  ray = Ray(rec_2.point, ray.dir);
+	//  hit = traverse_bvh(geom_node_list[0], ray, rec_2);
+	//}
 
-	
-        if (pixel_width_index == 208 && pixel_height_index == 179) {
-          printf(
-	    "hit point accummulated lm = (%.2f, %.2f, %.2f), accummulated indirect = (%.2f, %.2f, %.2f), direct = (%.2f, %.2f, %.2f)\n", 
-	    hit_point -> tmp_accummulated_lm.r(),
-	    hit_point -> tmp_accummulated_lm.g(),
-	    hit_point -> tmp_accummulated_lm.b(),
-	    hit_point -> accummulated_indirect_radiance.r(),
-	    hit_point -> accummulated_indirect_radiance.g(),
-	    hit_point -> accummulated_indirect_radiance.b(),
-	    hit_point -> direct_radiance.r(),
-	    hit_point -> direct_radiance.g(),
-	    hit_point -> direct_radiance.b()
-	  );
-	}
+	//if (hit) {
+	//  add_direct_radiance = (
+	//    filter_lag * ref_2.filter * transmittance * clamp(0, .999999, factor)
+	//  ) * rec_2.object -> get_material() -> get_texture_emission(
+	//    rec_2.uv_vector
+        //  );
+	//  direct_radiance += add_direct_radiance;
+	//}
+	////}
+        ////direct_radiance /= max(1.0, float(num_light_source_sampling));	
+	//direct_radiance += emittance;
 
 	return;
       }
@@ -211,10 +250,8 @@ void _get_hit_point_details(
 	prev_hit_point = rec.point;
       }
 
-      //if (!(ref.diffuse)) {
       ray = ref.ray;
       hit = traverse_bvh(geom_node_list[0], ray, rec);
-      //}
 
     }
   }
@@ -364,7 +401,7 @@ void ray_tracing_pass(
     ref, rec, filter, pdf, direct_radiance,
     camera, j, i, geom_node_list, max_bounce, main_camera_width_offset, 
     main_camera_height_offset, hit, target_geom_list, num_target_geom, 
-    target_node_list, target_leaf_list, sample_size, &local_rand_state, 
+    target_node_list, target_leaf_list, &local_rand_state, 
     pixel_index, init
   );
 
@@ -377,7 +414,7 @@ void ray_tracing_pass(
         camera, j, i, geom_node_list, max_bounce, 
         camera_width_offset[idx], camera_height_offset[idx], hit_2,
         target_geom_list, num_target_geom, target_node_list, target_leaf_list,
-        0, &local_rand_state, pixel_index, init
+        &local_rand_state, pixel_index, init
       );
       if (hit_2 && ref_2.diffuse) {
         hit_loc[idx] = rec_2.point;
