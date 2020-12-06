@@ -113,11 +113,9 @@ class Material {
 struct reflection_record
 {
   Ray ray;
-  vec3 k;
-  vec3 filter, filter_2;
-  vec3 perfect_reflection_dir;
+  vec3 k, filter, filter_2, perfect_reflection_dir;
   float pdf, n;
-  bool diffuse, reflected, refracted, false_hit, entering;
+  bool diffuse, reflected, refracted, false_hit, entering, bent;
   Material *next_material;
 };
 
@@ -315,6 +313,9 @@ __device__ void Material::_refract(
       ref.false_hit = false;
       ref.entering = true; 
       ref.next_material = this;
+      ref.bent = abs(
+	highest_prioritised_material_ref_idx - this -> n_i
+      ) < SMALL_DOUBLE;
     } else {
       v_out = reflect(v_in, normal);
       v_out.make_unit_vector();
@@ -372,6 +373,9 @@ __device__ void Material::_refract(
       ref.false_hit = false;
       ref.entering = false;
       ref.next_material = second_highest_prioritised_material;
+      ref.bent = abs(
+	second_highest_prioritised_material_ref_idx - this -> n_i
+      ) < SMALL_DOUBLE;
     }
   }
 
@@ -511,6 +515,7 @@ __device__ reflection_record _get_false_hit_parameters(
   ref.filter_2 = vec3(1.0, 1.0, 1.0);
   ref.pdf = 1;
   ref.diffuse = false;
+  ref.bent = false;
   if (dot(v_in, normal) <= 0) {
     ref.entering = true;
   } else {

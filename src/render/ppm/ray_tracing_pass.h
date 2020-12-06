@@ -35,6 +35,7 @@ __device__ vec3 _compute_direct_radiance(
   vec3 direct_radiance;
   Ray ray;
   bool hit;
+  vec3 prev_hit_point;
 
   change_ref_ray(
     rec, 
@@ -48,30 +49,37 @@ __device__ vec3 _compute_direct_radiance(
     rand_state,
     false
   );
-  ray = ref.ray;
-  hit = traverse_bvh(geom_node_list[0], ray, rec);
-  
-  while (
-    hit && rec.object -> get_material() -> n_i < SMALL_DOUBLE &&
-    rec.object -> get_material() -> extinction_coef >= SMALL_DOUBLE
-  ) {
-    if (dot(rec.normal, ray.dir) >= 0) {
-      transmittance *= rec.object -> get_material(
-      ) -> get_transmittance(rec.t);
-    }
-    ray = Ray(rec.point, ray.dir);
-    hit = traverse_bvh(geom_node_list[0], ray, rec);
-  }
-  
-  if (hit) {
-    direct_radiance += (
-      filter * ref.filter * transmittance * clamp(0, .999999, factor)
-    ) * rec.object -> get_material() -> get_texture_emission(
-      rec.uv_vector
-    );
-  }
 
-  direct_radiance += emittance;
+  //ray = ref.ray;
+  //hit = traverse_bvh(geom_node_list[0], ray, rec);
+  //
+  //while (
+  //  hit && rec.object -> get_material() -> n_i < SMALL_DOUBLE &&
+  //  rec.object -> get_material() -> extinction_coef >= SMALL_DOUBLE
+  //) {
+  //  if (dot(rec.normal, ray.dir) >= 0) {
+  //    transmittance *= rec.object -> get_material(
+  //    ) -> get_transmittance(rec.t);
+  //  }
+  //  ray = Ray(rec.point, ray.dir);
+  //  hit = traverse_bvh(geom_node_list[0], ray, rec);
+  //}
+  //
+  //if (hit) {
+  //  direct_radiance += (
+  //    filter * ref.filter * transmittance * clamp(0, .999999, factor)
+  //  ) * rec.object -> get_material() -> get_texture_emission(
+  //    rec.uv_vector
+  //  );
+  //}
+
+  //direct_radiance += emittance;
+  //return direct_radiance;
+ 
+  filter *= ref.filter;
+  ray = ref.ray;
+  prev_hit_point = rec.point;
+
   return direct_radiance;
 }
 
@@ -105,7 +113,7 @@ void _get_hit_point_details(
   reflection_record ref_2;
   bool sss = false, in_medium = false, prev_in_medium = false;
   Ray ray;
-  Material* material_list[400], *medium = nullptr;
+  Material* material_list[400], *medium = nullptr, *prev_medium = nullptr;
   int material_list_length = 0, num_bounce = 0;
   float factor, pdf_lag = 1, transmittance;
   vec3 emittance = vec3(0.0, 0.0, 0.0), filter_lag = vec3(1.0, 1.0, 1.0);
@@ -168,7 +176,7 @@ void _get_hit_point_details(
 	  );
 	} 
 
-	transmittance = medium -> get_transmittance(l);
+	transmittance = prev_medium -> get_transmittance(l);
 	filter *= transmittance;
       }
 
@@ -248,6 +256,7 @@ void _get_hit_point_details(
       if (!(ref.false_hit)) {
         prev_in_medium = in_medium;
 	prev_hit_point = rec.point;
+	prev_medium = medium;
       }
 
       ray = ref.ray;
