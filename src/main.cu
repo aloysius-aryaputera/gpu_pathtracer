@@ -1176,15 +1176,6 @@ int main(int argc, char **argv) {
 
     dim3 blocks(im_width / tx + 1, im_height / ty + 1);
     dim3 threads(tx, ty);
-   
-    Material *medium;
-
-    start = clock();
-    process = "Find medium";
-    print_start_process(process, start);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-    print_end_process(process, start);
 
     start = clock();
     process = "Ray tracing pass";

@@ -1,3 +1,7 @@
+//File: world.h
+#ifndef WORLD_H
+#define WORLD_H
+
 #include <curand_kernel.h>
 #include <iostream>
 #include <math.h>
@@ -242,3 +246,5 @@ __global__ void create_world(
   }
 
 }
+
+#endif

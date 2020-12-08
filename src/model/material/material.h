@@ -29,7 +29,8 @@ class Material {
       Material *highest_prioritised_material,
       Material *second_highest_prioritised_material,
       curandState *rand_state,
-      bool write
+      bool write,
+      bool force_refract
     );
     __device__ bool _check_if_false_hit(
       Material** material_list, int material_list_length,
@@ -90,7 +91,8 @@ class Material {
       Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
       bool &sss,
       Material** material_list, int material_list_length,
-      reflection_record &ref, curandState *rand_state, bool write
+      reflection_record &ref, curandState *rand_state, bool write,
+      bool force_refract
     );
     __device__ vec3 get_texture_emission(vec3 uv_vector);
     __device__ vec3 get_texture_diffuse(vec3 uv_vector);
@@ -101,6 +103,7 @@ class Material {
       vec3 current_dir, curandState *rand_state);
     __device__ float get_propagation_distance(curandState *rand_state);
     __device__ float get_phase_function_value(vec3 dir_1, vec3 dir_2);
+    __device__ bool is_transparent();
 
     vec3 emission;
     int priority;
@@ -261,11 +264,9 @@ __device__ void Material::_refract(
   Material *highest_prioritised_material,
   Material *second_highest_prioritised_material,
   curandState *rand_state,
-  bool write=false
+  bool write=false,
+  bool force_refract=false
 ) {
-  if (write) {
-    printf("In the _refract function\n.");
-  }
 
   float random_number = curand_uniform(&rand_state[0]);
 
@@ -288,7 +289,7 @@ __device__ void Material::_refract(
       cos_theta_1, highest_prioritised_material_ref_idx, this -> n_i
     );
 
-    if (random_number >= reflection_probability) {
+    if (random_number >= reflection_probability || force_refract) {
       float sin_theta_1 = powf(1 - powf(cos_theta_1, 2), .5);
       vec3 v_in_perpendicular = - cos_theta_1 * normal;
       vec3 v_in_parallel = v_in - v_in_perpendicular;
@@ -315,7 +316,7 @@ __device__ void Material::_refract(
       ref.next_material = this;
       ref.bent = abs(
 	highest_prioritised_material_ref_idx - this -> n_i
-      ) < SMALL_DOUBLE;
+      ) > SMALL_DOUBLE;
     } else {
       v_out = reflect(v_in, normal);
       v_out.make_unit_vector();
@@ -338,7 +339,10 @@ __device__ void Material::_refract(
       cos_theta_1, this -> n_i, second_highest_prioritised_material_ref_idx);
 
     if (
-      sin_theta_1 >= sin_theta_1_max | random_number <= reflection_probability
+      (
+        sin_theta_1 >= sin_theta_1_max || 
+        random_number <= reflection_probability
+      ) && !force_refract
     ) {
       v_out = reflect(v_in, -normal);
       v_out.make_unit_vector();
@@ -375,7 +379,7 @@ __device__ void Material::_refract(
       ref.next_material = second_highest_prioritised_material;
       ref.bent = abs(
 	second_highest_prioritised_material_ref_idx - this -> n_i
-      ) < SMALL_DOUBLE;
+      ) > SMALL_DOUBLE;
     }
   }
 
@@ -525,11 +529,15 @@ __device__ reflection_record _get_false_hit_parameters(
   return ref;
 }
 
+__device__ bool Material::is_transparent() {
+  return this -> t_r > 0;
+}
+
 __device__ void Material::check_next_path(
   Ray coming_ray, vec3 hit_point, vec3 normal, vec3 uv_vector,
-  bool &sss,
-  Material** material_list, int material_list_length,
-  reflection_record &ref, curandState *rand_state, bool write=false
+  bool &sss, Material** material_list, int material_list_length,
+  reflection_record &ref, curandState *rand_state, bool write=false,
+  bool force_refract = false
 ) {
   ref.next_material = nullptr;
 
@@ -551,13 +559,14 @@ __device__ void Material::check_next_path(
     return;
   }
 
-  if (
-    this -> t_r > 0 && (
-      dot(v_in, normal) <= 0 ||
-      second_highest_prioritised_material == nullptr ||
-      second_highest_prioritised_material -> t_r > 0
-    )
-  ) {
+  //if (
+  //  this -> t_r > 0 && (
+  //    dot(v_in, normal) <= 0 ||
+  //    second_highest_prioritised_material == nullptr ||
+  //    second_highest_prioritised_material -> t_r > 0
+  //  )
+  //) {
+  if (this -> is_transparent()) {
     this -> _refract(
       ref,
       hit_point, 
@@ -568,7 +577,8 @@ __device__ void Material::check_next_path(
       highest_prioritised_material,
       second_highest_prioritised_material,
       rand_state,
-      write
+      write,
+      force_refract
     );
     return;
   }
@@ -577,7 +587,7 @@ __device__ void Material::check_next_path(
   vec3 reflected_ray_dir;
   float random_number = curand_uniform(&rand_state[0]);
 
-  if (this -> t_r > 0) {
+  if (this -> is_transparent()) {
     actual_mat = second_highest_prioritised_material;
   } else {
     actual_mat = this;

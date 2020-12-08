@@ -103,7 +103,7 @@ __device__ vec3 PPMHitPoint::compute_pixel_color(int num_passes, int type, bool 
 }
 
 __device__ void PPMHitPoint::update_radius(float radius_) {
-  this -> volume_radius = 5 * radius_;
+  this -> volume_radius = 2 * radius_;
   this -> surface_radius = radius_;
   this -> bounding_sphere -> assign_new_radius(this -> surface_radius);
 }

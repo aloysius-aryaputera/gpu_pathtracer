@@ -139,7 +139,7 @@ void photon_pass(
     rec.point, vec3(0, 0, 0), rec.normal, 2, 1, &local_rand_state);
   
   prev_location = rec.point;
-  photon_list[i] -> assign_prev_location(prev_location);
+  //photon_list[i] -> assign_prev_location(prev_location);
 
   while ((hit && num_bounce < max_bounce) || num_bounce < 0) {
     scattered_in_medium_now = false;
@@ -171,6 +171,7 @@ void photon_pass(
           scattered_in_medium_now = true;
           random_number = curand_uniform(&local_rand_state);
           if (random_number < medium -> scattering_prob) {
+	    photon_list[i] -> assign_prev_location(prev_location);
             photon_list[i] -> assign_location(ray.get_vector(d));
             photon_list[i] -> assign_color(light_source_color);
             photon_list[i] -> assign_direction(rec_medium.coming_ray.dir);
