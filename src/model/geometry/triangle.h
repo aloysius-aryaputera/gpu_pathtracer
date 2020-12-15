@@ -23,6 +23,7 @@ class Triangle: public Primitive {
       float weight_1, float weight_2, float weight_3);
     __device__ void _compute_tangent();
     __device__ bool _check_if_light_emitting();
+    __device__ bool _check_if_transparent_geom();
     __device__ vec3 _compute_energy();
 
     float inv_tolerance, tolerance;
@@ -33,6 +34,7 @@ class Triangle: public Primitive {
     Material *material;
     bool sub_surface_scattering;
     bool light_source;
+    bool transparent_geom;
     float area;
     int point_1_idx, point_2_idx, point_3_idx;
 
@@ -51,6 +53,7 @@ class Triangle: public Primitive {
     __device__ BoundingBox* get_bounding_box();
     __device__ bool is_sub_surface_scattering();
     __device__ bool is_light_source();
+    __device__ bool is_transparent_geom();
     __device__ hit_record get_random_point_on_surface(curandState *rand_state);
     __device__ float get_area();
     __device__ int get_object_idx();
@@ -116,6 +119,10 @@ __device__ vec3 Triangle::_compute_energy() {
   vec3 avg_emission_tex = (
     emission_tex_1 + emission_tex_2 + emission_tex_3) / 3.0;
   return 2 * M_PI * avg_emission_tex * this -> area;
+}
+
+__device__ bool Triangle::_check_if_transparent_geom() {
+  return this -> material -> is_transparent(); 
 }
 
 __device__ bool Triangle::_check_if_light_emitting() {
@@ -280,6 +287,7 @@ __device__ Triangle::Triangle(
     this -> material -> sub_surface_scattering;
   this -> light_source = \
     this -> _check_if_light_emitting();
+  this -> transparent_geom = this -> _check_if_transparent_geom();
 
   if (
     compute_distance(norm_1_, vec3(0, 0, 0)) < this -> tolerance ||
@@ -318,6 +326,10 @@ __device__ bool Triangle::is_sub_surface_scattering() {
 
 __device__ bool Triangle::is_light_source() {
   return this -> light_source;
+}
+
+__device__ bool Triangle::is_transparent_geom() {
+  return this -> transparent_geom;
 }
 
 __device__ Material* Triangle::get_material() {

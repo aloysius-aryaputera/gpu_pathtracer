@@ -2,7 +2,9 @@
 #ifndef MATERIAL_LIST_OPERATIONS_H
 #define MATERIAL_LIST_OPERATIONS_H
 
+#include "../model/bvh/bvh.h"
 #include "../model/material/material.h"
+#include "../model/vector_and_matrix/vec3.h"
 
 __device__ void add_new_material(
   Material** material_list, int &material_list_length, Material* material
@@ -53,6 +55,40 @@ __device__ void rearrange_material_list(
   
   if (!false_hit && refracted && !entering)
     remove_a_material(material_list, material_list_length, material);
+}
+
+__device__ void init_material_list(
+  Material** material_list, int& material_list_length,
+  Node** transparent_geom_node_list, vec3 init_point, vec3 init_dir,
+  curandState *rand_state
+) {
+  float t = 99999;
+  Ray ray = Ray(init_point + t * init_dir, -init_dir);
+  hit_record rec;
+  reflection_record ref;
+  bool force_refract = true, sss;
+  bool hit = traverse_bvh(transparent_geom_node_list[0], ray, rec);
+
+  while (hit && t - rec.t > SMALL_DOUBLE) {
+    t -= rec.t;
+
+    rec.object -> get_material() -> check_next_path(
+      rec.coming_ray, rec.point, rec.normal, rec.uv_vector,
+      sss, material_list, material_list_length, ref, rand_state, false,
+      force_refract
+    );
+
+    rearrange_material_list(
+      material_list, material_list_length, rec.object -> get_material(),
+      ref.false_hit, ref.entering, ref.refracted 
+    );
+
+    ray = Ray(rec.point, -init_dir);
+
+    hit = traverse_bvh(transparent_geom_node_list[0], ray, rec);
+
+  }
+
 }
 
 #endif

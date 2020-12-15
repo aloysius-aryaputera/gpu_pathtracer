@@ -96,8 +96,8 @@ __device__ int pick_primitive_idx_for_sampling(
 
 __global__
 void photon_pass(
-  Primitive **target_geom_list, Node **geom_node_list,
-  Point **photon_list, 
+  Primitive **target_geom_list, Node **geom_node_list, 
+  Node **transparent_node_list, Point **photon_list, 
   int num_light_source_geom, float *accummulated_light_source_energy,
   int num_photons, int max_bounce,
   int pass_iteration, curandState *rand_state
@@ -146,20 +146,30 @@ void photon_pass(
 
     num_bounce += 1;
 
+    if (num_bounce <= 0) {
+      init_material_list(
+        material_list, material_list_length, transparent_node_list, ray.p0, 
+	ray.dir, &local_rand_state
+      );
+    }
+
     rec.object -> get_material() -> check_next_path(
       rec.coming_ray, rec.point, rec.normal, rec.uv_vector,
       sss, material_list, material_list_length,
       ref, rand_state
     );
 
-    rearrange_material_list(
-      material_list, material_list_length, rec.object -> get_material(),
-      ref.false_hit, ref.entering, ref.refracted 
-    );
+    if (num_bounce > 0) {
+      rearrange_material_list(
+        material_list, material_list_length, rec.object -> get_material(),
+        ref.false_hit, ref.entering, ref.refracted 
+      );
+    }
 
     in_medium = check_if_entering_medium(ref, in_medium, medium);
  
-    if (!(ref.false_hit) && num_bounce > 0) {
+    //if (!(ref.false_hit) && num_bounce > 0) {
+    if (!(ref.false_hit)) {
 
       if (in_medium) {
         ray = ref.ray;
@@ -191,7 +201,7 @@ void photon_pass(
         }
       }
       
-      if(!scattered_in_medium_now) {
+      if(!scattered_in_medium_now && num_bounce > 0) {
         random_number = curand_uniform(&local_rand_state);
         reflection_prob = max(ref.k);
         if (random_number > reflection_prob) {

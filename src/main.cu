@@ -39,6 +39,7 @@
 #include "render/ppm/image_output.h"
 #include "render/ppm/photon_pass.h"
 #include "render/ppm/ray_tracing_pass.h"
+#include "render/transparent_geom_operations.h"
 #include "util/general.h"
 #include "util/image_util.h"
 #include "util/string_util.h"
@@ -115,8 +116,9 @@ int main(int argc, char **argv) {
   int tx = 8, ty = 8;
 
   BoundingBox **world_bounding_box, **target_world_bounding_box;
+  BoundingBox **transparent_world_bounding_box;
   Primitive **my_geom;
-  Primitive **target_geom_list;
+  Primitive **target_geom_list, **transparent_geom_list;
   Object **my_objects;
   unsigned int *morton_code_list;
   Material **my_material;
@@ -127,7 +129,7 @@ int main(int argc, char **argv) {
   int num_pixels = im_width * im_height;
   int max_num_materials = 100;
   int num_objects, num_vertices, num_faces, num_vt, num_vn;
-  int *num_sss_objects, *num_target_geom;
+  int *num_sss_objects, *num_target_geom, *num_transparent_geom;
   size_t image_size = num_pixels * sizeof(vec3);
   curandState *rand_state_sss, *rand_state_image;
 
@@ -927,6 +929,139 @@ int main(int argc, char **argv) {
 
   vec3 sky_emission = vec3(sky_emission_r, sky_emission_g, sky_emission_b);
 
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&num_transparent_geom, sizeof(int)));
+
+  start = clock();
+  process = "Computing the number of transparent geometries";
+  print_start_process(process, start);
+  compute_num_transparent_geom<<<1, 1>>>(
+    my_geom, num_triangles[0], num_transparent_geom
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&transparent_geom_list, 
+    max(1, num_transparent_geom[0]) * sizeof(Primitive *)));
+
+  start = clock();
+  process = "Collecting transparent geometries";
+  print_start_process(process, start);
+  collect_transparent_geom<<<1, 1>>>(
+    my_geom, num_triangles[0], transparent_geom_list
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&transparent_world_bounding_box, sizeof(BoundingBox *)));
+
+  start = clock();
+  process = "Computing the transparent world bounding box";
+  print_start_process(process, start);
+  compute_world_bounding_box<<<1, 1>>>(
+    transparent_world_bounding_box, transparent_geom_list, 
+    num_transparent_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Computing the morton code of every transparent geometry bounding box";
+  print_start_process(process, start);
+  compute_morton_code_batch<<<blocks_world, threads_world>>>(
+    transparent_geom_list, transparent_world_bounding_box, 
+    num_transparent_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Sorting the transparent geometries based on morton code";
+  print_start_process(process, start);
+  thrust::stable_sort(
+    thrust::device, transparent_geom_list, 
+    transparent_geom_list + num_transparent_geom[0],
+    sort_geom
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  Node** transparent_node_list, **transparent_leaf_list;
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&transparent_node_list, 
+    max(1, (num_transparent_geom[0] - 1)) * sizeof(Node *)));
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&transparent_leaf_list, 
+    max(1, num_transparent_geom[0]) * sizeof(Node *)));
+
+  start = clock();
+  process = "Building transparent leaves";
+  print_start_process(process, start);
+  build_leaf_list<<<max(1, num_transparent_geom[0]), 1>>>(
+    transparent_leaf_list, transparent_geom_list, num_transparent_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Building transparent nodes";
+  print_start_process(process, start);
+  build_node_list<<<max(1, num_transparent_geom[0]), 1>>>(
+    transparent_node_list, num_transparent_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  unsigned int *transparent_morton_code_list;
+  checkCudaErrors(cudaMallocManaged(
+    (void **)&transparent_morton_code_list,
+    max(1, num_transparent_geom[0]) * sizeof(unsigned int)));
+
+  start = clock();
+  process = "Extracting transparent morton codes";
+  print_start_process(process, start);
+  extract_morton_code_list<<<max(1, num_transparent_geom[0]), 1>>>(
+    transparent_geom_list, transparent_morton_code_list, 
+    num_transparent_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  start = clock();
+  process = "Setting transparent node relationship";
+  print_start_process(process, start);
+  set_node_relationship<<<max(1, num_transparent_geom[0]), 1>>>(
+    transparent_node_list, transparent_leaf_list, transparent_morton_code_list,
+    num_transparent_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
+  checkCudaErrors(cudaFree(transparent_morton_code_list));
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+
+  start = clock();
+  process = "Compute transparent node bounding boxes";
+  print_start_process(process, start);
+  compute_node_bounding_boxes<<<max(1, num_transparent_geom[0]), 1>>>(
+    transparent_leaf_list, transparent_node_list, num_transparent_geom[0]
+  );
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaDeviceSynchronize());
+  print_end_process(process, start);
+
   checkCudaErrors(cudaMallocManaged((void **)&num_target_geom, sizeof(int)));
 
   start = clock();
@@ -1187,6 +1322,7 @@ int main(int argc, char **argv) {
       target_geom_list,
       target_node_list,
       target_leaf_list,
+      transparent_node_list,
       pathtracing_sample_size,
       ppm_radius_scaling_factor
     );
@@ -1358,9 +1494,9 @@ int main(int argc, char **argv) {
       process = "Photon pass";
       print_start_process(process, start);
       photon_pass<<<ppm_num_photon_per_pass, 1>>>(
-        target_geom_list, node_list, photon_list, num_target_geom[0],
-        accummulated_target_geom_energy, ppm_num_photon_per_pass,
-        ppm_max_bounce, i, rand_state_ppm);
+        target_geom_list, node_list, transparent_node_list, photon_list, 
+	num_target_geom[0], accummulated_target_geom_energy, 
+	ppm_num_photon_per_pass, ppm_max_bounce, i, rand_state_ppm);
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
@@ -1578,6 +1714,7 @@ int main(int argc, char **argv) {
         target_geom_list,
 	target_node_list,
         target_leaf_list,
+	transparent_node_list,
         pathtracing_sample_size,
 	ppm_radius_scaling_factor
       );

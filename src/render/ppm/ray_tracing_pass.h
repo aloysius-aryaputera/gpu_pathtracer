@@ -141,6 +141,33 @@ __device__ vec3 _compute_direct_radiance(
   //return vec3(0.9, 0.3, 0.3);
 }
 
+__device__ reflection_record _set_init_ref(
+  Material** material_list, int material_list_length, Ray init_ray
+) {
+  Material* highest_prioritised_material = nullptr;
+  Material* second_highest_prioritised_material = nullptr;
+
+  find_highest_prioritised_materials(
+    material_list, material_list_length,
+    highest_prioritised_material,
+    second_highest_prioritised_material
+  );
+
+  reflection_record ref;
+  ref.false_hit = false;
+  ref.reflected = true;
+  ref.refracted = false;
+  ref.ray = init_ray;
+  ref.filter = vec3(1.0, 1.0, 1.0);
+  ref.filter_2 = vec3(1.0, 1.0, 1.0);
+  ref.pdf = 1;
+  ref.diffuse = false;
+  ref.bent = false;
+  ref.entering = true;
+  ref.next_material = highest_prioritised_material;
+  return ref;
+}
+
 __device__
 void _get_hit_point_details(
   PPMHitPoint* hit_point,
@@ -162,6 +189,7 @@ void _get_hit_point_details(
   int num_target_geom,
   Node **target_node_list,
   Node **target_leaf_list,
+  Node **transparent_node_list,
   curandState *rand_state,
   int pixel_idx,
   bool init
@@ -191,6 +219,16 @@ void _get_hit_point_details(
   filter = vec3(1.0, 1.0, 1.0);
   pdf = 1.0;
 
+  init_material_list(
+    material_list, material_list_length, transparent_node_list, ray.p0,
+    ray.dir, rand_state
+  );
+  ref = _set_init_ref(material_list, material_list_length, ray);
+  in_medium = check_if_entering_medium(ref, in_medium, medium);
+  prev_in_medium = in_medium;
+  prev_medium = medium;
+  prev_hit_point = ray.p0;
+
   hit = traverse_bvh(geom_node_list[0], ray, rec);
 
   if (hit) {
@@ -209,6 +247,11 @@ void _get_hit_point_details(
       );
   
       in_medium = check_if_entering_medium(ref, in_medium, medium);
+
+      //if (num_bounce == 1) {
+      //  prev_in_medium = in_medium;
+      // prev_medium = medium;
+      //}
 
       if (!(ref.false_hit) && prev_in_medium && !init) {
 
@@ -441,8 +484,8 @@ void ray_tracing_pass(
   Node **volume_photon_node_list,
   Node **geom_node_list, bool init, int max_bounce, float ppm_alpha,
   int pass_iteration, int num_target_geom, Primitive** target_geom_list,
-  Node** target_node_list, Node** target_leaf_list, int sample_size,
-  float radius_multiplier
+  Node** target_node_list, Node** target_leaf_list, 
+  Node** transparent_node_list, int sample_size, float radius_multiplier
 ) {
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
@@ -483,8 +526,8 @@ void ray_tracing_pass(
     ref, rec, filter, pdf, direct_radiance,
     camera, j, i, geom_node_list, max_bounce, main_camera_width_offset, 
     main_camera_height_offset, hit, target_geom_list, num_target_geom, 
-    target_node_list, target_leaf_list, &local_rand_state, 
-    pixel_index, init
+    target_node_list, target_leaf_list, transparent_node_list,
+    &local_rand_state, pixel_index, init
   );
 
   if (init) {
@@ -496,7 +539,7 @@ void ray_tracing_pass(
         camera, j, i, geom_node_list, max_bounce, 
         camera_width_offset[idx], camera_height_offset[idx], hit_2,
         target_geom_list, num_target_geom, target_node_list, target_leaf_list,
-        &local_rand_state, pixel_index, init
+        transparent_node_list, &local_rand_state, pixel_index, init
       );
       if (hit_2 && ref_2.diffuse) {
         hit_loc[idx] = rec_2.point;
