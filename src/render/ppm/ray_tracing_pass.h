@@ -225,6 +225,12 @@ void _get_hit_point_details(
   );
   ref = _set_init_ref(material_list, material_list_length, ray);
   in_medium = check_if_entering_medium(ref, in_medium, medium);
+
+  if (!in_medium) {
+    printf("in_medium = %d; material_list_length = %d, ray.p0 = (%5.2f, %5.2f, %5.2f), ray.dir = (%5.2f, %5.2f, %5.2f)\n", 
+      in_medium, material_list_length, ray.p0.x(), ray.p0.y(), ray.p0.z(), ray.dir.x(), ray.dir.y(), ray.dir.z());
+  }
+
   prev_in_medium = in_medium;
   prev_medium = medium;
   prev_hit_point = ray.p0;
@@ -278,6 +284,9 @@ void _get_hit_point_details(
 
 	transmittance = prev_medium -> get_transmittance(l);
 	filter *= transmittance;
+      } else {
+        if (!(ref.false_hit) && num_bounce < 2 && !init)
+	  printf("Not in medium while num_bounce < 2!\n");
       }
 
       if (!(ref.false_hit)) {

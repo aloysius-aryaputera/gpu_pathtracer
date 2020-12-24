@@ -16,6 +16,7 @@ __global__ void compute_num_transparent_geom(
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx > 0) return;
 
+  num_transparent_geom[0] = 0;
   for (int i = 0; i < num_geom; i++) {
     if (geom_array[i] -> is_transparent_geom()) {
       num_transparent_geom[0]++;

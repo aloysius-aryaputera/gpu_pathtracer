@@ -62,7 +62,7 @@ __device__ void init_material_list(
   Node** transparent_geom_node_list, vec3 init_point, vec3 init_dir,
   curandState *rand_state
 ) {
-  float t = 99999;
+  float t = 999;
   Ray ray = Ray(init_point + t * init_dir, -init_dir);
   hit_record rec;
   reflection_record ref;

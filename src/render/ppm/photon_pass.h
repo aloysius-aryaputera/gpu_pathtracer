@@ -148,8 +148,8 @@ void photon_pass(
 
     if (num_bounce <= 0) {
       init_material_list(
-        material_list, material_list_length, transparent_node_list, ray.p0, 
-	ray.dir, &local_rand_state
+        material_list, material_list_length, transparent_node_list, rec.point, 
+	rec.normal, &local_rand_state
       );
     }
 
