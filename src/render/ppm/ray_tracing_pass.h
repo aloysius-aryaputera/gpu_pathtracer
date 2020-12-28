@@ -227,8 +227,8 @@ void _get_hit_point_details(
   in_medium = check_if_entering_medium(ref, in_medium, medium);
 
   if (!in_medium) {
-    printf("in_medium = %d; material_list_length = %d, ray.p0 = (%5.2f, %5.2f, %5.2f), ray.dir = (%5.2f, %5.2f, %5.2f)\n", 
-      in_medium, material_list_length, ray.p0.x(), ray.p0.y(), ray.p0.z(), ray.dir.x(), ray.dir.y(), ray.dir.z());
+    //printf("in_medium = %d; material_list_length = %d, ray.p0 = (%5.2f, %5.2f, %5.2f), ray.dir = (%5.2f, %5.2f, %5.2f)\n", 
+    //  in_medium, material_list_length, ray.p0.x(), ray.p0.y(), ray.p0.z(), ray.dir.x(), ray.dir.y(), ray.dir.z());
   }
 
   prev_in_medium = in_medium;
@@ -275,18 +275,18 @@ void _get_hit_point_details(
 	  hit_point -> tmp_accummulated_lm.g() < 0 ||
 	  hit_point -> tmp_accummulated_lm.b() < 0
 	) {
-	  printf("wi = %d, hi = %d, false hit = %d, entering = %d, refracted = %d, reflected = %d, diffuse = %d, material list length = %d\n",
-	    pixel_width_index, pixel_height_index,
-	    ref.false_hit, ref.entering, ref.refracted, ref.reflected, ref.diffuse,
-	    material_list_length
-	  );
+	  //printf("wi = %d, hi = %d, false hit = %d, entering = %d, refracted = %d, reflected = %d, diffuse = %d, material list length = %d\n",
+	  //  pixel_width_index, pixel_height_index,
+	  //  ref.false_hit, ref.entering, ref.refracted, ref.reflected, ref.diffuse,
+	  //  material_list_length
+	  //);
 	} 
 
 	transmittance = prev_medium -> get_transmittance(l);
 	filter *= transmittance;
       } else {
-        if (!(ref.false_hit) && num_bounce < 2 && !init)
-	  printf("Not in medium while num_bounce < 2!\n");
+        //if (!(ref.false_hit) && num_bounce < 2 && !init)
+	//  printf("Not in medium while num_bounce < 2!\n");
       }
 
       if (!(ref.false_hit)) {
@@ -431,61 +431,17 @@ void compute_max_radius(
 }
 
 __global__
-void assign_radius_to_invalid_hit_points(
-  PPMHitPoint** hit_point_list, int num_hit_points, float new_radius
+void assign_radius_hit_points(
+  PPMHitPoint** hit_point_list, int num_hit_points, float surface_radius,
+  float volume_radius
 ) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
 
   if (i >= num_hit_points) return;
 
-  //float current_radius;
-  //current_radius = hit_point_list[i] -> current_photon_radius;
-  //if(
-  //  isinf(current_radius) || current_radius > new_radius ||
-  //  isnan(current_radius)
-  //) {
-  //  hit_point_list[i] -> update_radius(new_radius);
-  //}
-  hit_point_list[i] -> update_radius(new_radius);
+  hit_point_list[i] -> update_surface_radius(surface_radius);
+  hit_point_list[i] -> update_volume_radius(volume_radius);
 }
-
-//__global__
-//void compute_radius(
-//  PPMHitPoint** hit_point_list, Camera **camera, float radius_scaling_factor
-//) {
-//  int j = threadIdx.x + blockIdx.x * blockDim.x;
-//  int i = threadIdx.y + blockIdx.y * blockDim.y;
-//
-//  if (
-//    (j >= camera[0] -> width - 1) || 
-//    (i >= camera[0] -> height - 1) || 
-//    (i == 0) || (j == 0)
-//  ) return;
-//
-//  int pixel_index = i * (camera[0] -> width) + j;
-//  int pixel_index_2 = (i - 1) * (camera[0] -> width) + j;
-//  int pixel_index_3 = (i + 1) * (camera[0] -> width) + j;
-//  int pixel_index_4 = i * (camera[0] -> width) + j + 1;
-//  int pixel_index_5 = i * (camera[0] -> width) + j - 1;
-//
-//  float dist_1 = compute_distance(
-//    hit_point_list[pixel_index] -> location, 
-//    hit_point_list[pixel_index_2] -> location);
-//  float dist_2 = compute_distance(
-//    hit_point_list[pixel_index] -> location, 
-//    hit_point_list[pixel_index_3] -> location);
-//  float dist_3 = compute_distance(
-//    hit_point_list[pixel_index] -> location, 
-//    hit_point_list[pixel_index_4] -> location);
-//  float dist_4 = compute_distance(
-//    hit_point_list[pixel_index] -> location, 
-//    hit_point_list[pixel_index_5] -> location);
-//
-//  float radius = radius_scaling_factor * (
-//    dist_1 + dist_2 + dist_3 + dist_4) / 4;
-//  hit_point_list[pixel_index] -> update_radius(radius);
-//  
-//}
 
 __global__
 void ray_tracing_pass(
@@ -494,7 +450,7 @@ void ray_tracing_pass(
   Node **geom_node_list, bool init, int max_bounce, float ppm_alpha,
   int pass_iteration, int num_target_geom, Primitive** target_geom_list,
   Node** target_node_list, Node** target_leaf_list, 
-  Node** transparent_node_list, int sample_size, float radius_multiplier
+  Node** transparent_node_list, int sample_size
 ) {
   int j = threadIdx.x + blockIdx.x * blockDim.x;
   int i = threadIdx.y + blockIdx.y * blockDim.y;
@@ -539,55 +495,55 @@ void ray_tracing_pass(
     &local_rand_state, pixel_index, init
   );
 
-  if (init) {
-    for (int idx = 0; idx < 4; idx++) {
-      _get_hit_point_details(
-        hit_point, volume_photon_node_list,
-	ref_2, rec_2, filter, pdf, 
-	direct_radiance_dummy,
-        camera, j, i, geom_node_list, max_bounce, 
-        camera_width_offset[idx], camera_height_offset[idx], hit_2,
-        target_geom_list, num_target_geom, target_node_list, target_leaf_list,
-        transparent_node_list, &local_rand_state, pixel_index, init
-      );
-      if (hit_2 && ref_2.diffuse) {
-        hit_loc[idx] = rec_2.point;
-      } else {
-        hit_loc[idx] = vec3(INFINITY, INFINITY, INFINITY);
-      }
-    }
+  //if (init) {
+  //  for (int idx = 0; idx < 4; idx++) {
+  //    _get_hit_point_details(
+  //      hit_point, volume_photon_node_list,
+  //      ref_2, rec_2, filter, pdf, 
+  //      direct_radiance_dummy,
+  //      camera, j, i, geom_node_list, max_bounce, 
+  //      camera_width_offset[idx], camera_height_offset[idx], hit_2,
+  //      target_geom_list, num_target_geom, target_node_list, target_leaf_list,
+  //      transparent_node_list, &local_rand_state, pixel_index, init
+  //    );
+  //    if (hit_2 && ref_2.diffuse) {
+  //      hit_loc[idx] = rec_2.point;
+  //    } else {
+  //      hit_loc[idx] = vec3(INFINITY, INFINITY, INFINITY);
+  //    }
+  //  }
 
-    for (int idx = 0; idx < 4; idx++) {
-      if (
-        !(hit_loc[idx].vector_is_inf()) && !(rec.point.vector_is_inf()) &&
-        hit && ref.diffuse
-      ) {
-        radius_tmp = compute_distance(hit_loc[idx], rec.point);
-        if (radius > radius_tmp && radius_tmp > 0) {
-          radius = radius_tmp;
-        }
-      }
+  //  for (int idx = 0; idx < 4; idx++) {
+  //    if (
+  //      !(hit_loc[idx].vector_is_inf()) && !(rec.point.vector_is_inf()) &&
+  //      hit && ref.diffuse
+  //    ) {
+  //      radius_tmp = compute_distance(hit_loc[idx], rec.point);
+  //      if (radius > radius_tmp && radius_tmp > 0) {
+  //        radius = radius_tmp;
+  //      }
+  //    }
 
-      for (int idx_2 = idx; idx_2 < 4; idx_2++) {
-        if(!(hit_loc[idx_2].vector_is_inf()) && !(hit_loc[idx].vector_is_inf())
-        ) {
-          radius_tmp = compute_distance(hit_loc[idx], hit_loc[idx_2]);
-          if (radius > radius_tmp && radius_tmp > 0) {
-            radius = radius_tmp;
-          }
-        }
-      }
+  //    for (int idx_2 = idx; idx_2 < 4; idx_2++) {
+  //      if(!(hit_loc[idx_2].vector_is_inf()) && !(hit_loc[idx].vector_is_inf())
+  //      ) {
+  //        radius_tmp = compute_distance(hit_loc[idx], hit_loc[idx_2]);
+  //        if (radius > radius_tmp && radius_tmp > 0) {
+  //          radius = radius_tmp;
+  //        }
+  //      }
+  //    }
 
-    }
-    radius *= radius_multiplier;
-  }
+  //  }
+  //  radius *= radius_multiplier;
+  //}
 
   if (hit && ref.diffuse) {
-    hit_point -> update_parameters(rec.point, radius, filter, rec.normal, pdf);
+    hit_point -> update_parameters(rec.point, filter, rec.normal, pdf);
     hit_point -> update_direct_radiance(direct_radiance);
   } else {
     hit_point -> update_parameters(
-      vec3(INFINITY, INFINITY, INFINITY), radius, filter, vec3(0, 0, 1), pdf
+      vec3(INFINITY, INFINITY, INFINITY), filter, vec3(0, 0, 1), pdf
     );
   }
 

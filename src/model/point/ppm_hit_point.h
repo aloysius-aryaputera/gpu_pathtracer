@@ -25,12 +25,12 @@ class PPMHitPoint {
     __host__ __device__ PPMHitPoint();
     __device__ PPMHitPoint(float ppm_alpha_); 
     __device__ void update_parameters(
-      vec3 location_, float surface_radius_, vec3 filter_, vec3 normal_,
-      float pdf_
+      vec3 location_, vec3 filter_, vec3 normal_, float pdf_
     );
     __device__ void reset_tmp_accummulated_lm();
     __device__ void add_tmp_accummulated_lm(vec3 add);
-    __device__ void update_radius(float radius_);
+    __device__ void update_surface_radius(float radius_);
+    __device__ void update_volume_radius(float radius_);
     __device__ void update_accummulated_reflected_flux(
       int iteration, vec3 iterative_total_photon_flux, int extra_photons,
       int emitted_photon_per_pass
@@ -102,8 +102,11 @@ __device__ vec3 PPMHitPoint::compute_pixel_color(int num_passes, int type, bool 
   }
 }
 
-__device__ void PPMHitPoint::update_radius(float radius_) {
-  this -> volume_radius = 2 * radius_;
+__device__ void PPMHitPoint::update_volume_radius(float radius_) {
+  this -> volume_radius = radius_;
+}
+
+__device__ void PPMHitPoint::update_surface_radius(float radius_) {
   this -> surface_radius = radius_;
   this -> bounding_sphere -> assign_new_radius(this -> surface_radius);
 }
@@ -198,17 +201,14 @@ __device__ void PPMHitPoint::_create_bounding_cylinder() {
 }
 
 __device__ void PPMHitPoint::update_parameters(
-  vec3 location_, float surface_radius_, vec3 filter_, vec3 normal_, 
-  float pdf_
+  vec3 location_, vec3 filter_, vec3 normal_, float pdf_
 ) {
   this -> location = location_;
-  this -> surface_radius = surface_radius_;
   this -> filter = filter_;
   this -> normal = normal_;
   this -> pdf = pdf_;
 
   this -> bounding_sphere -> assign_new_center(this -> location);
-  this -> bounding_sphere -> assign_new_radius(this -> surface_radius);
 }
 
 #endif

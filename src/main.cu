@@ -87,7 +87,9 @@ int main(int argc, char **argv) {
   int ppm_num_pass = input_param.ppm_num_pass;
   int ppm_max_bounce = input_param.ppm_max_bounce;
   float ppm_alpha = input_param.ppm_alpha;
-  float ppm_radius_scaling_factor = input_param.ppm_radius_scaling_factor;
+  //float ppm_radius_scaling_factor = input_param.ppm_radius_scaling_factor;
+  float ppm_init_surface_radius = input_param.ppm_init_surface_radius;
+  float ppm_init_volume_radius = input_param.ppm_init_volume_radius;
   int ppm_image_output_iteration = input_param.ppm_image_output_iteration;
 
   int pathtracing_sample_size = input_param.pathtracing_sample_size;
@@ -1323,8 +1325,7 @@ int main(int argc, char **argv) {
       target_node_list,
       target_leaf_list,
       transparent_node_list,
-      pathtracing_sample_size,
-      ppm_radius_scaling_factor
+      pathtracing_sample_size
     );
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
@@ -1350,8 +1351,10 @@ int main(int argc, char **argv) {
     start = clock();
     process = "Assign radius to invalid hit points";
     print_start_process(process, start);
-    assign_radius_to_invalid_hit_points<<<num_pixels, 1>>>(
-      hit_point_list, num_pixels, average_hit_point_radius[0]);
+    assign_radius_hit_points<<<num_pixels, 1>>>(
+      hit_point_list, num_pixels, ppm_init_surface_radius, 
+      ppm_init_volume_radius
+    );
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     print_end_process(process, start);
@@ -1715,8 +1718,7 @@ int main(int argc, char **argv) {
 	target_node_list,
         target_leaf_list,
 	transparent_node_list,
-        pathtracing_sample_size,
-	ppm_radius_scaling_factor
+        pathtracing_sample_size
       );
       checkCudaErrors(cudaGetLastError());
       checkCudaErrors(cudaDeviceSynchronize());
