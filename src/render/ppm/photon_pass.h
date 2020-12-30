@@ -115,7 +115,7 @@ void photon_pass(
   Material* material_list[400], *medium;
   int num_bounce = -1, material_list_length = 0, light_source_idx;
   bool hit = false, sss = false, in_medium = false, scattered_in_medium = false;
-  bool scattered_in_medium_now = false;
+  bool scattered_in_medium_now = false, direct_check_surface = false;
   curandState local_rand_state = rand_state[i];
   float random_number, reflection_prob, mean_color, mean_color_tmp, d;
   float max_energy = accummulated_light_source_energy[num_light_source_geom - 1];
@@ -171,7 +171,7 @@ void photon_pass(
     //if (!(ref.false_hit) && num_bounce > 0) {
     if (!(ref.false_hit)) {
 
-      if (in_medium) {
+      if (in_medium && !direct_check_surface) {
         ray = ref.ray;
         d = medium -> get_propagation_distance(&local_rand_state); 
         hit = traverse_bvh(geom_node_list[0], ray, rec_medium);
@@ -195,6 +195,8 @@ void photon_pass(
           prev_location = rec_medium.point;
           hit = traverse_bvh(geom_node_list[0], ray, rec_medium);
         }
+
+	direct_check_surface = true;
 
         if (scattered_in_medium_now) {
           rec = rec_medium;
@@ -220,6 +222,7 @@ void photon_pass(
             light_source_color.b()
           ) / 3;
           light_source_color *= (mean_color / mean_color_tmp);
+	  direct_check_surface = false;
         }	
       }
     } 
