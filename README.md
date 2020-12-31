@@ -2,7 +2,7 @@
 
 ![](images/20201028_green_dragon.jpg)
 
-![](images/20201023_skyhawk.jpg)
+![](images/20201231_fog.jpg)
 
 ![](images/20200707_t_rex_scene_3.jpg)
 
@@ -15,6 +15,7 @@
 ## Features
 * Path tracing
 * Stochastic progressive photon mapping
+* Participating medium
 * OBJ file reader
 * Bounding volume hierarchy acceleration structure
 * Diffuse, metal, and dieletric materials
