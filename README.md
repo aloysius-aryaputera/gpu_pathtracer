@@ -1,6 +1,6 @@
 # GPU Renderer
 
-![](images/20201028_green_dragon.jpg)
+![](images/20201023_skyhawk.jpg)
 
 ![](images/20201231_fog.jpg)
 
@@ -49,7 +49,7 @@
 
 ## Credits
 
-* The Ferrari SF70H model was by [Dil Afroze Ahmed](https://free3d.com/user/dil_afroze). 
+* The Warthog was by by [McCarthy3D](https://sketchfab.com/joshuawatt811).
 * The table lamp was from https://www.lugher3d.com/free-3d-models/table-lamp-fendi.
 * The Douglas A-4 Skyhawk model was from https://done3d.com/douglas-a-4-skyhawk/.
 * The Dr.Booms Exo model was by [LDsanya](https://www.blendswap.com/profile/740888).
