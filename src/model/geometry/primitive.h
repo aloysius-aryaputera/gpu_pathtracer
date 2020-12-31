@@ -19,6 +19,7 @@ class Primitive {
     Material *material;
     bool sub_surface_scattering;
     bool light_source;
+    bool transparent_geom;
     float area;
     vec3 t, b, normal;
 
@@ -41,6 +42,10 @@ class Primitive {
     }
 
     __device__ virtual bool is_light_source() {
+      return false;
+    }
+
+    __device__ virtual bool is_transparent_geom() {
       return false;
     }
 

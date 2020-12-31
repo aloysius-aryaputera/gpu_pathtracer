@@ -29,6 +29,7 @@ void _extract_single_material_data(
   float *tf_x, float *tf_y, float *tf_z,
   float *path_length,
   float *t_r, float *n_s, float *n_i, float *bm,
+  float *scattering_coef, float *absoprtion_coef, float *g,
   int *material_priority,
   int *material_image_height_diffuse, int *material_image_width_diffuse,
   int *material_image_offset_diffuse,
@@ -75,6 +76,7 @@ void extract_material_data(
   float *tf_x, float *tf_y, float *tf_z,
   float *path_length,
   float *t_r, float *n_s, float *n_i, float *bm,
+  float *scattering_coef, float *absorption_coef, float *g,
   int *material_priority,
   int *material_image_height_diffuse, int *material_image_width_diffuse,
   int *material_image_offset_diffuse,
@@ -211,6 +213,7 @@ void _extract_single_material_data(
   float *tf_x, float *tf_y, float *tf_z,
   float *path_length,
   float *t_r, float *n_s, float *n_i, float *bm,
+  float *scattering_coef, float *absorption_coef, float *g,
   int *material_priority,
   int *material_image_height_diffuse, int *material_image_width_diffuse,
   int *material_image_offset_diffuse,
@@ -260,6 +263,10 @@ void _extract_single_material_data(
     *(n_i + idx) = 0;
     *(t_r + idx) = 0;
     *(bm + idx) = 1;
+
+    *(scattering_coef + idx) = -1;
+    *(absorption_coef + idx) = -1;
+    *(g + idx) = 0;
 
     *(material_priority + idx) = -1;
 
@@ -325,6 +332,10 @@ void _extract_single_material_data(
           *(t_r + idx) = 1;
 	  *(bm + idx) = 1;
 
+          *(scattering_coef + idx) = 0;
+          *(absorption_coef + idx) = 0;
+          *(g + idx) = 0;
+
           *(material_priority + idx) = -1;
 
           *(material_image_height_diffuse + idx) = texture_height_array[0];
@@ -377,6 +388,12 @@ void _extract_single_material_data(
           *(n_s + idx) = clamp(std::stof(chunks[1]), 0, MAX_PHONG_N_S);
         } else if (chunks[0] == "Ni") {
           *(n_i + idx) = clamp(std::stof(chunks[1]), 1, 1000);
+	} else if (chunks[0] == "scattering_coef") {
+	  *(scattering_coef + idx) = std::stof(chunks[1]);
+	} else if (chunks[0] == "absorption_coef") {
+	  *(absorption_coef + idx) = std::stof(chunks[1]);
+	} else if (chunks[0] == "g") {
+	  *(g + idx) = std::stof(chunks[1]);
         } else if (chunks[0] == "priority") {
           *(material_priority + idx) = clamp(
             std::stoi(chunks[1]), -num_materials[0], num_materials[0]);
@@ -468,6 +485,7 @@ void extract_material_data(
   float *tf_x, float *tf_y, float *tf_z,
   float *path_length,
   float *t_r, float *n_s, float *n_i, float *bm,
+  float *scattering_coef, float *absorption_coef, float *g,
   int *material_priority,
   int *material_image_height_diffuse, int *material_image_width_diffuse,
   int *material_image_offset_diffuse,
@@ -497,6 +515,7 @@ void extract_material_data(
       tf_x, tf_y, tf_z,
       path_length,
       t_r, n_s, n_i, bm,
+      scattering_coef, absorption_coef, g,
       material_priority,
       material_image_height_diffuse, material_image_width_diffuse,
       material_image_offset_diffuse,

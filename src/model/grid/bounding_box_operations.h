@@ -6,6 +6,7 @@
 
 #include "../../param.h"
 #include "../geometry/primitive.h"
+#include "../point/point.h"
 #include "bounding_box.h"
 
 __global__ void compute_world_bounding_box(
@@ -39,6 +40,82 @@ __global__ void compute_world_bounding_box(
 
     world_bounding_box[0] = new BoundingBox(
       x_min, x_max, y_min, y_max, z_min, z_max);
+  }
+
+}
+
+__global__ void compute_world_bounding_box(
+  BoundingBox **world_bounding_box, Point **point_array, int num_points
+) {
+
+  if (threadIdx.x == 0 && blockIdx.x == 0) {
+
+    float x_min = INFINITY;
+    float x_max = -INFINITY;
+    float y_min = INFINITY;
+    float y_max = -INFINITY;
+    float z_min = INFINITY;
+    float z_max = -INFINITY;
+
+    for (int i = 0; i < num_points; i++) {
+      x_min = min(x_min, point_array[i] -> bounding_box -> x_min);
+      x_max = max(x_max, point_array[i] -> bounding_box -> x_max);
+      y_min = min(y_min, point_array[i] -> bounding_box -> y_min);
+      y_max = max(y_max, point_array[i] -> bounding_box -> y_max);
+      z_min = min(z_min, point_array[i] -> bounding_box -> z_min);
+      z_max = max(z_max, point_array[i] -> bounding_box -> z_max);
+    }
+
+    x_min -= SMALL_DOUBLE;
+    x_max += SMALL_DOUBLE;
+    y_min -= SMALL_DOUBLE;
+    y_max += SMALL_DOUBLE;
+    z_min -= SMALL_DOUBLE;
+    z_max += SMALL_DOUBLE;
+
+    world_bounding_box[0] = new BoundingBox(
+      x_min, x_max, y_min, y_max, z_min, z_max);
+  }
+
+}
+
+__global__ void modify_world_bounding_box(
+  BoundingBox **world_bounding_box, Point **point_array, int num_points
+) {
+
+  if (threadIdx.x == 0 && blockIdx.x == 0) {
+
+    float x_min = INFINITY;
+    float x_max = -INFINITY;
+    float y_min = INFINITY;
+    float y_max = -INFINITY;
+    float z_min = INFINITY;
+    float z_max = -INFINITY;
+
+    printf("Stop 1\n");
+
+    for (int i = 0; i < num_points; i++) {
+      x_min = min(x_min, point_array[i] -> bounding_box -> x_min);
+      x_max = max(x_max, point_array[i] -> bounding_box -> x_max);
+      y_min = min(y_min, point_array[i] -> bounding_box -> y_min);
+      y_max = max(y_max, point_array[i] -> bounding_box -> y_max);
+      z_min = min(z_min, point_array[i] -> bounding_box -> z_min);
+      z_max = max(z_max, point_array[i] -> bounding_box -> z_max);
+    }
+
+    x_min -= SMALL_DOUBLE;
+    x_max += SMALL_DOUBLE;
+    y_min -= SMALL_DOUBLE;
+    y_max += SMALL_DOUBLE;
+    z_min -= SMALL_DOUBLE;
+    z_max += SMALL_DOUBLE;
+
+    printf("Stop 2\n");
+
+    world_bounding_box[0] -> initialize(
+      x_min, x_max, y_min, y_max, z_min, z_max);
+
+    printf("Stop 3\n");
   }
 
 }

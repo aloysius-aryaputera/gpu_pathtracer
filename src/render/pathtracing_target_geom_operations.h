@@ -22,6 +22,7 @@ __global__ void compute_num_target_geom(
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx > 0) return;
 
+  num_target_geom[0] = 0;
   for (int i = 0; i < num_geom; i++) {
     if (_is_target_geom(geom_array[i])) {
       num_target_geom[0]++;

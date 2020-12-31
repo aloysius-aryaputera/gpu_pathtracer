@@ -1,3 +1,7 @@
+//File: world.h
+#ifndef WORLD_H
+#define WORLD_H
+
 #include <curand_kernel.h>
 #include <iostream>
 #include <math.h>
@@ -6,7 +10,6 @@
 
 #include "../input/read_file_util.h"
 #include "../model/camera.h"
-#include "../model/data_structure/local_vector.h"
 #include "../model/geometry/triangle.h"
 #include "../model/material/material.h"
 #include "../model/object/object.h"
@@ -47,7 +50,8 @@ __global__ void create_material(
   float *ke_x, float *ke_y, float *ke_z,
   float *tf_x, float *tf_y, float *tf_z,
   float *path_length,
-  float *t_r, float *n_s, float *n_i,
+  float *t_r, float *n_s, float *n_i, float *bm,
+  float *scattering_coef, float *absorption_coef, float *g,
   int *material_priority,
   int *material_image_height_diffuse,
   int *material_image_width_diffuse,
@@ -103,6 +107,7 @@ __global__ void create_material(
   float *tf_x, float *tf_y, float *tf_z,
   float *path_length,
   float *t_r, float *n_s, float *n_i, float *bm,
+  float *scattering_coef, float *absorption_coef, float *g,
   int *material_priority,
   int *material_image_height_diffuse,
   int *material_image_width_diffuse,
@@ -136,6 +141,9 @@ __global__ void create_material(
     vec3(tf_x[i], tf_y[i], tf_z[i]),
     path_length[i],
     t_r[i], n_s[i], n_i[i], bm[i],
+    scattering_coef[i],
+    absorption_coef[i],
+    g[i],
     material_priority[i],
     material_image_height_diffuse[i],
     material_image_width_diffuse[i],
@@ -238,3 +246,5 @@ __global__ void create_world(
   }
 
 }
+
+#endif

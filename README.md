@@ -1,8 +1,8 @@
 # GPU Renderer
 
-![](images/20201028_green_dragon.jpg)
-
 ![](images/20201023_skyhawk.jpg)
+
+![](images/20201231_fog.jpg)
 
 ![](images/20200707_t_rex_scene_3.jpg)
 
@@ -15,6 +15,7 @@
 ## Features
 * Path tracing
 * Stochastic progressive photon mapping
+* Participating medium
 * OBJ file reader
 * Bounding volume hierarchy acceleration structure
 * Diffuse, metal, and dieletric materials
@@ -42,11 +43,13 @@
 * T. Hachisuka and H. W. Jensen, "Stochastic Progressive Photon Mapping," *ACM Transactions on Graphics*, 2009.
 * C. Knaus and M. Zwicker, "Progressive Photon Mapping: A Probabilistic Approach," *ACM Transactions on Graphics*, 2011.
 * R. Perrot, *et al.*, "Photon Mapping with Visible Kernel Domains," *Visual Computer*, 2019.
+* W. Jarosz, M. Zwicker, and H. W. Jensen, "The Beam Radiance Estimate for Volumetric Photon Mapping," *Eurographics*, 2008.
+* C. Collin, *et al.*, "Visibility-Driven Progressive Volume Photon Tracing," *Visual Computer*, 2013.
 
 
 ## Credits
 
-* The Ferrari SF70H model was by [Dil Afroze Ahmed](https://free3d.com/user/dil_afroze). 
+* The Warthog model was by [McCarthy3D](https://sketchfab.com/joshuawatt811).
 * The table lamp was from https://www.lugher3d.com/free-3d-models/table-lamp-fendi.
 * The Douglas A-4 Skyhawk model was from https://done3d.com/douglas-a-4-skyhawk/.
 * The Dr.Booms Exo model was by [LDsanya](https://www.blendswap.com/profile/740888).
