@@ -49,7 +49,7 @@
 
 ## Credits
 
-* The Warthog was by by [McCarthy3D](https://sketchfab.com/joshuawatt811).
+* The Warthog model was by [McCarthy3D](https://sketchfab.com/joshuawatt811).
 * The table lamp was from https://www.lugher3d.com/free-3d-models/table-lamp-fendi.
 * The Douglas A-4 Skyhawk model was from https://done3d.com/douglas-a-4-skyhawk/.
 * The Dr.Booms Exo model was by [LDsanya](https://www.blendswap.com/profile/740888).
