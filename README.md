@@ -42,6 +42,8 @@
 * T. Hachisuka and H. W. Jensen, "Stochastic Progressive Photon Mapping," *ACM Transactions on Graphics*, 2009.
 * C. Knaus and M. Zwicker, "Progressive Photon Mapping: A Probabilistic Approach," *ACM Transactions on Graphics*, 2011.
 * R. Perrot, *et al.*, "Photon Mapping with Visible Kernel Domains," *Visual Computer*, 2019.
+* W. Jarosz, M. Zwicker, and H. W. Jensen, "The Beam Radiance Estimate for Volumetric Photon Mapping," *Eurographics*, 2008.
+* C. Collin, *et al.*, "Visibility-Driven Progressive Volume Photon Tracing," *Visual Computer*, 2013.
 
 
 ## Credits
