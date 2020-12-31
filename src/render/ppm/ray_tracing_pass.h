@@ -221,7 +221,7 @@ void _get_hit_point_details(
 
   init_material_list(
     material_list, material_list_length, transparent_node_list, ray.p0,
-    ray.dir, rand_state
+    vec3(0, 0, 1), rand_state
   );
   ref = _set_init_ref(material_list, material_list_length, ray);
   in_medium = check_if_entering_medium(ref, in_medium, medium);

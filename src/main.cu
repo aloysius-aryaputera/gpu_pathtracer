@@ -1550,13 +1550,54 @@ int main(int argc, char **argv) {
       checkCudaErrors(cudaDeviceSynchronize());
       print_end_process(process, start);
 
+      BoundingBox **world_surface_photon_bounding_box;
+      BoundingBox **world_volume_photon_bounding_box;
+
+      checkCudaErrors(cudaMallocManaged(
+        (void **)&world_surface_photon_bounding_box, sizeof(BoundingBox *)));
+      checkCudaErrors(cudaMallocManaged(
+        (void **)&world_volume_photon_bounding_box, sizeof(BoundingBox *)));
+
+      start = clock();
+      process = "Computing surface photon world bounding box";
+      print_start_process(process, start);
+      compute_world_bounding_box<<<1, 1>>>(
+        world_surface_photon_bounding_box, surface_photon_list,
+        num_surface_photons[0]
+      );
+      checkCudaErrors(cudaGetLastError());
+      checkCudaErrors(cudaDeviceSynchronize());
+      print_end_process(process, start);
+
+      start = clock();
+      process = "Computing volume photon world bounding box";
+      print_start_process(process, start);
+      compute_world_bounding_box<<<1, 1>>>(
+        world_volume_photon_bounding_box, volume_photon_list,
+        num_volume_photons[0]
+      );
+      checkCudaErrors(cudaGetLastError());
+      checkCudaErrors(cudaDeviceSynchronize());
+      print_end_process(process, start);
+
       if (num_surface_photons[0] > 0) {
-      	checkCudaErrors(cudaDeviceSynchronize());
+        start = clock();
+        process = "Computing surface photon world bounding box";
+        print_start_process(process, start);
+        modify_world_bounding_box<<<1, 1>>>(
+          world_surface_photon_bounding_box, surface_photon_list,
+	  num_surface_photons[0]
+        );
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
+        print_end_process(process, start);
+
       	start = clock();
       	process = "Computing photon morton codes";
       	print_start_process(process, start);
       	compute_photon_morton_code_batch<<<num_surface_photons[0], 1>>>(
-      	  surface_photon_list, num_surface_photons[0], world_bounding_box);
+      	  surface_photon_list, num_surface_photons[0], 
+	  world_surface_photon_bounding_box);
       	checkCudaErrors(cudaGetLastError());
       	checkCudaErrors(cudaDeviceSynchronize());
       	print_end_process(process, start);
@@ -1626,12 +1667,23 @@ int main(int argc, char **argv) {
       }
 
       if (num_volume_photons[0] > 0) {
-      	checkCudaErrors(cudaDeviceSynchronize());
+        start = clock();
+        process = "Computing volume photon world bounding box";
+        print_start_process(process, start);
+        modify_world_bounding_box<<<1, 1>>>(
+          world_volume_photon_bounding_box, volume_photon_list,
+	  num_volume_photons[0]
+        );
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
+        print_end_process(process, start);
+
       	start = clock();
       	process = "Computing photon morton codes";
       	print_start_process(process, start);
       	compute_photon_morton_code_batch<<<num_volume_photons[0], 1>>>(
-      	  volume_photon_list, num_volume_photons[0], world_bounding_box);
+      	  volume_photon_list, num_volume_photons[0], 
+	  world_volume_photon_bounding_box);
       	checkCudaErrors(cudaGetLastError());
       	checkCudaErrors(cudaDeviceSynchronize());
       	print_end_process(process, start);
